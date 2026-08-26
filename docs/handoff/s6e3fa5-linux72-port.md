@@ -95,6 +95,10 @@ mkdir -p "$output" && \
 make -C "$kernel" O="$output" ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 defconfig && \
 "$kernel/scripts/kconfig/merge_config.sh" -m -O "$output" "$output/.config" "$project/kernel/configs/oneplus3-s6e3fa5.fragment" && \
 make -C "$kernel" O="$output" ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 olddefconfig && \
+grep -qx 'CONFIG_DRM=y' "$output/.config" && \
+grep -qx 'CONFIG_DRM_MSM=y' "$output/.config" && \
+grep -qx 'CONFIG_BACKLIGHT_CLASS_DEVICE=y' "$output/.config" && \
+grep -qx 'CONFIG_DRM_PANEL_SAMSUNG_S6E3FA5=y' "$output/.config" && \
 make -C "$kernel" O="$output" ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 -j"$(nproc)" Image.gz qcom/msm8996-oneplus3.dtb
 ```
 
@@ -107,11 +111,13 @@ relative DTB target and looked for the path twice, so the invocation failed
 before producing the requested targets. Use the `qcom/msm8996-oneplus3.dtb`
 target above to continue with the existing output directory.
 
-The first successful build resolved `CONFIG_DRM_PANEL_SAMSUNG_S6E3FA5=m`
-because `CONFIG_BACKLIGHT_CLASS_DEVICE=m` limited the panel to a module. The
-fragment now sets `CONFIG_BACKLIGHT_CLASS_DEVICE=y` as well as the FA5 symbol.
-Rerun the configuration and build command before using these artifacts, then
-confirm that both values in the regenerated `.config` are `=y`.
+The first two successful builds resolved `CONFIG_DRM_PANEL_SAMSUNG_S6E3FA5=m`.
+The first was limited by `CONFIG_BACKLIGHT_CLASS_DEVICE=m`; the second had
+backlight built in, but the parent `CONFIG_DRM=m` still limited all panel
+drivers to modules. The fragment now also sets `CONFIG_DRM=y` and
+`CONFIG_DRM_MSM=y`, which is required to build the MSM DSI host and FA5 panel
+into the kernel. Rerun the configuration and build command before using these
+artifacts; its exact-value checks must all pass.
 
 The current `scripts/build-kernel.sh` intentionally rejects any source commit
 other than pristine `8d3ae592...`; it will therefore reject this port branch.
@@ -138,9 +144,10 @@ None collected. USB COM logging must be enabled before the first owner-run boot.
 
 ## Remaining issues
 
-- The corrected fragment requests both `CONFIG_BACKLIGHT_CLASS_DEVICE=y` and
+- The corrected fragment requests `CONFIG_DRM=y`, `CONFIG_DRM_MSM=y`,
+  `CONFIG_BACKLIGHT_CLASS_DEVICE=y`, and
   `CONFIG_DRM_PANEL_SAMSUNG_S6E3FA5=y`; the owner must rebuild and verify that
-  both survive Kconfig resolution.
+  all four survive Kconfig resolution.
 - The binding and DTS require owner-run DT schema validation.
 - The existing pristine-only build script requires an approved separate build
   policy change or a documented patched-kernel invocation before it can build
