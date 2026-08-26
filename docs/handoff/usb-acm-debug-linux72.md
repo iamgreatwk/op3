@@ -81,6 +81,30 @@ UUID-free cmdline `fbcon=nodefault console=tty0 pmos.debug-shell`.
 
 No fastboot or device test has yet been executed for this USB ACM artifact.
 
+## A530 zap firmware presence A/B
+
+The Linux 7.2 OnePlus 3 DTS names exactly one device-specific GPU zap firmware
+file: `qcom/msm8996/oneplus3/a530_zap.mbn`. The v100 reference initramfs
+contains that file; the original USB ACM diagnostic initramfs did not.
+
+A second image was prepared with this as the sole changed initramfs payload:
+
+- Firmware source: extracted locally from the v100 reference initramfs.
+- Firmware path in test initramfs:
+  `lib/firmware/qcom/msm8996/oneplus3/a530_zap.mbn`
+- Firmware SHA256:
+  `17c0f33a881c9ad09a75377b185c9388458fad6d38002d4ae78b9cf12225b4ef`
+- Initramfs SHA256:
+  `2183d5bccbe04ad102b7214f23ee0787666f7e52e847f0b4a667ced577b9a467`
+- Output (local ignored):
+  `artifacts/boot-oneplus3-fa5-linux72-usb-acm-a530-zap.img`
+- Boot image SHA256:
+  `053cbf16ce6a25303193b186b98c85759edd0448ee7e21a96cfecf9c00ca6ed0`
+
+The Image.gz, DTB, boot profile, load addresses, and UUID-free cmdline are
+identical to the preceding USB ACM image. No ADSP, modem, SLPI, Venus, Wi-Fi,
+or other legacy firmware was added. No fastboot or device test has been run.
+
 After an owner kernel build, merge both fragments and verify:
 
 ```bash
