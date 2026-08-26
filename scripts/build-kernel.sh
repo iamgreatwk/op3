@@ -20,6 +20,19 @@ if [ "${ALLOW_LEGACY_KERNEL:-0}" != 1 ] && [ "$actual_kernel_version" != "$TARGE
   exit 1
 fi
 
+source_commit="$(git -C "$kernel_source" rev-parse HEAD)"
+if [ "${ALLOW_LEGACY_KERNEL:-0}" != 1 ] && [ "$source_commit" != "$TARGET_KERNEL_COMMIT" ]; then
+  printf 'Refusing to build source commit %s: expected pristine %s (%s).\n' \
+    "$source_commit" "$TARGET_KERNEL_TAG" "$TARGET_KERNEL_COMMIT" >&2
+  exit 1
+fi
+
+if [ "${ALLOW_LEGACY_KERNEL:-0}" != 1 ] && \
+  { ! git -C "$kernel_source" diff --quiet || ! git -C "$kernel_source" diff --cached --quiet; }; then
+  printf 'Refusing to build a modified kernel source tree: %s\n' "$kernel_source" >&2
+  exit 1
+fi
+
 config_path="$output_dir/.config"
 config_sha="not-created"
 if [ -f "$config_path" ]; then
@@ -27,7 +40,7 @@ if [ -f "$config_path" ]; then
 fi
 
 printf 'TARGET_KERNEL_VERSION=%s\n' "$TARGET_KERNEL_VERSION"
-printf 'SOURCE_COMMIT=%s\n' "$(git -C "$kernel_source" rev-parse HEAD)"
+printf 'SOURCE_COMMIT=%s\n' "$source_commit"
 printf 'DEVICE=%s\n' "$TARGET_DEVICE"
 printf 'CONFIG_SHA=%s\n' "$config_sha"
 printf 'TOOLCHAIN=%s\n' "$("$CROSS_GCC" --version | head -n 1)"

@@ -15,4 +15,12 @@ fi
 printf 'Fetching %s (%s) from %s\n' "$TARGET_KERNEL_TAG" "$TARGET_KERNEL_TREE" "$TARGET_KERNEL_REMOTE"
 git clone --branch "$TARGET_KERNEL_TAG" --single-branch --depth=1 \
   "$TARGET_KERNEL_REMOTE" "$kernel_source"
-git -C "$kernel_source" rev-parse HEAD
+
+source_commit="$(git -C "$kernel_source" rev-parse HEAD)"
+if [ "$source_commit" != "$TARGET_KERNEL_COMMIT" ]; then
+  printf 'Refusing fetched source %s: %s resolved to %s, expected %s.\n' \
+    "$kernel_source" "$TARGET_KERNEL_TAG" "$source_commit" "$TARGET_KERNEL_COMMIT" >&2
+  exit 1
+fi
+
+printf '%s\n' "$source_commit"
