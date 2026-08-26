@@ -100,8 +100,11 @@ make -C "$kernel" O="$output" ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=aar
 "$kernel/scripts/kconfig/merge_config.sh" -m -O "$output" "$output/.config" "$project/kernel/configs/oneplus3-s6e3fa5.fragment" && \
 make -C "$kernel" O="$output" ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 olddefconfig && \
 grep -qx 'CONFIG_DRM=y' "$output/.config" && \
+grep -qx 'CONFIG_DRM_MSM=y' "$output/.config" && \
 grep -qx 'CONFIG_BACKLIGHT_CLASS_DEVICE=y' "$output/.config" && \
 grep -qx 'CONFIG_DRM_PANEL_SAMSUNG_S6E3FA5=y' "$output/.config" && \
+grep -qx '# CONFIG_QCOM_LLCC is not set' "$output/.config" && \
+grep -qx '# CONFIG_QCOM_OCMEM is not set' "$output/.config" && \
 make -C "$kernel" O="$output" ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 -j"$(nproc)" Image.gz qcom/msm8996-oneplus3.dtb
 ```
 
@@ -117,9 +120,15 @@ target above to continue with the existing output directory.
 The first two owner-run builds resolved `CONFIG_DRM_PANEL_SAMSUNG_S6E3FA5=m`.
 The first was limited by `CONFIG_BACKLIGHT_CLASS_DEVICE=m`; the second had
 backlight built in, but the parent `CONFIG_DRM=m` still limited all panel
-drivers to modules. The final build set `CONFIG_DRM=y` as the minimal parent
-dependency and verified FA5 resolves to `=y`, without forcing
-`CONFIG_DRM_MSM` to a different value.
+drivers to modules. The final panel-only build set `CONFIG_DRM=y` and verified
+FA5 resolves to `=y`, but it retained `CONFIG_DRM_MSM=m` and therefore cannot
+provide a rootfs-independent DSI probe.
+
+For the boot.img-only test, the fragment now sets `CONFIG_DRM_MSM=y`. Its only
+module-valued direct dependencies in the defconfig are `QCOM_LLCC` and
+`QCOM_OCMEM`; neither is referenced by the MSM8996 OnePlus DTS, so the
+fragment explicitly disables them. This permits built-in MSM DRM without any
+legacy patch or DRM/MSM source modification.
 
 The current `scripts/build-kernel.sh` intentionally rejects any source commit
 other than pristine `8d3ae592...`; it will therefore reject this port branch.
@@ -143,14 +152,13 @@ None collected. USB COM logging must be enabled before the first owner-run boot.
 
 ## Remaining issues
 
-- The corrected fragment has been owner-built and verified to resolve
-  `CONFIG_DRM=y`, `CONFIG_BACKLIGHT_CLASS_DEVICE=y`, and
-  `CONFIG_DRM_PANEL_SAMSUNG_S6E3FA5=y`.
-- The baseline still resolves `CONFIG_DRM_MSM=m`. This panel task does not
-  change that choice, and the Image/DTB-only command did not build or install
-  modules. Before DRM probe testing, Integration must choose and document
-  either a module build/install path or a separately scoped built-in MSM DRM
-  configuration change.
+- The previous build verified the panel-only configuration, but it retained
+  `CONFIG_DRM_MSM=m` and cannot meet the boot.img-only test objective.
+- The updated fragment requires `CONFIG_DRM=y`, `CONFIG_DRM_MSM=y`,
+  `CONFIG_BACKLIGHT_CLASS_DEVICE=y`, and
+  `CONFIG_DRM_PANEL_SAMSUNG_S6E3FA5=y`, while disabling the unreferenced
+  optional `QCOM_LLCC` and `QCOM_OCMEM` dependencies. Owner rebuild and
+  exact-value verification are still required.
 - The binding and DTS require owner-run DT schema validation.
 - The existing pristine-only build script requires an approved separate build
   policy change or a documented patched-kernel invocation before it can build
