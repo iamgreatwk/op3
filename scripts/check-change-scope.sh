@@ -2,7 +2,7 @@
 set -euo pipefail
 
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-required=(BASELINE.env docs/handoff/latest.md docs/bringup-status.md docs/git-workflow.md)
+required=(AGENTS.md BASELINE.env docs/handoff/latest.md docs/bringup-status.md docs/git-workflow.md docs/collaboration-framework.md)
 failed=0
 
 for path in "${required[@]}"; do
