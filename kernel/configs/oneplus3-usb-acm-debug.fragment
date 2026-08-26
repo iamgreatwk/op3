@@ -1,0 +1,7 @@
+# Early OnePlus 3 USB CDC ACM diagnostic console.
+# Keep the complete gadget path built in: boot.img-only tests cannot load
+# modules before the diagnostic initramfs starts.
+CONFIG_USB_GADGET=y
+CONFIG_USB_LIBCOMPOSITE=y
+CONFIG_USB_CONFIGFS=y
+CONFIG_USB_CONFIGFS_ACM=y
