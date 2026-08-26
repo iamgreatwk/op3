@@ -77,8 +77,8 @@ The unsupported legacy `disp-te-gpios` property was not carried forward.
   errors (only the generic new-file MAINTAINERS advisory).
 - Owner-run build completed successfully with the corrected fragment.
 - Final configuration SHA256:
-  `2781083b97a74bff9d4ee8ac4a953a14f905b6717eebea82cac0b14ea4ddae58`
-- Final configuration confirms `CONFIG_DRM=y`,
+  `84e811949e5d8cab5e55109384711190ecdfe86eac94d7d8c45bf9a85c1b6ff1`
+- Final configuration confirms `CONFIG_DRM=y`, `CONFIG_DRM_MSM=y`,
   `CONFIG_BACKLIGHT_CLASS_DEVICE=y`, and
   `CONFIG_DRM_PANEL_SAMSUNG_S6E3FA5=y`.
 - Build log confirms `panel-samsung-s6e3fa5.o` was compiled and linked into
@@ -138,13 +138,35 @@ separate, scoped task before the owner builds this branch.
 
 ## Artifact SHA256
 
-- `Image.gz`: `15800663cd23b842f492150edee46e702f04bf0d7107c522303780952001a23f`
+- `Image.gz`: `4a636bc445a000f8f57208220472109752b0f8e3799e0c7778151d1700e48b56`
 - `msm8996-oneplus3.dtb`: `87963b9340d437abb6bfe387e05327bcb24766e81d515df9513ce0da1a4eea45`
+
+## Boot-image packaging result
+
+- Packer profile: `boot/oneplus3-fa5.env`
+- Kernel payload: `Image.gz` followed by the raw OnePlus 3 DTB, as required
+  by the profile.
+- Initrd: local ignored temporary reference artifact
+  `artifacts/reference-initrd.img`
+  (`c3358a1cadb747996ddaa492e636827f2d72974040e8fd40d81f8a213e676366`).
+  It was extracted from the known-good `boot_fa5_v100_auto.img`; it is only
+  for minimal bring-up and is not committed.
+- Actual cmdline: `fbcon=nodefault console=tty0 pmos.debug-shell`
+  (the reference image's old pmOS boot/root UUID arguments were not reused).
+- Output: local ignored
+  `artifacts/boot-oneplus3-fa5-linux72.img`
+  (`88c91c749c87f32d78df374dd3bcc57af81512b1c2dc1b67aee7bd8f6fd8ad59`).
+- `abootimg -i` verified an Android boot header v0, 4096-byte pages, kernel
+  address `0x80008000`, ramdisk address `0x81000000`, tags address
+  `0x80000100`, and the cmdline above.
+- Packaging only was performed: no fastboot command, device boot, or device
+  test was executed by the agent.
 
 ## Device test result
 
-Not tested. No OnePlus 3 boot, DRM/MSM probe, DSI attach, panel prepare/enable,
-KMS, or dumb-buffer RGB result is claimed.
+Not tested. A boot image has been produced for owner-run testing, but no
+OnePlus 3 boot, DRM/MSM probe, DSI attach, panel prepare/enable, KMS, or
+dumb-buffer RGB result is claimed.
 
 ## USB COM evidence
 
@@ -152,13 +174,13 @@ None collected. USB COM logging must be enabled before the first owner-run boot.
 
 ## Remaining issues
 
-- The previous build verified the panel-only configuration, but it retained
-  `CONFIG_DRM_MSM=m` and cannot meet the boot.img-only test objective.
-- The updated fragment requires `CONFIG_DRM=y`, `CONFIG_DRM_MSM=y`,
+- The owner build now verifies `CONFIG_DRM=y`, `CONFIG_DRM_MSM=y`,
   `CONFIG_BACKLIGHT_CLASS_DEVICE=y`, and
   `CONFIG_DRM_PANEL_SAMSUNG_S6E3FA5=y`, while disabling the unreferenced
-  optional `QCOM_LLCC` and `QCOM_OCMEM` dependencies. Owner rebuild and
-  exact-value verification are still required.
+  optional `QCOM_LLCC` and `QCOM_OCMEM` dependencies.
+- The temporary initrd is legacy pmOS early userspace and is not a formal
+  rootfs solution; replace it with Buildroot's `rootfs.cpio.gz` for the
+  long-term boot path.
 - The binding and DTS require owner-run DT schema validation.
 - The existing pristine-only build script requires an approved separate build
   policy change or a documented patched-kernel invocation before it can build
@@ -168,10 +190,9 @@ None collected. USB COM logging must be enabled before the first owner-run boot.
 
 ## Next recommended step
 
-First obtain Integration approval for a patched-kernel build invocation without
-weakening the pristine-source guard in this task. Then enable the FA5 driver in
-the OnePlus 3 kernel configuration, build `msm8996-oneplus3.dtb`, and collect
-USB COM output. Validate in order: boot, DRM/MSM probe, DSI probe, S6E3FA5
-probe, prepare/enable, KMS connector/mode, then a dumb-buffer sequence of solid
-red, green, blue, white and black. Do not investigate GPU, Weston, Cog, or WPE
-until this DRM RGB milestone has evidence.
+The owner may test
+`artifacts/boot-oneplus3-fa5-linux72.img` with a non-persistent fastboot boot.
+Validate in order: boot, DRM/MSM probe, DSI probe, S6E3FA5 probe,
+prepare/enable, KMS connector/mode, then a dumb-buffer sequence of solid red,
+green, blue, white and black. Do not investigate GPU, Weston, Cog, or WPE until
+this DRM RGB milestone has evidence.
