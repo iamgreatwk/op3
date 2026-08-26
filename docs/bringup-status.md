@@ -2,7 +2,9 @@
 
 | Field | Current value |
 | --- | --- |
-| Active branch | `main` (no initial commit: Git identity still unset) |
+| Active branch | `bringup` |
+| Governance baseline commit | `b8ec809f5f97f9db9de5deaa3a4f75a200aa0659` |
+| Project remote | `https://github.com/iamgreatwk/op3.git` |
 | Current layer | Linux 7.2 clean-rebuild setup |
 | Previous PASS milestone | None |
 | Current hypothesis | Linux 7.2 upstream contains the OnePlus 3/MSM8996 DTS needed for the initial no-patch boot baseline. |

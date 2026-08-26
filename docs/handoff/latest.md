@@ -14,6 +14,7 @@ DEVICE: OnePlus 3 / MSM8996
 - Host tools and GCC 11 ARM64/ARM32 cross compilers have been verified.
 - `BASELINE.env` is the authoritative machine-readable baseline.
 - GitHub repository: `https://github.com/iamgreatwk/op3`.
+- Initial governance commit: `b8ec809f5f97f9db9de5deaa3a4f75a200aa0659`.
 - A pmOS 6.3.1 checkout exists only as ignored local legacy evidence under
   `source/linux-pmos-msm8996-6.3.1/`.
 - No kernel image has been built, packed, flashed, or booted in this project.
