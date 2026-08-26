@@ -1,0 +1,11 @@
+# Local build products and device evidence; retain them outside version control.
+/artifacts/
+/cache/
+/diag_archive/
+/out/
+/source/
+
+# Editor and temporary files.
+*.swp
+*.tmp
+*~
