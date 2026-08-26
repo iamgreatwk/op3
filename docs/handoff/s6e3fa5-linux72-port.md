@@ -146,6 +146,11 @@ None collected. USB COM logging must be enabled before the first owner-run boot.
 - The corrected fragment has been owner-built and verified to resolve
   `CONFIG_DRM=y`, `CONFIG_BACKLIGHT_CLASS_DEVICE=y`, and
   `CONFIG_DRM_PANEL_SAMSUNG_S6E3FA5=y`.
+- The baseline still resolves `CONFIG_DRM_MSM=m`. This panel task does not
+  change that choice, and the Image/DTB-only command did not build or install
+  modules. Before DRM probe testing, Integration must choose and document
+  either a module build/install path or a separately scoped built-in MSM DRM
+  configuration change.
 - The binding and DTS require owner-run DT schema validation.
 - The existing pristine-only build script requires an approved separate build
   policy change or a documented patched-kernel invocation before it can build
