@@ -187,19 +187,19 @@ depending on its old root selection.
 - `abootimg -i` verified header v0, 4096-byte pages, kernel address
   `0x80008000`, ramdisk address `0x81000000`, and tags address `0x80000100`.
 
-PASS for this A/B is that the device no longer returns to fastboot when the
-owner executes the same non-persistent `fastboot boot` procedure. FAIL means
-the failure is before this init executes (or otherwise independent of the old
-initrd); neither result by itself establishes panel output. No fastboot or
-device operation was executed by the agent.
+The owner executed the same non-persistent `fastboot boot` procedure. Sending
+and booting both returned `OKAY`, but the device again returned to fastboot.
+This A/B is **FAIL**: the failure is before this init executes (or otherwise
+independent of the old initrd). It does not establish panel output. No fastboot
+or device operation was executed by the agent.
 
 ## Device test result
 
-Not tested. The owner reported that the first boot image was accepted by
-fastboot (`Sending` and `Booting` both `OKAY`) but the device returned to
-fastboot. A second boot image with the minimal initramfs is ready for the next
-owner-run A/B. No OnePlus 3 DRM/MSM probe, DSI attach, panel prepare/enable,
-KMS, or dumb-buffer RGB result is claimed.
+The owner reported two `fastboot boot` attempts accepted by fastboot
+(`Sending` and `Booting` both `OKAY`) that returned to fastboot: the reference
+pmOS initrd image and the minimal-initramfs A/B image. No OnePlus 3 Linux boot,
+DRM/MSM probe, DSI attach, panel prepare/enable, KMS, or dumb-buffer RGB result
+is claimed.
 
 ## USB COM evidence
 
@@ -211,11 +211,10 @@ None collected. USB COM logging must be enabled before the first owner-run boot.
   `CONFIG_BACKLIGHT_CLASS_DEVICE=y`, and
   `CONFIG_DRM_PANEL_SAMSUNG_S6E3FA5=y`, while disabling the unreferenced
   optional `QCOM_LLCC` and `QCOM_OCMEM` dependencies.
-- The temporary initrd is legacy pmOS early userspace and is not a formal
-  rootfs solution; replace it with Buildroot's `rootfs.cpio.gz` for the
-  long-term boot path.
-- The minimal initramfs is diagnostic-only and intentionally has no shell,
-  storage mounts, or display userspace.
+- The old pmOS initrd is not the cause of the immediate return to fastboot:
+  the UUID-free minimal-initramfs A/B produced the same result.
+- The minimal initramfs remains diagnostic-only and is not a Buildroot/rootfs
+  replacement.
 - The binding and DTS require owner-run DT schema validation.
 - The existing pristine-only build script requires an approved separate build
   policy change or a documented patched-kernel invocation before it can build
@@ -225,9 +224,8 @@ None collected. USB COM logging must be enabled before the first owner-run boot.
 
 ## Next recommended step
 
-The owner may test
-`artifacts/boot-oneplus3-fa5-linux72-minimal-init.img` with the same
-non-persistent fastboot boot procedure. If it remains out of fastboot, record
-that result before replacing this diagnostic initramfs with Buildroot. If it
-still returns, investigate only early kernel/DTB boot evidence; do not change
-GPU, Weston, Cog, or WPE.
+Do not change the initrd, GPU, DRM, panel, or DTS on the basis of this result.
+The next scoped task is early-boot observability: obtain a kernel-visible log
+path (for example, a separately enabled USB gadget serial path) or equivalent
+early-boot evidence, then distinguish kernel entry, DTB unflattening, and
+initramfs execution before investigating display.
