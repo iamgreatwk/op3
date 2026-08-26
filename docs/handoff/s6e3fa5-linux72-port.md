@@ -13,6 +13,8 @@ runtime PM, clocks, regulators outside the panel consumer, or userspace.
 - Device: OnePlus 3 / MSM8996
 - Panel identity: owner confirmed S6E3FA5
 - Kernel work branch: `agent/implementation/s6e3fa5-linux72-port`
+- Kernel commit: `d73a640c6af7ad461bce8f54967c0abdf44d1204`
+- Config fragment: `kernel/configs/oneplus3-s6e3fa5.fragment`
 
 ## pmOS reference
 
@@ -37,6 +39,7 @@ The newer reference retains the FA5 command sequence and adds
 - `drivers/gpu/drm/panel/Kconfig`
 - `drivers/gpu/drm/panel/Makefile`
 - `arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi`
+- `kernel/configs/oneplus3-s6e3fa5.fragment`
 
 ## API adaptations
 
@@ -75,6 +78,26 @@ The unsupported legacy `disp-te-gpios` property was not carried forward.
 - Panel driver compile: not run; owner action required.
 - DTB compile / `dtbs_check`: not run; owner action required.
 - Kernel/Image build: not run; owner action required.
+
+## Owner manual build command
+
+The following command uses the current Linux 7.2 FA5 branch, applies only the
+tracked FA5 config fragment to an out-of-tree configuration, and builds only
+`Image.gz` plus `msm8996-oneplus3.dtb`:
+
+```bash
+project=/home/kai/src/oneplus3-mainline
+kernel="$project/source/linux-7.2"
+output="$project/out/linux-7.2-oneplus3-s6e3fa5"
+mkdir -p "$output" && \
+make -C "$kernel" O="$output" ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 defconfig && \
+"$kernel/scripts/kconfig/merge_config.sh" -m -O "$output" "$output/.config" "$project/kernel/configs/oneplus3-s6e3fa5.fragment" && \
+make -C "$kernel" O="$output" ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 olddefconfig && \
+make -C "$kernel" O="$output" ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 -j"$(nproc)" Image.gz arch/arm64/boot/dts/qcom/msm8996-oneplus3.dtb
+```
+
+It does not apply or modify DRM/MSM, GPU, runtime PM, or legacy patches. The
+agent did not execute this command.
 
 The current `scripts/build-kernel.sh` intentionally rejects any source commit
 other than pristine `8d3ae592...`; it will therefore reject this port branch.
