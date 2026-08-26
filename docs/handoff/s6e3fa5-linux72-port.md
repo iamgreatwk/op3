@@ -93,11 +93,17 @@ mkdir -p "$output" && \
 make -C "$kernel" O="$output" ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 defconfig && \
 "$kernel/scripts/kconfig/merge_config.sh" -m -O "$output" "$output/.config" "$project/kernel/configs/oneplus3-s6e3fa5.fragment" && \
 make -C "$kernel" O="$output" ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 olddefconfig && \
-make -C "$kernel" O="$output" ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 -j"$(nproc)" Image.gz arch/arm64/boot/dts/qcom/msm8996-oneplus3.dtb
+make -C "$kernel" O="$output" ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 -j"$(nproc)" Image.gz qcom/msm8996-oneplus3.dtb
 ```
 
 It does not apply or modify DRM/MSM, GPU, runtime PM, or legacy patches. The
 agent did not execute this command.
+
+The owner initially ran the command with
+`arch/arm64/boot/dts/qcom/msm8996-oneplus3.dtb`; Kbuild treated that as a
+relative DTB target and looked for the path twice, so the invocation failed
+before producing the requested targets. Use the `qcom/msm8996-oneplus3.dtb`
+target above to continue with the existing output directory.
 
 The current `scripts/build-kernel.sh` intentionally rejects any source commit
 other than pristine `8d3ae592...`; it will therefore reject this port branch.
