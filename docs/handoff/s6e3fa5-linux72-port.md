@@ -75,10 +75,14 @@ The unsupported legacy `disp-te-gpios` property was not carried forward.
 - DTB target: `msm8996-oneplus3.dtb`
 - Static checks: `git diff --check` clean; `checkpatch --strict` reports no
   errors (only the generic new-file MAINTAINERS advisory).
-- Initial panel-driver configuration/build: owner-run, but FA5 resolved to
-  module (`=m`); not accepted for built-in panel bring-up.
-- Initial DTB/Image build: owner-run; the artifacts below must be replaced
-  after rebuilding with the corrected fragment.
+- Owner-run build completed successfully with the corrected fragment.
+- Final configuration SHA256:
+  `2781083b97a74bff9d4ee8ac4a953a14f905b6717eebea82cac0b14ea4ddae58`
+- Final configuration confirms `CONFIG_DRM=y`,
+  `CONFIG_BACKLIGHT_CLASS_DEVICE=y`, and
+  `CONFIG_DRM_PANEL_SAMSUNG_S6E3FA5=y`.
+- Build log confirms `panel-samsung-s6e3fa5.o` was compiled and linked into
+  `drivers/gpu/drm/panel/built-in.a`.
 - `dtbs_check`: not run; owner action required.
 
 ## Owner manual build command
@@ -110,13 +114,12 @@ relative DTB target and looked for the path twice, so the invocation failed
 before producing the requested targets. Use the `qcom/msm8996-oneplus3.dtb`
 target above to continue with the existing output directory.
 
-The first two successful builds resolved `CONFIG_DRM_PANEL_SAMSUNG_S6E3FA5=m`.
+The first two owner-run builds resolved `CONFIG_DRM_PANEL_SAMSUNG_S6E3FA5=m`.
 The first was limited by `CONFIG_BACKLIGHT_CLASS_DEVICE=m`; the second had
 backlight built in, but the parent `CONFIG_DRM=m` still limited all panel
-drivers to modules. The fragment now also sets `CONFIG_DRM=y`. This is the
-minimal parent dependency required for FA5 itself to resolve to `=y`; it does
-not force `CONFIG_DRM_MSM` to a different value. Rerun the configuration and
-build command before using these artifacts; its exact-value checks must pass.
+drivers to modules. The final build set `CONFIG_DRM=y` as the minimal parent
+dependency and verified FA5 resolves to `=y`, without forcing
+`CONFIG_DRM_MSM` to a different value.
 
 The current `scripts/build-kernel.sh` intentionally rejects any source commit
 other than pristine `8d3ae592...`; it will therefore reject this port branch.
@@ -126,11 +129,8 @@ separate, scoped task before the owner builds this branch.
 
 ## Artifact SHA256
 
-- Initial `Image.gz`: `633eb8d63b2ebc00ad8b8adb2da06812d0fb8497a320c80e6958370759748347`
-- Initial `msm8996-oneplus3.dtb`: `87963b9340d437abb6bfe387e05327bcb24766e81d515df9513ce0da1a4eea45`
-
-These artifacts must not be used for panel testing because FA5 resolved as a
-module in that build.
+- `Image.gz`: `15800663cd23b842f492150edee46e702f04bf0d7107c522303780952001a23f`
+- `msm8996-oneplus3.dtb`: `87963b9340d437abb6bfe387e05327bcb24766e81d515df9513ce0da1a4eea45`
 
 ## Device test result
 
@@ -143,10 +143,9 @@ None collected. USB COM logging must be enabled before the first owner-run boot.
 
 ## Remaining issues
 
-- The corrected fragment requests `CONFIG_DRM=y`,
-  `CONFIG_BACKLIGHT_CLASS_DEVICE=y`, and
-  `CONFIG_DRM_PANEL_SAMSUNG_S6E3FA5=y`; the owner must rebuild and verify that
-  all three survive Kconfig resolution.
+- The corrected fragment has been owner-built and verified to resolve
+  `CONFIG_DRM=y`, `CONFIG_BACKLIGHT_CLASS_DEVICE=y`, and
+  `CONFIG_DRM_PANEL_SAMSUNG_S6E3FA5=y`.
 - The binding and DTS require owner-run DT schema validation.
 - The existing pristine-only build script requires an approved separate build
   policy change or a documented patched-kernel invocation before it can build
