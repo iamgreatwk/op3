@@ -19,4 +19,4 @@ Run `./scripts/agent-start.sh`, then read the assigned GitHub Issue. Confirm the
 
 Use `docs/templates/agent-handoff.md` in the Issue or pull request. A code change also requires an updated test report or a statement that no device test occurred.
 
-Detailed rules: `docs/collaboration-framework.md`.
+For every Codex subtask, start from `docs/templates/codex-subtask-prompt.md` and replace its bracketed fields. Detailed rules: `docs/collaboration-framework.md`.
