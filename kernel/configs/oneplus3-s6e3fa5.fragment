@@ -1,0 +1,2 @@
+# Samsung S6E3FA5 command-mode DSI panel (OnePlus 3)
+CONFIG_DRM_PANEL_SAMSUNG_S6E3FA5=y
