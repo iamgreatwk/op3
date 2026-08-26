@@ -51,6 +51,13 @@ Allowed deliverables:
 - Exact build/test commands for the project owner to run.
 - A local Git commit.
 
+Commit and checkpoint rules:
+- Commit every source/config/script change before asking the owner to build it.
+- Do not commit a repeated build attempt if files did not change.
+- Keep the same task for repeated build/fix cycles under the same hypothesis.
+- Before pausing for an owner build or closing the task, update and commit the handoff.
+- Commit only to the assigned agent branch. Push only with owner authorization.
+
 Completion record:
 Use every field from docs/templates/agent-handoff.md:
 - Task, role, baseline commit, working branch, commit SHA, and changed files.

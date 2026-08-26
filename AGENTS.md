@@ -11,6 +11,15 @@ This file is mandatory reading for every human or AI agent before making a chang
 5. Do not modify another agent's branch. Work only on `agent/<role>/<topic>` or the branch assigned in the GitHub Issue.
 6. No agent may declare a fix accepted. Only the Integration role may promote an evidence-backed result after the owner reports the OnePlus 3 test.
 
+## Commit and checkpoint rules
+
+1. Every source, configuration, or script change must be committed before the project owner builds it. The owner never builds uncommitted work.
+2. Create one commit per independently explainable change. Do not commit merely because a repeated build was attempted without changing files.
+3. A build failure followed by one minimal fix creates one new commit; the owner then builds that new commit. Repeat within the same task while the hypothesis remains the same.
+4. Before a task pauses for an owner-run build, or reaches a conclusion, update its handoff and commit the documentation.
+5. Agents commit only to their assigned `agent/*` or `test/*` branch. They do not commit directly to `main` or `bringup`.
+6. Push the assigned branch at a stable checkpoint (for example, ready for owner build or task conclusion) when the owner has authorized push. Never force-push a shared branch.
+
 ## Required startup sequence
 
 Run `./scripts/agent-start.sh`, then read the assigned GitHub Issue. Confirm the baseline commit, prior PASS milestone, active layer, sole hypothesis, sole variable, and PASS/FAIL condition. If one is missing, stop and request clarification rather than changing code.

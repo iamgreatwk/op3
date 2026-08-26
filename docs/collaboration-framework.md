@@ -62,6 +62,26 @@ GitHub Issue → assigned agent branch → scoped commit(s) → owner-run build 
 
 Every Issue must state baseline commit, layer, known-good milestone, hypothesis, only variable, expected PASS/FAIL, assigned roles, and required evidence.
 
+## Commit and build loop
+
+One task owns one hypothesis, not one build attempt. An owner-run build is
+always against a committed state:
+
+```text
+agent makes one minimal change → agent commits → owner builds that commit
+→ PASS or FAIL → agent analyzes result → next minimal commit only if needed
+```
+
+Do not create a commit for a repeated build with no file change. Do create a
+new commit for each independently explainable fix. Keep the same task through
+repeated build/fix cycles while the hypothesis and layer remain unchanged.
+Start a new task only when the layer or sole hypothesis changes, or when the
+current task has reached a stable PASS/FAIL/INCONCLUSIVE conclusion.
+
+At a stable checkpoint, the agent updates its handoff and commits it. An agent
+may push only its assigned `agent/*` or `test/*` branch and only with owner
+authorization. `main` and `bringup` remain Integration-controlled.
+
 ## Prohibited actions
 
 - Combining DTS, GPU, and userspace changes in one experiment.
