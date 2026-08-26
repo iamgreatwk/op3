@@ -75,9 +75,11 @@ The unsupported legacy `disp-te-gpios` property was not carried forward.
 - DTB target: `msm8996-oneplus3.dtb`
 - Static checks: `git diff --check` clean; `checkpatch --strict` reports no
   errors (only the generic new-file MAINTAINERS advisory).
-- Panel driver compile: not run; owner action required.
-- DTB compile / `dtbs_check`: not run; owner action required.
-- Kernel/Image build: not run; owner action required.
+- Initial panel-driver configuration/build: owner-run, but FA5 resolved to
+  module (`=m`); not accepted for built-in panel bring-up.
+- Initial DTB/Image build: owner-run; the artifacts below must be replaced
+  after rebuilding with the corrected fragment.
+- `dtbs_check`: not run; owner action required.
 
 ## Owner manual build command
 
@@ -105,6 +107,12 @@ relative DTB target and looked for the path twice, so the invocation failed
 before producing the requested targets. Use the `qcom/msm8996-oneplus3.dtb`
 target above to continue with the existing output directory.
 
+The first successful build resolved `CONFIG_DRM_PANEL_SAMSUNG_S6E3FA5=m`
+because `CONFIG_BACKLIGHT_CLASS_DEVICE=m` limited the panel to a module. The
+fragment now sets `CONFIG_BACKLIGHT_CLASS_DEVICE=y` as well as the FA5 symbol.
+Rerun the configuration and build command before using these artifacts, then
+confirm that both values in the regenerated `.config` are `=y`.
+
 The current `scripts/build-kernel.sh` intentionally rejects any source commit
 other than pristine `8d3ae592...`; it will therefore reject this port branch.
 Do not weaken that guard as part of this panel task. Integration must provide
@@ -113,7 +121,11 @@ separate, scoped task before the owner builds this branch.
 
 ## Artifact SHA256
 
-None. No artifact has been built.
+- Initial `Image.gz`: `633eb8d63b2ebc00ad8b8adb2da06812d0fb8497a320c80e6958370759748347`
+- Initial `msm8996-oneplus3.dtb`: `87963b9340d437abb6bfe387e05327bcb24766e81d515df9513ce0da1a4eea45`
+
+These artifacts must not be used for panel testing because FA5 resolved as a
+module in that build.
 
 ## Device test result
 
@@ -126,8 +138,9 @@ None collected. USB COM logging must be enabled before the first owner-run boot.
 
 ## Remaining issues
 
-- The owner must enable `CONFIG_DRM_PANEL_SAMSUNG_S6E3FA5` in the actual device
-  configuration (built-in is recommended for first panel bring-up).
+- The corrected fragment requests both `CONFIG_BACKLIGHT_CLASS_DEVICE=y` and
+  `CONFIG_DRM_PANEL_SAMSUNG_S6E3FA5=y`; the owner must rebuild and verify that
+  both survive Kconfig resolution.
 - The binding and DTS require owner-run DT schema validation.
 - The existing pristine-only build script requires an approved separate build
   policy change or a documented patched-kernel invocation before it can build
