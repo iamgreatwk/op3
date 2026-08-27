@@ -9,40 +9,31 @@ HOST TARGET: Ubuntu 26.04 LTS x86_64
 DEVICE: OnePlus 3 / MSM8996
 ```
 
-## Current state (2026-08-27)
+## Current state (2026-08-27) — ROOT CAUSE FOUND
 
-Linux 7.2 (and all mainline/msm8996 6.4+ kernels) return to fastboot on the
-OnePlus 3 with no early output (no ACM, empty ramoops, no UART). The project
-owner runs all builds/flashes; this agent prepares source, config, scripts,
-and records diagnostics.
+**mainline v6.4 + strict v74 full config + ported S6E3FA5 panel boots**
+(OP3-BOOT-028 PASS).
 
-### Established facts
+**Root cause of "all new kernels return to fastboot" = configuration
+completeness + panel driver, NOT kernel early-boot code.**
 
-1. **Packaging/boot profile/header are NOT the cause** (OP3-BOOT-003: the same
-   packer boots the known-good v100 payload).
-2. **panel compatible mismatch was 6.3.1's root cause** (`s6e3fa3`→`s6e3fa5`,
-   OP3-BOOT-019/020). 7.2 already uses `s6e3fa5`, so 7.2 has a separate issue.
-3. **Configuration is NOT the cause for 7.2**: VA_BITS=48, EFI off, full
-   built-in MSM8996 drivers all verified (OP3-BOOT-021/022), still fastboot.
-4. **soc@0 is NOT the cause**: mainline v6.4 (old-style `soc`) also fails
-   (OP3-BOOT-027). The break is in mainline **v6.3 → v6.4**.
+- 6.3.1 boots because of the **complete v74 config** (1748 =y items) + the
+  **S6E3FA5 panel driver**, not because of old-style `soc`.
+- New kernels (6.4/6.8/6.12/6.16/7.2) failed with hand-made fragments because
+  those fragments were incomplete (only ~20 QCOM items vs v74's 1748) and/or
+  the S6E3FA5 panel driver was absent.
 
-### Root-cause hypothesis (pending device confirmation)
+See `docs/handoff/root-cause-config-completeness.md`.
 
-`arch/arm64/mm/proc.S` `.idmap.text` section flags:
-- 6.3.1 (boots): `"awx"` (writable + executable)
-- 6.4+ / 7.2 (fail): `"a"` (read-only, non-executable) — security hardening in
-  mainline v6.4.
+## Next action (7.2)
 
-Hypothesis: idmap code runs pre-MMU/pre-relocation and writes data inside
-`.idmap.text`; the hardened `"a"` flags cause an early permission fault →
-watchdog reset → fastboot. 6.3.1's `"awx"` avoids it.
+1. Configure 7.2 with the **strict v74 config** (cp v74-full.config +
+   olddefconfig) — `source/linux-7.2` already has S6E3FA5 driver + panel DTS.
+2. Provide `extfw/ath10k/QCA6174/hw3.0/` firmware in `source/linux-7.2`.
+3. Compile, pack with the full initramfs, `fastboot boot`.
 
-See `docs/handoff/root-cause-idmap-text-section.md`.
+## Key artifacts
 
-## Next action (owner)
-
-In `source/linux-7.2/arch/arm64/mm/proc.S`, change the 3
-`.pushsection ".idmap.text", "a"` to `".idmap.text", "awx"` (matching 6.3.1),
-rebuild Image.gz + DTB, pack with the full initramfs, `fastboot boot`. If it
-leaves fastboot, the root cause is confirmed.
+- 6.4 strict config: `kernel/configs/pmos631/v64-v74strict-full.config`
+- 6.4 bootable image: `artifacts/boot-oneplus3-mainline-64-v74strict-fa5.img`
+- Panel driver source: `source/linux-mainline-6.4/drivers/gpu/drm/panel/panel-samsung-s6e3fa5.c`
