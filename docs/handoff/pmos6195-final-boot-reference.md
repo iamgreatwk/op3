@@ -35,7 +35,14 @@ the v6.19.5 msm8996-oneplus3.dts is deliberately not modified: its compiled
 DTB is not used in this cross test. The fragment makes the matched FA5 driver
 built-in so no 6.3.1 module is needed.
 
-Build run by project owner: NOT_RUN
+Build run by project owner: PASS, 2026-08-27. Built with the configured
+`aarch64-linux-gnu-gcc-11` command and packed without an error.
+Artifact:
+- `artifacts/boot-oneplus3-pmos6195-fa5-final-companions.img`
+- SHA256: `a71a4dab7bdf24c81e7e9047702b54d09feb86df2835fd6f54424ac1e6943c5a`
+- Android boot v0; page size 4096; kernel `0x80008000`; ramdisk
+  `0x81000000`; tags `0x80000100`
+- actual cmdline: `fbcon=nodefault console=tty0 pmos.debug-shell`
 Device test run by project owner: NOT_RUN
-Conclusion: NOT_RUN
+Conclusion: Build/PACK PASS; boot result pending owner test.
 ```
