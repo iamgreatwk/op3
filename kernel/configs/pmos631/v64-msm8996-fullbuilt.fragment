@@ -1,0 +1,39 @@
+# Linux 6.4 (mainline, last 'soc' old-style node) MSM8996 boot test.
+# Goal: verify that the old-style 'soc' DTS node (last version = 6.4) boots,
+# isolating the soc@0 refactor (introduced in 6.5) as the fastboot cause.
+# v6.4 has NO s6e3fa5 panel driver, so no CONFIG_DRM_PANEL_SAMSUNG_S6E3FA5.
+
+# --- ARM64 boot defaults ---
+CONFIG_ARM64_VA_BITS_48=y
+# CONFIG_ARM64_VA_BITS_52 is not set
+# CONFIG_EFI is not set
+
+# --- Display stack built-in ---
+# DRM_MSM depends on QCOM_OCMEM; disable it (OnePlus 3 DTS does not use it).
+CONFIG_QCOM_OCMEM=n
+CONFIG_QCOM_LLCC=n
+CONFIG_DRM=y
+CONFIG_DRM_MSM=y
+CONFIG_BACKLIGHT_CLASS_DEVICE=y
+
+# --- Clocks / watchdog / reset ---
+CONFIG_MSM_MMCC_8996=y
+CONFIG_QCOM_WDT=y
+
+# --- UFS / USB PHYs ---
+CONFIG_SCSI_UFS_QCOM=y
+CONFIG_PHY_QCOM_QMP=y
+CONFIG_PHY_QCOM_QMP_UFS=y
+CONFIG_PHY_QCOM_QMP_USB=y
+CONFIG_PHY_QCOM_QUSB2=y
+CONFIG_PHY_QCOM_USB_HS=y
+
+# --- RTC ---
+CONFIG_RTC_DRV_PM8XXX=y
+
+# --- Remoteproc built-in (mirror v74) ---
+CONFIG_QCOM_RPROC_COMMON=y
+CONFIG_QCOM_Q6V5_COMMON=y
+CONFIG_QCOM_Q6V5_ADSP=y
+CONFIG_QCOM_Q6V5_PAS=y
+CONFIG_QCOM_PIL_INFO=y
