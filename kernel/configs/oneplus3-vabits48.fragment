@@ -1,0 +1,15 @@
+# Force ARM64 48-bit VA/PA for the ARMv8.0 MSM8996 (Cortex-A53/A72) CPU.
+#
+# Linux v7.2 upstream defaults the arm64 virtual-address size to 52-bit
+# (CONFIG_ARM64_VA_BITS_52), which requires the ARMv8.2 LVA/LPA2 features
+# that the OnePlus 3 CPU does not implement.  In the primary-boot path the
+# alternatives machinery has not been applied yet, so __cpu_setup() executes
+# the unpatched instruction sequence and unconditionally writes
+# TCR_EL1.T1SZ = 12 (52-bit) plus 52-bit IPS.  On ARMv8.0 that TCR value is
+# architecturally reserved, the MMU faults immediately, and LK resets the
+# device back to fastboot.
+#
+# The known-good pmOS 6.3.1 configuration sets CONFIG_ARM64_VA_BITS_48=y and
+# its Kconfig does not offer 52-bit with 4K pages, which is why it boots.
+CONFIG_ARM64_VA_BITS_48=y
+# CONFIG_ARM64_VA_BITS_52 is not set
