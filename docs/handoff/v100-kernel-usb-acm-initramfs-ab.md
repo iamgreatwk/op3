@@ -35,13 +35,24 @@ Artifacts and SHA256:
   `0x80008000`, ramdisk address `0x81000000`, tags address `0x80000100`,
   and the UUID-free cmdline.
 
-Device test run by project owner: NOT_RUN
-Device result: NOT_RUN
-Evidence links / log paths: owner must retain `fastboot boot` output and check
-the host for `/dev/ttyACM*` and the diagnostic banner.
+Device test run by project owner: `fastboot boot` only; no flash
+Device result: FAIL for the expected USB-ACM diagnostic observation. The phone
+left fastboot but remained black-screened, and the owner observed no new
+`/dev/ttyACM*` device or diagnostic banner.
 
-Conclusion: INCONCLUSIVE pending owner-run device test
-Uncertainties: A missing ACM device can still mean a Type-C role/UDC failure;
-it does not alone prove that the v100 kernel failed before PID 1.
-Recommended next experiment: owner boots the generated artifact and checks
-for an ACM device and banner. Do not flash.
+Evidence: host `dmesg` pasted on 2026-08-27 is retained at
+`/home/kai/.codex/attachments/712615e3-4a30-429f-9ab6-daaadaab914b/pasted-text.txt`.
+It contains an earlier `1d6b:0104` CDC-ACM/RNDIS enumeration with no product
+strings, consistent with the known full v100 userspace boot. The later test
+events are repeated `18d1:d00d` Android fastboot enumerations; the log contains
+no identifiable enumeration from this ACM-only diagnostic image. The earlier
+ACM/RNDIS event must not be treated as evidence that this A/B passed.
+
+Conclusion: FAIL for the expected host-visible ACM diagnostic endpoint; overall
+kernel-entry/PID-1 state remains INCONCLUSIVE. A missing ACM endpoint may occur
+before PID 1, in the diagnostic initramfs, or while binding the USB gadget/UDC;
+it does not prove a Linux 7.2 DRM, GPU, PM, or panel failure.
+Recommended next experiment: a new, initramfs-only v100-payload A/B that
+reproduces v100's proven configfs shape (RNDIS plus ACM and its descriptors),
+while still mounting no root filesystem and reusing no pmOS root UUID. Do not
+change kernel, DTS, boot-header parameters, DRM/MSM, GPU, PM, or flash storage.
