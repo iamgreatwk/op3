@@ -43,6 +43,12 @@ Artifact:
 - Android boot v0; page size 4096; kernel `0x80008000`; ramdisk
   `0x81000000`; tags `0x80000100`
 - actual cmdline: `fbcon=nodefault console=tty0 pmos.debug-shell`
-Device test run by project owner: NOT_RUN
-Conclusion: Build/PACK PASS; boot result pending owner test.
+Device test run by project owner: 2026-08-27
+Device result: FAIL. Owner reports `fastboot boot` returned/remained in
+fastboot; no Linux/display PASS is claimed.
+Conclusion: REJECTED as a booting intermediate reference. With the final FA5
+DTB and complete final initramfs fixed, the v6.19.5 reference Image.gz has the
+same observed early-boot failure as Linux 7.2. The remaining differentiator is
+therefore within the known-good 6.3.1 kernel/configuration/startup chain or
+the unavailable early diagnostic evidence; this does not identify a patch.
 ```
