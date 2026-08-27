@@ -6,7 +6,7 @@ Role: Implementation agent
 Baseline commit: d73a640c6af7ad461bce8f54967c0abdf44d1204 (Linux v7.2-3-gd73a640c6)
 Working branch: agent/implementation/s6e3fa5-linux72-port
 Changed files: docs/handoff/linux72-v56-dtb-ab.md; docs/test-matrix.md
-Artifact-definition commit: pending
+Artifact-definition commit: e6e38d79d1d870c5fce17c29e8ef9b19d9666a5b
 
 Layer: Boot / early boot kernel-versus-DTB isolation
 Hypothesis tested: The actual v56 DTB (not the newer v100 DTB) provides a
