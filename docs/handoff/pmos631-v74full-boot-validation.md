@@ -79,3 +79,28 @@ v74 配置设了 `CONFIG_EXTRA_FIRMWARE="ath10k/QCA6174/hw3.0/firmware-6.bin ath
 
 - **离开 fastboot（哪怕黑屏）** → 证明"完整配置 + 完整 initramfs（含固件）"是启动关键，问题不在内核代码。下一步把 v74 的完整配置思路（全内置关键驱动 + 固件）移植到 7.2。
 - **仍卡 fastboot** → 指向 6.3.1 源码与 Image-v74 的代码级差异，需逐行审计 head.S/proc.S/早期 C 初始化。
+
+## 实测结果（2026-08-27）—— 根因定位到项目编译的 DTB
+
+- **OP3-BOOT-018**：项目 6.3.1 Image + v74 完整配置 + **项目编译的 DTB** + v100 完整 initramfs → **卡 fastboot**（FAIL）
+- **OP3-BOOT-019**：完全相同的 Image/配置/initramfs，仅 DTB 换成 **v100 的 DTB** → **能启动**（PASS）
+
+**结论：根因在"项目编译的 DTB"，不在内核 Image、不在 v74 配置、不在 initramfs/固件。**
+
+DTB 对比（反编译）：
+- 项目 DTB `73383` 字节 vs v100 DTB `74540` 字节
+- memory / chosen / reserved-memory 节点完全一致
+- 差异集中在：项目多 `div1-clk`（`gpio-gate-clock`，来自
+  `msm8996-oneplus-common.dtsi`）、音频/按键/触摸节点、以及因此导致的
+  phandle 编号重排
+- 音频/按键节点差异本身不应导致早期挂死，phandle 重排后引用完整性待确认
+
+**下一步（7.2 移植）**：既然项目 6.3.1 内核 Image 本身能启动（配 v100 DTB），
+说明项目内核源码的早期启动是好的。真正的障碍在 OnePlus 3 的 DTS/DTB。
+对 Linux 7.2 而言：
+1. 逐行对比项目 `msm8996-oneplus-common.dtsi` / `msm8996-oneplus3.dts`
+   与 v100 DTB 反编译，找出导致挂死的具体节点（优先排查 `div1-clk` /
+   `gpio-gate-clock` 及其 phandle 引用）；
+2. 确认 7.2 的 OnePlus 3 DTS 是否也含类似问题节点；
+3. 若 `div1-clk` 是问题，将其从 OnePlus 3 的 DTS 移除或改为与 v100 一致。
+
