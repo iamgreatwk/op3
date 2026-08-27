@@ -6,7 +6,7 @@ Role: Implementation agent
 Baseline commit: d73a640c6af7ad461bce8f54967c0abdf44d1204 (Linux v7.2-3-gd73a640c6)
 Working branch: agent/implementation/s6e3fa5-linux72-port
 Changed files: docs/handoff/linux72-v100-dtb-ab.md; docs/test-matrix.md
-Artifact-definition commit: pending
+Artifact-definition commit: 2c395613e0085a37660aac0b48e2a93e8520d16d
 
 Layer: Boot / early boot kernel-versus-DTB isolation
 Hypothesis tested: The Linux 7.2 DTB, rather than the Linux 7.2 Image.gz,
