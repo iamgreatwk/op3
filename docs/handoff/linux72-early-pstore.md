@@ -6,7 +6,7 @@ Role: Implementation agent
 Baseline commit: d73a640c6af7ad461bce8f54967c0abdf44d1204 (Linux v7.2-3-gd73a640c6)
 Working branch: agent/implementation/s6e3fa5-linux72-port
 Changed files: kernel/configs/oneplus3-early-pstore.fragment; docs/handoff/linux72-early-pstore.md; docs/test-matrix.md
-Commit SHA: pending
+Configuration commit: e58bad1d51d82e4d9842340ebf4f4cd4e524fe7e
 
 Layer: Kernel configuration / early-boot observability
 Hypothesis tested: Linux 7.2 fails after ramoops can initialize, and its console
