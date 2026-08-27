@@ -25,8 +25,10 @@ Evidence for the change:
 - The known-good v100 kernel has `CONFIG_PSTORE_RAM=y` and
   `CONFIG_PSTORE_CONSOLE=y`.
 
-Build run by project owner: NOT_RUN
-Build result: NOT_RUN
+Build run by project owner: RUN
+Build result: PASS. The owner built the pstore diagnostic output; its final
+`.config` contains `CONFIG_PSTORE=y`, `CONFIG_PSTORE_RAM=y`, and
+`CONFIG_PSTORE_CONSOLE=y`.
 Required config fragments, in this order:
 1. `kernel/configs/oneplus3-s6e3fa5.fragment`
 2. `kernel/configs/oneplus3-early-pstore.fragment`
@@ -53,13 +55,21 @@ make -C "$kernel" O="$output" ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=aar
   -j"$(nproc)" Image.gz qcom/msm8996-oneplus3.dtb
 ```
 
-Device test run by project owner: NOT_RUN
-Device result: NOT_RUN
+Test image: `artifacts/boot-oneplus3-fa5-linux72-pstore.img`, SHA256
+`dff99c7f0fd244068825a851d36163b36a27a4e7a69506a5eb266143973aee0b`.
+The matching Image.gz SHA256 is
+`532f710146b7b7529ec36dddb0d577378094255cc19d993f37c216c299dfb8b9`.
+
+Device test run by project owner: `fastboot boot` only; no flash
+Device result: FAIL for boot. The device still returned to fastboot mode.
 Evidence collection after the failed Linux 7.2 `fastboot boot`: boot the known
 working v100 image, then on the device run:
 `mount -t pstore pstore /sys/fs/pstore 2>/dev/null || true; ls -al /sys/fs/pstore; cat /sys/fs/pstore/console-ramoops-* /sys/fs/pstore/dmesg-ramoops-* 2>/dev/null`
 
-Conclusion: INCONCLUSIVE pending owner build and device test.
+Conclusion: INCONCLUSIVE for failure location pending the required pstore
+collection. The build and fastboot test prove the diagnostic configuration is
+present, but no conclusion may be drawn until retained records are read after
+booting v100.
 Uncertainties: ramoops can only capture execution after the Linux kernel maps
 the reserved-memory node. An earlier bootloader/decompressor failure produces
 no pstore record. The v100 boot must not erase the preserved region before the
