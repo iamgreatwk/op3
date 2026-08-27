@@ -10,7 +10,7 @@ Working branch: agent/implementation/s6e3fa5-linux72-port
 Changed files:
 - docs/test-matrix.md
 - docs/handoff/pmos631-defconfig-final-boot-reference.md
-Commit SHA: PENDING
+Commit SHA: 4d94dae621fa153040d37caacbb43c0f9dc5b3ab
 
 Reference source:
 - source/linux-pmos-msm8996-6.3.1
