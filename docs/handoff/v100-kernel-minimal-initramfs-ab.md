@@ -33,16 +33,20 @@ Artifacts and SHA256:
   and the UUID-free cmdline.
 
 Device test run by project owner: `fastboot boot` of the cross-A/B artifact
-Device result: PASS — owner reported that the device skipped/left fastboot mode.
+Device result: INCONCLUSIVE — owner reported that the device skipped/left
+fastboot mode but remained black-screened; no Linux login, USB service, serial
+log, or display result was observed.
 Evidence links / log paths: owner report in this task; no fastboot terminal
 capture or serial/USB log was supplied.
 
-Conclusion: SUPPORTED — the UUID-free minimal initramfs and default boot
-profile do not by themselves cause the return-to-fastboot result.  Relative to
-OP3-BOOT-002, the remaining changed unit is the Linux 7.2 kernel/DTB payload.
-Uncertainties: With no UART or USB gadget evidence, a non-fastboot result only
-establishes that the v100 boot path remains alive; it does not prove minimal
-PID 1 execution.
+Conclusion: INCONCLUSIVE — the UUID-free minimal initramfs and default boot
+profile do not reproduce the immediate-return-to-fastboot symptom when paired
+with v100, but the black screen provides no evidence that PID 1 ran. Relative
+to OP3-BOOT-002, the remaining changed unit is the Linux 7.2 kernel/DTB
+payload.
+Uncertainties: With no UART or USB gadget evidence, the black-screen,
+non-fastboot state does not establish kernel entry, initramfs unpacking, or
+minimal PID 1 execution.
 Recommended next experiment: retain the same boot profile and minimal initramfs
 and investigate one Linux 7.2 kernel/DTB early-boot prerequisite at a time.
 Do not restore the old rootfs, alter offsets, or change GPU/PM/DRM.
