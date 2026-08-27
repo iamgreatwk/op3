@@ -40,13 +40,16 @@ reference and are deliberately omitted. This initramfs contains legacy 6.3.1
 modules, so a Linux 7.2 module or USB-gadget result is not an acceptance
 criterion for this A/B.
 
-Device test run by project owner: NOT_RUN
-Device result: NOT_RUN
-Evidence links / log paths: owner should retain `fastboot boot` output and
-report fastboot return versus visible pmOS debug-shell/display behaviour.
+Device test run by project owner: 2026-08-27
+Device result: FAIL. Owner reports `fastboot boot` still returned/remained in
+fastboot; no visible pmOS debug-shell/display behaviour.
+Evidence links / log paths: owner report, 2026-08-27.
 
-Conclusion: INCONCLUSIVE pending owner-run test.
+Conclusion: REJECTED. Replacing only the previously tested v56 ramdisk with
+the complete final initramfs did not change the Linux 7.2 outcome.
 Uncertainties: This is a transient boot binary A/B, not a proposal to adopt
 the legacy initramfs, DTB, root UUIDs, or legacy kernel behaviour.
-Recommended next experiment: owner runs only `fastboot boot` of the output.
+Recommended next experiment: inspect the Linux 7.2 Image.gz / ARM64-Qcom
+early-boot configuration and code path without modifying DTS, DRM, GPU, or
+legacy patches.
 ```

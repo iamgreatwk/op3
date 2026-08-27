@@ -42,13 +42,16 @@ The reference DTB identifies `model = "OnePlus 3"` and compatibles
 `oneplus,oneplus3`, `qcom,msm8996`. The source image's old pmOS boot/root UUIDs
 were examined only as legacy reference and are deliberately omitted.
 
-Device test run by project owner: NOT_RUN
-Device result: NOT_RUN
-Evidence links / log paths: owner should retain `fastboot boot` output and
-report fastboot return versus visible pmOS debug-shell/display behaviour.
+Device test run by project owner: 2026-08-27
+Device result: FAIL. Owner reports `fastboot boot` still returned/remained in
+fastboot; no visible pmOS debug-shell/display behaviour.
+Evidence links / log paths: owner report, 2026-08-27.
 
-Conclusion: INCONCLUSIVE pending owner-run test.
+Conclusion: REJECTED. The historical final DTB plus complete final initramfs
+did not change the Linux 7.2 outcome.
 Uncertainties: Both DTB and initramfs are legacy evidence only. They must not
 be copied into Linux 7.2 DTS or used as a permanent rootfs/boot design.
-Recommended next experiment: owner runs only `fastboot boot` of the output.
+Recommended next experiment: inspect the Linux 7.2 Image.gz / ARM64-Qcom
+early-boot configuration and code path without modifying DTS, DRM, GPU, or
+legacy patches.
 ```
