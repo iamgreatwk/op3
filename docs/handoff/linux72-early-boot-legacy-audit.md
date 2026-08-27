@@ -45,13 +45,12 @@ Other dirty linux-fa5 changes:
 Early-boot configuration differences worth auditing, not importing:
 - Both configurations build ARM64, ARCH_QCOM, 4K pages, initrd gzip support,
   DRM/MSM, S6E3FA5, pstore RAM/console, and CONFIG_SERIAL_MSM built-in.
-- Known-display 6.3.1 uses ARM64_VA_BITS=48, QCOM_WDT=y, and
-  QCOM_RPROC_COMMON=y.
-- current Linux 7.2 pstore build uses ARM64_VA_BITS=52, QCOM_WDT=m, and
+- Known-display 6.3.1 uses ARM64_VA_BITS=48 and QCOM_RPROC_COMMON=y.
+- current Linux 7.2 pstore build uses ARM64_VA_BITS=52 and
   QCOM_RPROC_COMMON=m.
 - These are hypotheses only; no causal evidence supports changing any of
-  them yet. In particular, no Qcom watchdog node was found in the examined
-  OnePlus 3 DTBs, so changing QCOM_WDT alone is not currently justified.
+  them yet. QCOM_WDT is explicitly excluded: the owner confirms it was added
+  for a later browser-build context, not the minimum boot path.
 
 Build run by project owner: NOT_RUN
 Device test run by project owner: NOT_RUN
