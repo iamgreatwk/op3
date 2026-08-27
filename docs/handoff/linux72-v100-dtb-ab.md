@@ -27,19 +27,19 @@ Artifacts and SHA256:
   ramdisk `0x81000000`; tags `0x80000100`
 - actual cmdline: `fbcon=nodefault console=tty0 pmos.debug-shell`
 
-Device test run by project owner: NOT_RUN
-Device result: NOT_RUN
-Evidence links / log paths: owner should retain `fastboot boot` output and
-record whether it returns to fastboot or reaches the v56 debug-shell display.
+Device test run by project owner: `fastboot boot` only; no flash
+Device result: FAIL. The device remained/returned to fastboot mode; no
+debug-shell display was observed.
+Evidence links / log paths: owner report, 2026-08-27.
 
-Conclusion: INCONCLUSIVE pending owner-run device test.
+Conclusion: REJECTED. The known-good v100 DTB does not change the Linux 7.2
+boot result when paired with the same Linux 7.2 Image.gz and v56 initramfs.
 Uncertainties: The v100 DTB is legacy evidence only. It is intentionally used
 as a transient binary diagnostic input and must not be copied into Linux 7.2 or
 treated as an acceptable final DTS. USB remains outside this experiment's
 acceptance condition.
-Recommended next experiment: owner performs only `fastboot boot` of this image.
-If it still returns to fastboot, the evidence strongly moves the next diagnosis
-to the Linux 7.2 Image.gz/configuration layer; if it reaches debug shell, audit
-the DTB difference narrowly from the Linux 7.2 upstream DTS baseline. Do not
-flash or modify DRM/MSM, GPU, PM, or legacy DTS wholesale.
+Recommended next experiment: diagnose the Linux 7.2 Image.gz/configuration
+layer using a separate, explicitly scoped early-boot observation mechanism.
+Do not repeat DTB or initramfs substitutions, flash, or modify DRM/MSM, GPU,
+PM, or legacy DTS wholesale.
 ```
