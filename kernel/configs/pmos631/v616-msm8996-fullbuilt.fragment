@@ -1,0 +1,49 @@
+# Linux 6.16.0-rc2 (latest) MSM8996 OnePlus 3 boot configuration.
+#
+# The bootable pmOS 6.3.1 v74 config builds every early-boot-critical driver
+# in-kernel (=y).  The 6.16 defconfig leaves them modules (=m).  Because the
+# diagnostic initramfs carries no matching 6.16 modules, any module-only
+# early-critical driver is never loaded and early bring-up stalls (returns to
+# fastboot).  Force them built-in to mirror v74.
+#
+# Also fix the two ARM64 defaults that break ARMv8.0 MSM8996 boot:
+#  - VA_BITS 52 -> 48
+#  - EFI-stub on -> off (plain non-EFI ARM64 Image)
+# Panel s6e3fa5 is set directly in arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts.
+
+# --- ARM64 boot defaults ---
+CONFIG_ARM64_VA_BITS_48=y
+# CONFIG_ARM64_VA_BITS_52 is not set
+# CONFIG_EFI is not set
+
+# --- Display stack built-in ---
+CONFIG_DRM=y
+CONFIG_DRM_MSM=y
+CONFIG_DRM_PANEL_SAMSUNG_S6E3FA5=y
+CONFIG_BACKLIGHT_CLASS_DEVICE=y
+CONFIG_BACKLIGHT_QCOM_WLED=y
+
+# --- Clocks / watchdog / reset ---
+CONFIG_MSM_MMCC_8996=y
+CONFIG_QCOM_WDT=y
+CONFIG_RESET_QCOM_PDC=y
+
+# --- UFS / USB PHYs ---
+CONFIG_SCSI_UFS_QCOM=y
+CONFIG_PHY_QCOM_QMP=y
+CONFIG_PHY_QCOM_QMP_UFS=y
+CONFIG_PHY_QCOM_QMP_USB=y
+CONFIG_PHY_QCOM_QUSB2=y
+CONFIG_PHY_QCOM_USB_HS=y
+
+# --- RTC ---
+CONFIG_RTC_DRV_PM8XXX=y
+
+# --- Remoteproc (ADSP/SLPI firmware) built-in, matching v74 ---
+CONFIG_QCOM_RPROC_COMMON=y
+CONFIG_QCOM_Q6V5_COMMON=y
+CONFIG_QCOM_Q6V5_ADSP=y
+CONFIG_QCOM_Q6V5_PAS=y
+CONFIG_QCOM_PIL_INFO=y
+
+# ATH10K stays =m (铁律 #2: built-in hangs early probe)
