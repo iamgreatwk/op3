@@ -32,15 +32,17 @@ Artifacts and SHA256:
   `0x80008000`, ramdisk address `0x81000000`, tags address `0x80000100`,
   and the UUID-free cmdline.
 
-Device test run by project owner: NOT_RUN
-Device result: NOT_RUN
-Evidence links / log paths: owner must record whether the device returns to
-fastboot after `fastboot boot`.
+Device test run by project owner: `fastboot boot` of the cross-A/B artifact
+Device result: PASS — owner reported that the device skipped/left fastboot mode.
+Evidence links / log paths: owner report in this task; no fastboot terminal
+capture or serial/USB log was supplied.
 
-Conclusion: INCONCLUSIVE pending owner-run device test
+Conclusion: SUPPORTED — the UUID-free minimal initramfs and default boot
+profile do not by themselves cause the return-to-fastboot result.  Relative to
+OP3-BOOT-002, the remaining changed unit is the Linux 7.2 kernel/DTB payload.
 Uncertainties: With no UART or USB gadget evidence, a non-fastboot result only
-establishes that the boot path remains alive; it does not prove minimal PID 1
-execution.
-Recommended next experiment: owner runs the generated artifact by `fastboot boot`
-only. PASS is no immediate return to fastboot; FAIL is the same fastboot result
-as OP3-BOOT-002.
+establishes that the v100 boot path remains alive; it does not prove minimal
+PID 1 execution.
+Recommended next experiment: retain the same boot profile and minimal initramfs
+and investigate one Linux 7.2 kernel/DTB early-boot prerequisite at a time.
+Do not restore the old rootfs, alter offsets, or change GPU/PM/DRM.
