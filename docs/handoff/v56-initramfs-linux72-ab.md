@@ -31,12 +31,14 @@ Artifacts and SHA256:
   ramdisk `0x81000000`; tags `0x80000100`
 - actual cmdline: `fbcon=nodefault console=tty0 pmos.debug-shell`
 
-Device test run by project owner: NOT_RUN
-Device result: NOT_RUN
-Evidence links / log paths: owner should retain the `fastboot boot` output and
-record whether the pmOS splash/debug-shell framebuffer becomes visible.
+Device test run by project owner: `fastboot boot` only; no flash
+Device result: FAIL. The device returned to fastboot mode; no pmOS splash or
+debug-shell framebuffer was observed.
+Evidence links / log paths: owner report, 2026-08-27.
 
-Conclusion: INCONCLUSIVE pending owner-run device test.
+Conclusion: REJECTED. Replacing the minimal diagnostic ramdisk with the
+substantially fuller v56 pmOS initramfs did not let Linux 7.2 reach a visible
+debug-shell userspace.
 Uncertainties: This legacy initramfs includes 6.3.1 modules, so they are not
 compatible with Linux 7.2 and must not be treated as 7.2 dependencies. In
 particular, 7.2 currently has `CONFIG_USB_CONFIGFS=m`; the v56 `libcomposite`
@@ -45,8 +47,9 @@ not a PASS condition for this A/B. The v56 initramfs also normally knows the
 old pmOS root UUID, but this image's command line deliberately omits every
 `pmos_boot_uuid`, `pmos_root_uuid`, and rootfs option. `pmos.debug-shell`
 should stop before rootfs handoff.
-Recommended next experiment: owner runs only `fastboot boot` on the output and
-reports the exact screen state. Do not flash. If the screen remains black, do
-not alter GPU/DRM/PM; first make a separate initramfs-only experiment that
-uses Linux 7.2-compatible built-in USB gadget support or a screen marker.
+Recommended next experiment: do not make another ramdisk-only variation.
+The unchanged failing variable across OP3-BOOT-001, OP3-BOOT-002, and this
+test is the Linux 7.2 kernel/DTB payload. Diagnose that layer using an
+independent early-boot observation path; do not alter GPU/DRM/PM merely in
+response to a fastboot return.
 ```
