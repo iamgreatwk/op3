@@ -62,19 +62,20 @@ The matching Image.gz SHA256 is
 
 Device test run by project owner: `fastboot boot` only; no flash
 Device result: FAIL for boot. The device still returned to fastboot mode.
-Evidence collection after the failed Linux 7.2 `fastboot boot`: boot the known
-working v100 image, then on the device run:
-`mount -t pstore pstore /sys/fs/pstore 2>/dev/null || true; ls -al /sys/fs/pstore; cat /sys/fs/pstore/console-ramoops-* /sys/fs/pstore/dmesg-ramoops-* 2>/dev/null`
+Evidence collection after the failed Linux 7.2 `fastboot boot`: owner booted
+the known-working v100 image and mounted `/sys/fs/pstore` on 2026-08-27. The
+directory was empty; no `console-ramoops-*` or `dmesg-ramoops-*` record was
+present.
 
-Conclusion: INCONCLUSIVE for failure location pending the required pstore
-collection. The build and fastboot test prove the diagnostic configuration is
-present, but no conclusion may be drawn until retained records are read after
-booting v100.
+Conclusion: INCONCLUSIVE for exact failure location. The build and fastboot
+test prove the diagnostic configuration is present, while the empty ramoops
+area proves no pstore-visible panic/console record survived the failure. The
+failure is therefore either before ramoops initializes or a reset/hang path
+that does not flush persistent logs.
 Uncertainties: ramoops can only capture execution after the Linux kernel maps
 the reserved-memory node. An earlier bootloader/decompressor failure produces
-no pstore record. The v100 boot must not erase the preserved region before the
-owner collects it.
-Recommended next experiment: owner builds only this config delta, packages it
-with the existing Linux 7.2 DTB and v56 debug initramfs, runs `fastboot boot`,
-then boots v100 and retrieves pstore before any further Linux 7.2 attempt.
+no pstore record; a hard reset/hang can also leave it empty.
+Recommended next experiment: do not infer a legacy 6.3.1 patch from this
+result. Obtain a physical MSM8996 UART trace before changing a kernel
+subsystem; USB ACM cannot establish before the current failure point.
 ```
