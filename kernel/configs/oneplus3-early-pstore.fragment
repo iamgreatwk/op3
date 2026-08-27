@@ -1,0 +1,5 @@
+# OnePlus 3 early-boot crash persistence diagnostic.
+# The upstream OnePlus 3 DTB already reserves ramoops@ac000000.  Keep the
+# backend built in so a panic/reset before initramfs module loading is retained.
+CONFIG_PSTORE_RAM=y
+CONFIG_PSTORE_CONSOLE=y
