@@ -5,3 +5,7 @@ CONFIG_DRM=y
 CONFIG_DRM_MSM=y
 CONFIG_BACKLIGHT_CLASS_DEVICE=y
 CONFIG_DRM_PANEL_SAMSUNG_S6E3FA5=y
+# The 6.19.5 defconfig makes both optional services modules, which caps
+# DRM_MSM at =m. MSM8996 OnePlus 3 does not reference either service in DTS.
+CONFIG_QCOM_LLCC=n
+CONFIG_QCOM_OCMEM=n

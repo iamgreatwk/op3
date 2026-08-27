@@ -23,6 +23,8 @@ not a Linux 7.2 change and must not be merged into the Linux 7.2 path.
 
 Kernel-side variable: v6.19.5 kernel Image.gz with the display stack built-in:
 DRM, DRM_MSM, BACKLIGHT_CLASS_DEVICE, and S6E3FA5 are `=y`.
+QCOM_LLCC and QCOM_OCMEM are explicitly disabled because their defconfig `=m`
+state caps DRM_MSM at `=m`; the OnePlus 3 MSM8996 DTS does not reference them.
 Boot companions fixed:
 - final FA5 DTB: artifacts/reference-final-msm8996-oneplus3.dtb
 - final complete initramfs: artifacts/reference-initrd-final.img
