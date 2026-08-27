@@ -1,0 +1,51 @@
+# Linux 6.12 (msm8996-stable-6.12.y) MSM8996 OnePlus 3 boot configuration.
+# Same method as the bootable 6.3.1 v74: force early-boot-critical drivers
+# built-in (=y), VA_BITS=48, EFI off, panel s6e3fa5 (in DTS).
+
+# --- ARM64 boot defaults ---
+CONFIG_ARM64_VA_BITS_48=y
+# CONFIG_ARM64_VA_BITS_52 is not set
+# CONFIG_EFI is not set
+
+# --- Display stack built-in ---
+# DRM_MSM depends on QCOM_LLCC/QCOM_OCMEM; disable them (OnePlus 3 DTS does
+# not use them) so DRM_MSM can be =y.
+CONFIG_QCOM_LLCC=n
+CONFIG_QCOM_OCMEM=n
+CONFIG_DRM=y
+CONFIG_DRM_MSM=y
+CONFIG_DRM_PANEL_SAMSUNG_S6E3FA5=y
+CONFIG_BACKLIGHT_CLASS_DEVICE=y
+CONFIG_BACKLIGHT_QCOM_WLED=y
+
+# --- Clocks / watchdog / reset ---
+CONFIG_MSM_MMCC_8996=y
+CONFIG_QCOM_WDT=y
+CONFIG_RESET_QCOM_PDC=y
+
+# --- UFS / USB PHYs ---
+CONFIG_SCSI_UFS_QCOM=y
+CONFIG_PHY_QCOM_QMP=y
+CONFIG_PHY_QCOM_QMP_COMBO=y
+CONFIG_PHY_QCOM_QMP_PCIE=y
+CONFIG_PHY_QCOM_QMP_PCIE_8996=y
+CONFIG_PHY_QCOM_QMP_UFS=y
+CONFIG_PHY_QCOM_QMP_USB=y
+CONFIG_PHY_QCOM_QUSB2=y
+CONFIG_PHY_QCOM_USB_HS=y
+CONFIG_PHY_QCOM_USB_SNPS_FEMTO_V2=y
+CONFIG_PHY_QCOM_USB_SS=y
+
+# --- RTC ---
+CONFIG_RTC_DRV_PM8XXX=y
+
+# --- Remoteproc (ADSP/SLPI firmware) built-in ---
+CONFIG_RPMSG_QCOM_GLINK_SMEM=y
+CONFIG_QCOM_SYSMON=y
+CONFIG_QCOM_RPROC_COMMON=y
+CONFIG_QCOM_Q6V5_COMMON=y
+CONFIG_QCOM_Q6V5_ADSP=y
+CONFIG_QCOM_Q6V5_PAS=y
+CONFIG_QCOM_PIL_INFO=y
+
+# ATH10K stays =m (铁律 #2)
