@@ -1,0 +1,9 @@
+# Linux 6.19.5 MSM8996 boot fixes, mirroring the 7.2 diagnosis:
+# 1) VA_BITS must be 48 (6.19.5 default is 52, ARMv8.0 MSM8996 cannot use it).
+# 2) EFI/EFI-stub must be off so the Image is a plain ARM64 image (no "MZ" PE
+#    stub) that the non-UEFI MSM8996 LK bootloader can boot.
+# The panel fix (s6e3fa3 -> s6e3fa5) is applied directly in
+# arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts.
+CONFIG_ARM64_VA_BITS_48=y
+# CONFIG_ARM64_VA_BITS_52 is not set
+# CONFIG_EFI is not set
