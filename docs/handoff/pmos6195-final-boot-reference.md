@@ -10,7 +10,7 @@ Working branch: agent/implementation/s6e3fa5-linux72-port
 Changed files:
 - kernel/configs/pmos-msm8996-v6195-fa5-reference.fragment
 - docs/handoff/pmos6195-final-boot-reference.md
-Commit SHA: PENDING
+Commit SHA: 9227022fbc36517df3797f76eb7aa8e8e816f098
 
 Reference source (not an implementation target):
 - source/linux-pmos-msm8996-v6.19.5
