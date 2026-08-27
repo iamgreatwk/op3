@@ -6,7 +6,7 @@ Role: Implementation agent
 Baseline commit: d73a640c6af7ad461bce8f54967c0abdf44d1204 (Linux v7.2-3-gd73a640c6)
 Working branch: agent/implementation/s6e3fa5-linux72-port
 Changed files: docs/handoff/linux72-final-dtb-final-initramfs.md; docs/test-matrix.md
-Artifact-definition commit: PENDING
+Artifact-definition commit: 046a623135e2a0145debcf275898698d8a297253
 
 Layer: Boot / early boot historical boot companion cross test
 Hypothesis tested: Linux 7.2 can enter a different early-boot state when used
