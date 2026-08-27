@@ -1,0 +1,7 @@
+# Reference-only Linux 6.19.5 MSM8996 boot test for OnePlus 3 with FA5 DTB.
+# Keep the display stack built-in: the reused pmOS initramfs has only 6.3.1
+# modules and must not supply the Linux 6.19.5 panel or MSM DRM drivers.
+CONFIG_DRM=y
+CONFIG_DRM_MSM=y
+CONFIG_BACKLIGHT_CLASS_DEVICE=y
+CONFIG_DRM_PANEL_SAMSUNG_S6E3FA5=y
