@@ -25,12 +25,22 @@ CONFIG_RESET_QCOM_PDC=y
 CONFIG_QCOM_SPMI_TEMP_ALARM=y
 CONFIG_QCOM_COINCELL=y
 
-# NOTE: The ADSP/SLPI remoteproc drivers (QCOM_RPROC_COMMON, QCOM_Q6V5_*,
-# QCOM_PIL_INFO) are intentionally left as modules.  Their probe depends on
-# loading firmware files (e.g. adsp.mbn, slpi.mbn) that the diagnostic
-# initramfs does not carry; forcing them built-in could hang probe when the
-# firmware is absent.  The bootable v74 carries those firmware files in its
-# full initramfs, which our minimal initramfs does not.
+# --- Remoteproc: ADSP/SLPI firmware loading ---
+# v74 (bootable 6.3.1) has these built-in. Linux 7.2 leaves them modules.
+# They are now forced built-in to mirror v74 exactly.  NOTE: built-in probe
+# requires the firmware files (adsp.mbn/slpi.mbn/mba.mbn) present in the
+# initramfs; therefore this fragment MUST be tested with the v100 full
+# initramfs (artifacts/reference-initrd.img), NOT the minimal/ACM initramfs.
+CONFIG_QCOM_RPROC_COMMON=y
+CONFIG_QCOM_Q6V5_COMMON=y
+CONFIG_QCOM_Q6V5_ADSP=y
+CONFIG_QCOM_Q6V5_PAS=y
+CONFIG_QCOM_PIL_INFO=y
+CONFIG_QCOM_SYSMON=y
+CONFIG_QCOM_PDR_HELPERS=y
+CONFIG_QCOM_QMI_HELPERS=y
+CONFIG_QCOM_STATS=y
+CONFIG_QCOM_APR=y
 
 # --- PHYs: UFS / USB (early storage/USB bring-up) ---
 CONFIG_PHY_QCOM_QMP=y
