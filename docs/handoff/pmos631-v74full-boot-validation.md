@@ -36,9 +36,9 @@ project=/home/kai/src/oneplus3-mainline
 kernel="$project/source/linux-pmos-msm8996-6.3.1"
 output="$project/out/pmos-msm8996-6.3.1-v74full"
 
+# 先把完整 v74 配置复制为 out 的 .config，再 olddefconfig（不能把 .config 当 make 目标传）
 mkdir -p "$output" && \
-make -C "$kernel" O="$output" ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
-  "$project/kernel/configs/pmos631/v74-full.config" && \
+cp "$project/kernel/configs/pmos631/v74-full.config" "$output/.config" && \
 make -C "$kernel" O="$output" ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 olddefconfig && \
 grep -qx 'CONFIG_DRM_PANEL_SAMSUNG_S6E3FA5=y' "$output/.config" && \
 grep -qx 'CONFIG_SCSI_UFS_QCOM=y' "$output/.config" && \
@@ -48,6 +48,20 @@ grep -qx 'CONFIG_ATH10K=m' "$output/.config" && \
 make -C "$kernel" O="$output" ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
   -j"$(nproc)" Image.gz qcom/msm8996-oneplus3.dtb
 ```
+
+## 构建前置：提供 CONFIG_EXTRA_FIRMWARE 需要的固件
+
+v74 配置设了 `CONFIG_EXTRA_FIRMWARE="ath10k/QCA6174/hw3.0/firmware-6.bin ath10k/QCA6174/hw3.0/board-2.bin"`
+和 `CONFIG_EXTRA_FIRMWARE_DIR="extfw"`，要求这两个 ATH10K 固件被直接编进内核。
+内核 make 会在源码树 `extfw/` 下找它们。项目 6.3.1 源码树最初没有 `extfw/`，导致
+`drivers/base/firmware_loader/builtin` 编译失败（"没有规则可制作目标 .../extfw/ath10k/.../firmware-6.bin"）。
+
+已从 `artifacts/v100-reference-initrd.img` 提取这两个固件到：
+`source/linux-pmos-msm8996-6.3.1/extfw/ath10k/QCA6174/hw3.0/`
+- `board-2.bin`  (SHA256 `66e83dde...`)
+- `firmware-6.bin` (SHA256 `04d3bad5...`)
+
+> 注意：这两个固件是构建输入，不随内核源码提交；若重新检出源码树需重新放置。
 
 ## 打包（用含全部固件的完整 initramfs）
 
