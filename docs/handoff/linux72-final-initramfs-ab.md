@@ -6,7 +6,7 @@ Role: Implementation agent
 Baseline commit: d73a640c6af7ad461bce8f54967c0abdf44d1204 (Linux v7.2-3-gd73a640c6)
 Working branch: agent/implementation/s6e3fa5-linux72-port
 Changed files: docs/handoff/linux72-final-initramfs-ab.md; docs/test-matrix.md
-Artifact-definition commit: PENDING
+Artifact-definition commit: ab6b96e167089ecaa851ce2919e9f8cd3632d25b
 
 Layer: Boot / early boot initramfs isolation
 Hypothesis tested: The complete, gzip-valid early pmOS initramfs from the
