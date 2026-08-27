@@ -6,7 +6,7 @@ Role: Implementation agent
 Baseline commit: d73a640c6af7ad461bce8f54967c0abdf44d1204 (Linux v7.2-3-gd73a640c6)
 Working branch: agent/implementation/s6e3fa5-linux72-port
 Changed files: docs/handoff/v56-initramfs-linux72-ab.md; docs/test-matrix.md
-Commit SHA: pending
+Artifact-definition commit: e861fba7777f885d7cfbd419dca9f4966b0a9dba
 
 Layer: Boot / early boot userspace observability
 Hypothesis tested: Linux 7.2 reaches the known pmOS v56 debug-shell userspace
