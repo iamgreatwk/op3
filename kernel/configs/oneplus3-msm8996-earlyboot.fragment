@@ -1,0 +1,54 @@
+# MSM8996 early-boot-critical drivers as built-in.
+#
+# The known-good pmOS 6.3.1 v74 configuration (extracted from Image-v74 via
+# IKCONFIG) sets nearly every MSM8996 platform driver to =y.  Linux 7.2's
+# defconfig leaves the same drivers as modules (=m).  The OnePlus 3 diagnostic
+# initramfs carries only a static /init and NO kernel modules, so any driver
+# left as a module is never loaded.  Several of these are probed early during
+# platform bring-up (display/mmcc clocks, ADSP remoteproc firmware loading,
+# UFS/USB PHYs, watchdog); leaving them unloaded stalls early init and the
+# device returns to fastboot before any output.
+#
+# Keep every early-boot-relevant MSM8996 platform driver built-in.  This
+# mirrors the bootable v74 layout while staying a single-layer configuration
+# change on the Linux 7.2 tree.
+
+# --- Clocks / display: multimedia clock controller (DTS: mdss/mmss references) ---
+# Note: CONFIG_QCOM_RPMCC does not exist in Linux 7.2; the MSM8996 RPM clock
+# controller (qcom,rpmcc-msm8996) is served by CONFIG_QCOM_CLK_SMD_RPM, which
+# is already =y.
+CONFIG_MSM_MMCC_8996=y
+
+# --- Watchdog / reset / SPMI ---
+CONFIG_QCOM_WDT=y
+CONFIG_RESET_QCOM_PDC=y
+CONFIG_QCOM_SPMI_TEMP_ALARM=y
+CONFIG_QCOM_COINCELL=y
+
+# NOTE: The ADSP/SLPI remoteproc drivers (QCOM_RPROC_COMMON, QCOM_Q6V5_*,
+# QCOM_PIL_INFO) are intentionally left as modules.  Their probe depends on
+# loading firmware files (e.g. adsp.mbn, slpi.mbn) that the diagnostic
+# initramfs does not carry; forcing them built-in could hang probe when the
+# firmware is absent.  The bootable v74 carries those firmware files in its
+# full initramfs, which our minimal initramfs does not.
+
+# --- PHYs: UFS / USB (early storage/USB bring-up) ---
+CONFIG_PHY_QCOM_QMP=y
+CONFIG_PHY_QCOM_QMP_COMBO=y
+CONFIG_PHY_QCOM_QMP_PCIE=y
+CONFIG_PHY_QCOM_QMP_PCIE_8996=y
+CONFIG_PHY_QCOM_QMP_UFS=y
+CONFIG_PHY_QCOM_QMP_USB=y
+CONFIG_PHY_QCOM_QUSB2=y
+CONFIG_PHY_QCOM_USB_HS=y
+CONFIG_PHY_QCOM_USB_SNPS_FEMTO_V2=y
+CONFIG_PHY_QCOM_USB_SS=y
+
+# --- RTC / misc ---
+CONFIG_RTC_DRV_PM8XXX=y
+CONFIG_BACKLIGHT_QCOM_WLED=y
+
+# --- Haptics / input (optional but built-in in the bootable v74) ---
+CONFIG_INPUT_QCOM_SPMI_HAPTICS=y
+CONFIG_INPUT_GPIO_VIBRA=y
+CONFIG_INPUT_PWM_VIBRA=y
