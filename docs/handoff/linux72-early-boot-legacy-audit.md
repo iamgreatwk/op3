@@ -23,6 +23,20 @@ Reference trees:
 - linux-fa5 is dirty. Its existing built vmlinux identifies itself as
   Linux 6.3.1-msm8996+ #15, built 2026-08-20 with GCC 11.4.0.
 
+Additional newer pmOS/MSM8996 reference (2026-08-27):
+- Remote discovery shows the highest `*-msm8996` tag as `v6.19.5-msm8996`.
+- A depth-1, read-only reference checkout is available at
+  source/linux-pmos-msm8996-v6.19.5, commit
+  `1aed438cb5f49d7a61593f764d4a82f83b14114f` (2025-03-07), with Makefile
+  version Linux 6.19.5.
+- The default remote branch `msm8996-staging` is currently Linux 6.16-rc2;
+  it is not the highest version and is not the selected comparison reference.
+- The v6.19.5 tree contains the S6E3FA5 panel driver, but its standard
+  msm8996-oneplus3.dts still selects `samsung,s6e3fa3`. It therefore does
+  not replace the device-specific FA5 compatible delta already applied to
+  Linux 7.2. Its S6E3FA5 driver differs from Linux 7.2 and must be audited
+  before any code is considered; no code was copied.
+
 Display-relevant result:
 - panel-samsung-s6e3fa5.c is byte-identical in the two 6.3.1 trees
   (SHA256 b3cd1eb1d07911793a245c8a5973ca5b38e3d30729d80ade38ef1743806c17e2).
@@ -57,6 +71,7 @@ Device test run by project owner: NOT_RUN
 Conclusion: The known-display linux-fa5 source confirms the FA5 DTS compatible
 already ported to Linux 7.2, but does not identify a new display or boot patch.
 Recommended next experiment: a source-only 7.2 ARM64/Qcom early-boot audit
-that selects exactly one evidence-backed configuration or code hypothesis;
+using the 6.19.5 tree as an intermediate reference, then selecting exactly
+one evidence-backed configuration or code hypothesis;
 do not modify DRM/MSM, GPU, panel, audio, PM, or legacy DTS wholesale.
 ```
