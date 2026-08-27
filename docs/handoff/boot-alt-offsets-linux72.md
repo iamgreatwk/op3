@@ -36,10 +36,10 @@ Artifacts and SHA256:
   `0x80008000`, ramdisk address `0x82200000`, tags address `0x82000000`,
   and the unchanged UUID-free cmdline.
 
-Device test run by project owner: NOT_RUN
-Device result: NOT_RUN
-Evidence links / log paths: owner must retain `fastboot boot` output and report whether the phone remains outside fastboot after a normal wait.
+Device test run by project owner: `fastboot boot` of the alternative-offset artifact
+Device result: FAIL — owner reported that the device again remained/returned in fastboot mode.
+Evidence links / log paths: owner report in this task; no fastboot terminal capture was supplied.
 
-Conclusion: INCONCLUSIVE pending owner-run device test
+Conclusion: REJECTED — changing only to the alternative address-layout profile did not permit the Linux 7.2 minimal-initramfs image to boot.
 Uncertainties: This profile contradicts the known-good v100 physical header, which uses `0x81000000` and `0x80000100`; this is therefore a low-probability, explicit A/B rather than a proposed default.
-Recommended next experiment: owner runs the generated alternative-offset artifact by `fastboot boot` only. PASS means it does not immediately return to fastboot; FAIL means it returns to fastboot as OP3-BOOT-002 did.
+Recommended next experiment: do not make further boot-profile address changes. Stay at the Boot / early-boot layer and design one observable Linux 7.2 kernel-entry experiment with a single non-address variable.
