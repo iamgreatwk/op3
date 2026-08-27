@@ -1,0 +1,19 @@
+# Disable the ARM64 EFI/EFI-stub so the generated Image is a plain, non-EFI
+# ARM64 kernel image (no "MZ" PE stub, entry_offset 0), matching the layout
+# of the known-good pmOS 6.3.1 v74/v100 images that the OnePlus 3 LK
+# bootloader successfully boots.
+#
+# Linux v7.2 upstream defaults CONFIG_EFI=y ("UEFI runtime support", see
+# arch/arm64/Kconfig), which selects EFI_STUB and EFI_GENERIC_STUB and turns
+# the built Image into an EFI application (starts with the "MZ" PE header and
+# entry_offset = 0x4000).  The OnePlus 3 MSM8996 has no UEFI firmware; its LK
+# bootloader boots a plain ARM64 Image (entry_offset = 0).  Booting the
+# EFI-stub Image from the wrong entry point fails before any kernel output,
+# which is observed as an immediate return to fastboot.
+#
+# The known-good pmOS 6.3.1 images have "# CONFIG_EFI is not set", hence the
+# same non-EFI plain Image format.
+#
+# This is applied together with oneplus3-vabits48.fragment so the A/B keeps
+# every other variable identical to OP3-BOOT-015.
+# CONFIG_EFI is not set
