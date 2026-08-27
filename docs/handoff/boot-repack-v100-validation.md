@@ -5,7 +5,7 @@ Role: Implementation agent
 Baseline commit: `93faefcfb46027aac357cc795897222efa69d6d5`
 Working branch: `agent/implementation/s6e3fa5-linux72-port`
 Changed files: `docs/handoff/boot-repack-v100-validation.md`
-Commit SHA: pending
+Commit SHA: `47b5d04f93695bf2d13230ae351700decc23a89a` (test-ready checkpoint)
 
 Layer: Boot / early boot
 Hypothesis tested: The existing `scripts/pack-boot.sh` can reproduce the bootloader-relevant container layout of the known-good v100 image. If the owner can `fastboot boot` the repacked image, the Linux 7.2 immediate-return failure is not explained by the current packer's header, appended-DTB, or ramdisk placement.
@@ -42,16 +42,10 @@ Build run by project owner: NOT_RUN (this task performs no compilation)
 Build result: NOT_RUN
 Artifacts and SHA256: listed above
 
-Device test run by project owner: NOT_RUN
-Device result: NOT_RUN
-Evidence links / log paths: owner must record the `fastboot boot` output and whether the existing v100 system reaches its known USB/SSH behavior.
+Device test run by project owner: `fastboot boot` of the repacked artifact
+Device result: PASS — owner reported that the device entered the known v100 system.
+Evidence links / log paths: owner report in this task; no fastboot terminal capture was supplied.
 
-Conclusion: INCONCLUSIVE pending owner-run device test
-Uncertainties: The v100 payload is legacy evidence and cannot prove Linux 7.2 kernel entry. A PASS only rules out the current packer as the explanation for the Linux 7.2 failure.
-Recommended next experiment: owner runs exactly:
-
-```sh
-fastboot boot /home/kai/src/oneplus3-mainline/artifacts/boot-oneplus3-fa5-v100-repacked.img
-```
-
-Do not flash. If it reaches the known v100 USB/SSH behavior, record PASS and continue Linux 7.2 investigation at early kernel entry; if it returns to fastboot, preserve the fastboot output and investigate a packer/container difference before changing Linux 7.2.
+Conclusion: SUPPORTED — the current packer produces a OnePlus 3-bootable container when supplied with the known-good v100 kernel payload, DTB, ramdisk, and cmdline. The Linux 7.2 return-to-fastboot failure is therefore not explained by this packer's header fields, appended-DTB placement, or ramdisk placement.
+Uncertainties: This legacy-reference PASS does not prove Linux 7.2 kernel entry or identify its early-boot failure point.
+Recommended next experiment: remain at the Boot / early-boot layer and design one new observable Linux 7.2 kernel-entry experiment. Do not change the packer, boot profile, GPU, PM, DRM/MSM, panel, or rootfs based on this result.
