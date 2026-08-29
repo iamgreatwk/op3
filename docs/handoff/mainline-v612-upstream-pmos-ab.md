@@ -428,4 +428,9 @@ commit `a953d272118c02ad1f420f414a0d6ccedfd4bef2` atop that midpoint. No
 regulator, DTS, DSI, GPU, PM, cmdline, or initramfs source change is made.
 All test inputs outside `Image.gz` remain fixed.
 
-At this checkpoint: **NOT_BUILT, NOT_PACKED, NOT_DEVICE_TESTED**.
+### Midpoint 1 result (owner report)
+
+The owner built, packed, and boot-tested the midpoint-1 control. The device
+returned to **fastboot mode**: **FAIL**. The valid bisection range is now
+`v6.19` PASS → `0de6219fd74440199fb0bfc6ce02bb8bdb8e9466` FAIL, containing
+707 candidates. Recompute the next midpoint from this reduced graph.
