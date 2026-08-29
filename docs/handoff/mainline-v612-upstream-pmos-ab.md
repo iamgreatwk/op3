@@ -469,3 +469,12 @@ NOT_PACKED, NOT_DEVICE_TESTED**.
 
 The owner reports a **fastboot-mode FAIL** for midpoint 3. Active bounds:
 `v6.19` PASS → `68010e7b3daf0c2cf91eccb329703e82d1ef5aff` FAIL.
+
+## Commit-level bisection — midpoint 4
+
+Git selected `b3acb158ea1a2c9deb1bbff8360001a6a179dc9b` from the 191-commit
+range (95/94 split). Test worktree
+`source/linux-mainline-v619-rc1-mid4`, branch
+`agent/implementation/v619-rc1-mid4-fa5-control`, adds only FA5 support
+commit `44f1312c4e18aa47c7986de921617811a5a7b777`. At this checkpoint:
+**NOT_BUILT, NOT_PACKED, NOT_DEVICE_TESTED**.
