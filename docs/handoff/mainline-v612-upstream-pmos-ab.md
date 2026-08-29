@@ -153,3 +153,26 @@ No source port was attempted: the candidate requires changes in
 `drivers/gpu/drm/msm/dsi/`, an area explicitly outside the panel-only task
 scope. It must be separately authorized and forward-ported semantically, not
 blindly copied from pmOS.
+
+## Authorized v6.12.1 DSI test checkpoint
+
+The owner subsequently authorized a standalone DSI-only control test on
+official stable v6.12.1. The test branch is
+`agent/implementation/mainline-v6121-dsi-pm-ab` in
+`source/linux-mainline-6.12.1`; its tip is
+`548b0dc49481bf0c4d6fe63cec76b0e516ec3f91`:
+
+```text
+drm/msm/dsi: apply pmOS runtime PM sequencing for v6.12.1 test
+```
+
+It carries only the four files from pmOS commit `51f8b001ac1b` applied against
+its exact upstream parent (`v6.12.1`), in addition to the already committed
+FA5 driver/DTS test support. No GPU, SMMU, regulator framework, clock
+framework, DTS, cmdline, or initramfs change is included in this checkpoint.
+
+At this handoff update: **NOT_BUILT, NOT_PACKED, NOT_DEVICE_TESTED**. The
+owner build must use the existing v6.12 resolved config, then pack the new
+`Image.gz` with the fixed v74 FA5 DTB and complete reference initramfs. The
+sole test hypothesis is that DSI runtime-PM/PHY/host sequencing changes the
+pure-upstream v6.12.1 black-screen result to a visible boot.
