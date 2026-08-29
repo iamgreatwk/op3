@@ -176,3 +176,23 @@ owner build must use the existing v6.12 resolved config, then pack the new
 `Image.gz` with the fixed v74 FA5 DTB and complete reference initramfs. The
 sole test hypothesis is that DSI runtime-PM/PHY/host sequencing changes the
 pure-upstream v6.12.1 black-screen result to a visible boot.
+
+### Result (owner report)
+
+The owner built and packed this exact branch, then reported successful boot to
+the `recovery.c` program. This is a **PASS** for the DSI sequencing hypothesis:
+the prior pure-upstream v6.12.1 image with all the same control inputs was
+black, while only the four DSI files changed here reach recovery.
+
+| Item | Value |
+| --- | --- |
+| `Image.gz` SHA256 | `ecd6698bd27b8ae3327566f463658be94e05831c706dd057fb99a0ee0272fe71` |
+| boot image | `artifacts/boot-oneplus3-mainline-6121-dsi-pm-v74dtb-full-initrd.img` |
+| boot image SHA256 | `87bcc4ba5fe76768d8a0b310d68ecde07c2aa2ee0f63fde4c79ebc6abbf65f19` |
+| header / cmdline | v0, 4096-byte pages; `fbcon=nodefault console=tty0 pmos.debug-shell` |
+| device result | PASS — owner reached `recovery.c` |
+
+This validates the v6.12.1 control experiment only. It does **not** by itself
+accept a Linux 7.2 port: the same intent must be forward-ported against Linux
+7.2 DSI APIs in a separate reviewed change, then independently built and
+tested.
