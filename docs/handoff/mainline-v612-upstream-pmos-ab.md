@@ -319,6 +319,23 @@ cmdline. This test's single changing variable is v7.0 Image.gz.
 The owner built and packed the exact v7.0 control with the specified fixed
 inputs. `fastboot boot` returned the device to **fastboot mode**: **FAIL**.
 The reproducible bounds are now `v6.19.5` PASS → `v7.0` FAIL. Do not test
-v7.1 yet; the next test must be the midpoint commit of this exact upstream
-range, retaining the same v74 DTB, initramfs, cmdline, strict config, and FA5
-driver port.
+v7.1 yet. The next release-candidate midpoint is `v7.0-rc4`, retaining the
+same v74 DTB, initramfs, cmdline, strict config, and FA5 driver port. (The
+existing shallow clone cannot yet walk the whole v6.19.5..v7.0 commit graph;
+the RC tags provide a reproducible first bisection layer.)
+
+## v7.0 release-candidate binary-search control
+
+Official upstream `v7.0-rc4` (`f338e77383789c0cae23ca3d48adcc5e9e137e3c`)
+is the midpoint of rc1..rc7. Test tree
+`source/linux-mainline-7.0-rc4`, branch
+`agent/implementation/mainline-v70-rc4-fa5-control`, carries commit
+`380fd8584571636d626ae464bb868648ebb595ac`. It adds only the same FA5 panel
+driver, Kconfig entry, and Makefile entry as the v6.19.5/v7.0 controls.
+
+All non-kernel inputs remain fixed. Result routing:
+
+- rc4 PASS → test rc6.
+- rc4 FAIL → test rc2.
+
+At this checkpoint: **NOT_BUILT, NOT_PACKED, NOT_DEVICE_TESTED**.
