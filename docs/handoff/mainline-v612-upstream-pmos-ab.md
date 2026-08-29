@@ -338,4 +338,8 @@ All non-kernel inputs remain fixed. Result routing:
 - rc4 PASS → test rc6.
 - rc4 FAIL → test rc2.
 
-At this checkpoint: **NOT_BUILT, NOT_PACKED, NOT_DEVICE_TESTED**.
+### v7.0-rc4 result (owner report)
+
+The owner built, packed, and boot-tested the exact rc4 control. The device
+returned to **fastboot mode**: **FAIL**. The active bounds are now
+`v6.19.5` PASS → `v7.0-rc4` FAIL; the next test is `v7.0-rc2`.
