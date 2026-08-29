@@ -433,4 +433,16 @@ All test inputs outside `Image.gz` remain fixed.
 The owner built, packed, and boot-tested the midpoint-1 control. The device
 returned to **fastboot mode**: **FAIL**. The valid bisection range is now
 `v6.19` PASS → `0de6219fd74440199fb0bfc6ce02bb8bdb8e9466` FAIL, containing
-707 candidates. Recompute the next midpoint from this reduced graph.
+699 reachable candidates. (The preceding 707 figure was Git's initial
+split-score, not the count reachable from the new bad endpoint.) Recompute
+the next midpoint from this reduced graph.
+
+## Commit-level bisection — midpoint 2
+
+Git selected midpoint
+`d4a292c5f8e65d2784b703c67179f4f7d0c7846c`, a DRM merge tag, from the
+reduced range. Test worktree `source/linux-mainline-v619-rc1-mid2`, branch
+`agent/implementation/v619-rc1-mid2-fa5-control`, has only FA5 support commit
+`7d2db181f2a9ab991646d8b569ab85152d6c14be` atop that midpoint. Non-kernel
+test inputs remain fixed. At this checkpoint: **NOT_BUILT, NOT_PACKED,
+NOT_DEVICE_TESTED**.
