@@ -263,3 +263,19 @@ hold the strict v74 config, v74 FA5 DTB, complete reference initramfs, and
 standard cmdline fixed. Its only variable is upstream v6.19.5 Image.gz plus
 the required FA5 panel driver. At this checkpoint it is **NOT_BUILT,
 NOT_PACKED, NOT_DEVICE_TESTED**.
+
+### Build result (owner report)
+
+Build completed successfully with the existing strict v74 config after the
+new source tree linked its untracked `extfw` path to the project firmware
+cache. This is required by `CONFIG_EXTRA_FIRMWARE_DIR="extfw"`; the linked
+QCA6174 firmware matches the existing project cache by SHA256 and adds no
+kernel source change.
+
+| Item | Value |
+| --- | --- |
+| Image.gz | `out/linux-mainline-6.19.5-v74strict-fa5-control/arch/arm64/boot/Image.gz` |
+| Image.gz SHA256 | `8596f56dfc41ef8ff8ec461730b7b8316fb8878b7ca4343663e7568aa7708ab4` |
+| Image.gz size | 12,590,621 bytes |
+| build result | PASS |
+| pack / device result | NOT_YET_RUN |
