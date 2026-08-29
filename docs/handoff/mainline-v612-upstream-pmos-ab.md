@@ -239,3 +239,27 @@ display, GPU, PM, DTS, cmdline, or initramfs change to this image. The next
 falsifiable work item is a read-only comparison of the Linux 7.2 Image/boot
 entry properties against a known booting pmOS image, before retrying any 7.2
 runtime change.
+
+## Authorized upstream v6.19.5 control
+
+To avoid drawing a Linux 7.2 conclusion from v6.12.1 alone, the owner
+authorized a separate upstream v6.19.5 control. A fresh, detached clone of
+official stable `v6.19.5` at
+`c89ce241c1909d2c2bdde88334c33f3000d364fb` was placed at
+`source/linux-mainline-6.19.5` and switched to branch
+`agent/implementation/mainline-v6195-fa5-control`.
+
+Commit `c58b847e6b6b37d0ee91e2099eb10674fe4ddcab` adds only the current FA5
+panel driver plus its panel Kconfig/Makefile entries. The fixed v74 DTB
+already supplies the compatible node, so this test deliberately changes no
+DTS file. The driver is the current Linux 7.2 implementation, including
+`prepare_prev_first`, and its APIs exist in v6.19.5.
+
+Read-only audit confirms that pure v6.19.5 does **not** contain the pmOS DSI
+runtime-PM/PHY implementation (`phy_lock`, `dsi_mgr_power_on()`, and the
+autosuspend setup), whereas the known-booting pmOS v6.19.5 tree does. The
+first v6.19.5 build/test must nevertheless remain a pure-upstream control:
+hold the strict v74 config, v74 FA5 DTB, complete reference initramfs, and
+standard cmdline fixed. Its only variable is upstream v6.19.5 Image.gz plus
+the required FA5 panel driver. At this checkpoint it is **NOT_BUILT,
+NOT_PACKED, NOT_DEVICE_TESTED**.
