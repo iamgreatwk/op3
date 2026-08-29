@@ -464,3 +464,8 @@ From the 390-commit reduced range, Git selected
 commit `3266b688c7f6ea517657a4b0a22179692bd856ad` above that candidate.
 All non-kernel test inputs remain fixed. At this checkpoint: **NOT_BUILT,
 NOT_PACKED, NOT_DEVICE_TESTED**.
+
+### Midpoint 3 result (owner report)
+
+The owner reports a **fastboot-mode FAIL** for midpoint 3. Active bounds:
+`v6.19` PASS → `68010e7b3daf0c2cf91eccb329703e82d1ef5aff` FAIL.
