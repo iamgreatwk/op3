@@ -413,3 +413,19 @@ The owner built, packed, and boot-tested the v6.19 control. The device
 booted successfully: **PASS**. The valid, ancestral mainline bisection bounds
 are now `v6.19` PASS → `v7.0-rc1` FAIL. Proceed with commit-level binary
 search only within this range, holding all non-kernel test inputs fixed.
+
+## Commit-level bisection — midpoint 1
+
+A clean history repository covering the connected `v6.19..v7.0-rc1` graph was
+used to run `git rev-list --bisect`. The graph contains 1,407 candidate
+commits; Git selected midpoint
+`0de6219fd74440199fb0bfc6ce02bb8bdb8e9466` (a regulator merge), splitting
+the remaining candidates into 707 and 698.
+
+Independent worktree `source/linux-mainline-v619-rc1-mid1`, branch
+`agent/implementation/v619-rc1-mid1-fa5-control`, adds only FA5 panel support
+commit `a953d272118c02ad1f420f414a0d6ccedfd4bef2` atop that midpoint. No
+regulator, DTS, DSI, GPU, PM, cmdline, or initramfs source change is made.
+All test inputs outside `Image.gz` remain fixed.
+
+At this checkpoint: **NOT_BUILT, NOT_PACKED, NOT_DEVICE_TESTED**.
