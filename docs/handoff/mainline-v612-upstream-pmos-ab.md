@@ -394,3 +394,17 @@ mainline `v6.19`. It must be tested under the identical controls before any
 commit-level bisection is started. Only if v6.19 passes is
 `v6.19..v7.0-rc1` a valid monotonic bisect range. Every candidate retains the
 same fixed DTB, initramfs, cmdline, strict config, and FA5 driver port.
+
+## Required mainline v6.19 ancestry control
+
+Official upstream `v6.19` is
+`05f7e89ab9731565d8a62e3b5d1ec206485eeb0b`. Test tree
+`source/linux-mainline-6.19`, branch
+`agent/implementation/mainline-v619-fa5-control`, adds only FA5 support
+commit `8139be76205d5fecf4958907ef24e65bbc4f0c27`.
+
+- v6.19 PASS → begin actual Git bisection of v6.19..v7.0-rc1.
+- v6.19 FAIL → v6.19.5's PASS is attributable to stable-series changes;
+  separately bisect the v6.19 stable branch before comparing to v7.0.
+
+At this checkpoint: **NOT_BUILT, NOT_PACKED, NOT_DEVICE_TESTED**.
