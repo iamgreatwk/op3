@@ -514,6 +514,14 @@ The owner reports a **fastboot-mode FAIL**. Active bounds are
 `f46a283bbc58d7871ab22f5882e942f889fa2b0e` PASS →
 `93c88d06accdeceee4fbd243b084d3749bcd96d7` FAIL.
 
+## Commit-level bisection — midpoint 8
+
+Git selected `ba73713da50e5c24499ca8941171593466ea34f7` (5/5 split). Test
+worktree `source/linux-mainline-v619-rc1-mid8`, branch
+`agent/implementation/v619-rc1-mid8-fa5-control`, adds only FA5 support
+commit `06c1ce768f8e98ebe0ee66a0027d1df5cf0bfc16`. At this checkpoint:
+**NOT_BUILT, NOT_PACKED, NOT_DEVICE_TESTED**.
+
 ## Commit-level bisection — midpoint 5
 
 Git selected `f46a283bbc58d7871ab22f5882e942f889fa2b0e` from the 96-commit
