@@ -358,4 +358,12 @@ before this change; no reset, deletion, or overwrite was used.
 - rc2 FAIL → the release-candidate boundary predates rc2; obtain a connected
   upstream history and bisect individual commits from v6.19.5 to rc2.
 
-At this checkpoint: **NOT_BUILT, NOT_PACKED, NOT_DEVICE_TESTED**.
+### v7.0-rc2 result (owner report)
+
+The owner reports that the v7.0 rc2 control also returned to **fastboot
+mode**: **FAIL**. This does not imply a broad boot-image incompatibility
+between Linux 6.x and 7.x: the release number itself is not an ABI boundary.
+It establishes only that the triggering upstream change is earlier than rc2,
+somewhere after the v6.19.5 PASS. The last RC-level discriminator is rc1;
+test it with all fixed inputs unchanged before obtaining a connected history
+for commit-level bisection.
