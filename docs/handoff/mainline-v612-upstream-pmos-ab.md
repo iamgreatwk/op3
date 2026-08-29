@@ -105,3 +105,51 @@ mainline config, the remaining explanatory variable is the pmOS MSM8996
 downstream kernel source delta. Do not continue changing UUIDs, debug-shell
 flags, EFI settings, or boot-image offsets as a substitute for that source
 audit.
+
+## Follow-up source audit — identified display delta
+
+The pmOS v6.12.1 branch is directly based on official stable
+`v6.12.1` (`d390303b28da`). Its post-base commit list contains a single
+OnePlus-relevant DRM/MSM DSI lifecycle change:
+
+- `51f8b001ac1b850f892f965020ca86859c409e4d`
+  `drm/msm/dsi: improve power management` (parent: `d390303b28da`).
+
+It changes four files exclusively under `drivers/gpu/drm/msm/dsi/`:
+
+| File | Scope |
+| --- | --- |
+| `dsi.c`, `dsi.h` | add a PHY-power mutex and expose DSI manager power helpers |
+| `dsi_host.c` | use runtime-PM autosuspend and power the manager before command transfers |
+| `dsi_manager.c` | move PHY/host/IRQ sequencing into runtime-PM-aware manager helpers |
+
+This is technically relevant to FA5: panel `prepare()` immediately transmits
+DSI DCS commands (`exit_sleep_mode`, tear-on, vendor writes, display-on). The
+pmOS patch makes those transfers resume the DSI device and power the
+PHY/host first. In the unpatched path, transfer preparation only takes runtime
+PM and assumes the previous bridge power state is already valid. A failure at
+that point produces a black panel while the kernel may otherwise continue
+booting; no COM log was available to distinguish this visually.
+
+The pmOS FA5 panel driver has one additional line relative to the v6.12 test
+driver:
+
+```c
+ctx->panel.prepare_prev_first = true;
+```
+
+This requests that the DSI controller first reach LP-11 before panel power-up.
+It is a relevant explanation for the *v6.12 test driver* failure. However,
+the formal Linux 7.2 FA5 driver already sets this flag, so it is not the
+remaining Linux 7.2 delta.
+
+Linux 7.2 still has the old DSI manager flow (`dsi_mgr_bridge_power_on()` and
+`pm_runtime_get_sync()` in transfer preparation) and does not contain the
+pmOS `dsi_mgr_power_on()` / `dsi_mgr_power_off()` implementation. Therefore
+`51f8b001ac1b` is the current highest-confidence missing source delta for the
+Linux 7.2 black-screen path.
+
+No source port was attempted: the candidate requires changes in
+`drivers/gpu/drm/msm/dsi/`, an area explicitly outside the panel-only task
+scope. It must be separately authorized and forward-ported semantically, not
+blindly copied from pmOS.
