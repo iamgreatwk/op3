@@ -485,3 +485,12 @@ The owner built, packed, and boot-tested midpoint 4. The device **booted**:
 **PASS**. Active bounds are now
 `b3acb158ea1a2c9deb1bbff8360001a6a179dc9b` PASS →
 `68010e7b3daf0c2cf91eccb329703e82d1ef5aff` FAIL.
+
+## Commit-level bisection — midpoint 5
+
+Git selected `f46a283bbc58d7871ab22f5882e942f889fa2b0e` from the 96-commit
+range (47/47 split). Test worktree
+`source/linux-mainline-v619-rc1-mid5`, branch
+`agent/implementation/v619-rc1-mid5-fa5-control`, adds only FA5 support
+commit `9b9a06456609764257e20738a7b8f60e82dc404e`. At this checkpoint:
+**NOT_BUILT, NOT_PACKED, NOT_DEVICE_TESTED**.
