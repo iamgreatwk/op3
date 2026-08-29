@@ -196,3 +196,31 @@ This validates the v6.12.1 control experiment only. It does **not** by itself
 accept a Linux 7.2 port: the same intent must be forward-ported against Linux
 7.2 DSI APIs in a separate reviewed change, then independently built and
 tested.
+
+## Authorized Linux 7.2 DSI semantic-port checkpoint
+
+The owner authorized the next independent test on the formal Linux 7.2 tree.
+Branch `agent/implementation/linux72-dsi-pm-ab` in `source/linux-7.2` adds
+commit `9edd80e552ae642121db2ac778f62ee52510b5d5`:
+
+```text
+drm/msm/dsi: sequence runtime PM before panel commands
+```
+
+The port preserves Linux 7.2's newer bridge and connector APIs but carries the
+validated v6.12.1 semantics: a PHY lock; runtime-PM autosuspend; DSI
+PHY/host/IRQ power management from the manager; and command transfer power-up
+before FA5 DCS traffic. Scope is exactly these four files:
+
+```text
+drivers/gpu/drm/msm/dsi/dsi.c
+drivers/gpu/drm/msm/dsi/dsi.h
+drivers/gpu/drm/msm/dsi/dsi_host.c
+drivers/gpu/drm/msm/dsi/dsi_manager.c
+```
+
+No DTS, panel driver, GPU, SMMU, clock framework, regulator framework,
+cmdline, or initramfs change is included. At this checkpoint it is
+**NOT_BUILT, NOT_PACKED, NOT_DEVICE_TESTED**. The owner test must hold the
+strict v74 config, v74 FA5 DTB, complete reference initramfs, and standard
+cmdline constant; the sole variable is this DSI semantic port.
