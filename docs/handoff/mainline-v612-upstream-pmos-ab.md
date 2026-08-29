@@ -294,3 +294,24 @@ same DTB/initramfs/cmdline controls, the next investigation range is now the
 upstream interval **v6.19.5 → v7.2**, specifically before any panel DCS
 traffic can matter. Keep the v74 DTB and initramfs fixed for every subsequent
 7.x experiment.
+
+## Release-level binary search
+
+The first release-level midpoint is official upstream `v7.0`
+(`028ef9c96e96197026887c0f092424679298aae8`), between the v6.19.5 PASS and
+the v7.2 fastboot FAIL. Tree `source/linux-mainline-7.0` uses branch
+`agent/implementation/mainline-v70-fa5-control`; commit
+`d8451df177b97933683f4a3eee45f9d863a9fb3b` adds only the current FA5 panel
+driver plus panel Kconfig/Makefile registration. No DTS or DRM/MSM DSI change
+is included.
+
+The owner must build this tree with the same strict v74 config, use the fixed
+v74 FA5 DTB and complete reference initramfs, and preserve the standard
+cmdline. This test's single changing variable is v7.0 Image.gz.
+
+- PASS → next midpoint: v7.1.
+- FAIL/fastboot → binary-search individual upstream commits in the
+  v6.19.5..v7.0 interval; this is the first interval without another formal
+  release tag.
+
+At this checkpoint: **NOT_BUILT, NOT_PACKED, NOT_DEVICE_TESTED**.
