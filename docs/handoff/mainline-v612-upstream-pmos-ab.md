@@ -343,3 +343,19 @@ All non-kernel inputs remain fixed. Result routing:
 The owner built, packed, and boot-tested the exact rc4 control. The device
 returned to **fastboot mode**: **FAIL**. The active bounds are now
 `v6.19.5` PASS → `v7.0-rc4` FAIL; the next test is `v7.0-rc2`.
+
+## v7.0-rc2 binary-search control
+
+Official upstream `v7.0-rc2` is
+`11439c4635edd669ae435eec308f4ab8a0804808`. Tree
+`source/linux-mainline-7.0-rc2`, branch
+`agent/implementation/mainline-v70-rc2-fa5-control`, adds only commit
+`313c7ca226d00137a8c1a09030b6ee4d1369a58b` for the same FA5 panel support.
+The initial shallow checkout was allowed to complete and was verified clean
+before this change; no reset, deletion, or overwrite was used.
+
+- rc2 PASS → test rc3.
+- rc2 FAIL → the release-candidate boundary predates rc2; obtain a connected
+  upstream history and bisect individual commits from v6.19.5 to rc2.
+
+At this checkpoint: **NOT_BUILT, NOT_PACKED, NOT_DEVICE_TESTED**.
