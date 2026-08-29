@@ -454,3 +454,13 @@ The owner built, packed, and boot-tested midpoint 2. The device returned to
 `d4a292c5f8e65d2784b703c67179f4f7d0c7846c` FAIL. The fact that this commit
 is a DRM merge is not attribution; its entire reachable ancestor range remains
 in scope until later bisection steps isolate the first bad commit.
+
+## Commit-level bisection — midpoint 3
+
+From the 390-commit reduced range, Git selected
+`68010e7b3daf0c2cf91eccb329703e82d1ef5aff`, a trace merge tag, with a
+198/190 split. Test worktree `source/linux-mainline-v619-rc1-mid3`, branch
+`agent/implementation/v619-rc1-mid3-fa5-control`, adds only FA5 support
+commit `3266b688c7f6ea517657a4b0a22179692bd856ad` above that candidate.
+All non-kernel test inputs remain fixed. At this checkpoint: **NOT_BUILT,
+NOT_PACKED, NOT_DEVICE_TESTED**.
