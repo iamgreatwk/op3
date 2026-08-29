@@ -565,6 +565,20 @@ range `v6.19` (`05f7e89a`, PASS) to v7.0-rc1 (`6de23f81`, FAIL). Resume by
 testing midpoint 9, then recompute `git rev-list --bisect` from the updated
 PASS/FAIL endpoints. No culprit commit has been identified or attributed yet.
 
+### Midpoint 9 result (owner report)
+
+The owner subsequently tested midpoint 9 and reported **fastboot-mode FAIL**.
+The paused valid bisection bounds are therefore:
+
+```text
+good: f46a283bbc58d7871ab22f5882e942f889fa2b0e  PASS
+bad:  2cdfe39dc9447a09c568da1b6351c70b770dd923  FAIL
+```
+
+No next midpoint was calculated or prepared after this result, per the owner
+pause. Resume with `git rev-list --bisect` in the existing connected history
+tree using exactly these endpoints and retain all fixed companion inputs.
+
 ## Commit-level bisection — midpoint 5
 
 Git selected `f46a283bbc58d7871ab22f5882e942f889fa2b0e` from the 96-commit
