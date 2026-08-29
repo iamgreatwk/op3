@@ -278,4 +278,19 @@ kernel source change.
 | Image.gz SHA256 | `8596f56dfc41ef8ff8ec461730b7b8316fb8878b7ca4343663e7568aa7708ab4` |
 | Image.gz size | 12,590,621 bytes |
 | build result | PASS |
-| pack / device result | NOT_YET_RUN |
+| pack / device result | see device result below |
+
+### Device result (owner report)
+
+The owner packed the Image.gz with the fixed v74 FA5 DTB and complete
+reference initramfs, then used `fastboot boot`. The device booted and ran
+`recovery.c`: **PASS**.
+
+This is the required pure-upstream v6.19.5 control. It rejects the hypothesis
+that the successful pmOS v6.19.5 result depends on pmOS-only DSI runtime-PM
+code merely to reach early userspace: this upstream image does so without that
+DSI implementation. Together with the Linux 7.2 fastboot failure under the
+same DTB/initramfs/cmdline controls, the next investigation range is now the
+upstream interval **v6.19.5 → v7.2**, specifically before any panel DCS
+traffic can matter. Keep the v74 DTB and initramfs fixed for every subsequent
+7.x experiment.
