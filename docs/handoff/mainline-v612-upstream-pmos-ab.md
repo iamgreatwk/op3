@@ -495,6 +495,12 @@ From the paused three-commit range, Git selected
 commit `ac08d69f578e38ccd0361093553ace510ef99f98`. All companion inputs remain
 fixed. At this checkpoint: **NOT_BUILT, NOT_PACKED, NOT_DEVICE_TESTED**.
 
+### Midpoint 10 result (owner report)
+
+The owner reports a **fastboot-mode FAIL**. Active bounds are now
+`f46a283bbc58d7871ab22f5882e942f889fa2b0e` PASS →
+`0c2580a8094693578afa9b6cbcee406cf131920e` FAIL.
+
 ## Commit-level bisection — midpoint 6
 
 Git selected `fa4820b893843f7ad5e1b5c446a92426c5c946ce` (23/23 split).
