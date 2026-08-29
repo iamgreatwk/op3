@@ -367,3 +367,17 @@ It establishes only that the triggering upstream change is earlier than rc2,
 somewhere after the v6.19.5 PASS. The last RC-level discriminator is rc1;
 test it with all fixed inputs unchanged before obtaining a connected history
 for commit-level bisection.
+
+## v7.0-rc1 binary-search control
+
+Official upstream `v7.0-rc1` is
+`6de23f81a5e08be8fbf5e8d7e9febc72a5b5f27f`. Test tree
+`source/linux-mainline-7.0-rc1`, branch
+`agent/implementation/mainline-v70-rc1-fa5-control`, has only the FA5 support
+commit `5dd1c37a28980ec45eb1669991b56509297024a2` beyond that tag.
+
+- rc1 PASS → exact bad range reduces to rc1..rc2.
+- rc1 FAIL → the first failure is in v6.19.5..rc1 merge window; proceed
+  with connected-history commit bisection, not more release-tag tests.
+
+At this checkpoint: **NOT_BUILT, NOT_PACKED, NOT_DEVICE_TESTED**.
