@@ -501,24 +501,29 @@ The owner reports a **fastboot-mode FAIL**. Active bounds are now
 `f46a283bbc58d7871ab22f5882e942f889fa2b0e` PASS →
 `0c2580a8094693578afa9b6cbcee406cf131920e` FAIL.
 
-## Commit-level bisection — final candidate
+## Attempted final candidate — invalidated by shallow history
 
-The two commits between the known-good `f46a283b` and known-bad `0c2580a8`
-are, in order:
+The final prepared worktree `source/linux-mainline-v619-rc1-final-candidate`,
+branch `agent/implementation/v619-rc1-final-fa5-control`, adds only FA5
+support commit `4f2e7b3437c9c313a2a3f5084f319a850720fb22` on upstream commit
+`1c48f7ab72a8c9d6419622931e622e5247e979f5`.
 
-```text
-1c48f7ab72a8c9d6419622931e622e5247e979f5 tracing: Rename `eval_map_wq` and allow other parts of tracing use it
-0c2580a8094693578afa9b6cbcee406cf131920e blktrace: Make init_blk_tracer() asynchronous
-```
+The owner reports a **fastboot-mode FAIL** for that image. This is a valid
+per-image result under the fixed v74 DTB, complete reference initramfs, strict
+config, standard cmdline, and identical FA5 panel port.
 
-Final test worktree `source/linux-mainline-v619-rc1-final-candidate`, branch
-`agent/implementation/v619-rc1-final-fa5-control`, adds only FA5 support
-commit `4f2e7b3437c9c313a2a3f5084f319a850720fb22` on `1c48f7ab`.
+However, the attempted commit-level bisection is **invalid**. The history
+repository is a shallow clone and explicitly lists `1c48f7ab` in `.git/shallow`;
+therefore its real parent is unavailable locally. In particular,
+`git merge-base --is-ancestor f46a283b 1c48f7ab` does not establish ancestry.
+The locally inferred `f46a283b → 1c48f7ab → 0c2580a8` chain, and every
+"first bad commit" conclusion based on it, must be withdrawn.
 
-- PASS → `0c2580a8` is the first bad commit.
-- FAIL → `1c48f7ab` is the first bad commit.
-
-At this checkpoint: **NOT_BUILT, NOT_PACKED, NOT_DEVICE_TESTED**.
+Status: **BLOCKED** pending a connected, non-shallow upstream history spanning
+the verified v6.19 PASS and v7.0-rc1 FAIL endpoints. Preserve the recorded raw
+PASS/FAIL image results, but do not revert, modify, or port around either
+candidate commit into Linux 7.2. After obtaining connected history, redo the
+bisection from verified ancestor endpoints.
 
 ## Commit-level bisection — midpoint 6
 
