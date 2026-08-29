@@ -380,4 +380,10 @@ commit `5dd1c37a28980ec45eb1669991b56509297024a2` beyond that tag.
 - rc1 FAIL → the first failure is in v6.19.5..rc1 merge window; proceed
   with connected-history commit bisection, not more release-tag tests.
 
-At this checkpoint: **NOT_BUILT, NOT_PACKED, NOT_DEVICE_TESTED**.
+### v7.0-rc1 result (owner report)
+
+The owner reports that rc1 also returned to **fastboot mode**: **FAIL**.
+Release-level bisection is complete: `v6.19.5` is the known-good endpoint and
+`v7.0-rc1` is the known-bad endpoint. The next task is a connected-history,
+commit-level bisection within that interval. Every candidate must retain the
+same fixed DTB, initramfs, cmdline, strict config, and FA5 driver port.
