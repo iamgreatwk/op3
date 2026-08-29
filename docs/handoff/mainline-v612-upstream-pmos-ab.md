@@ -536,6 +536,35 @@ worktree `source/linux-mainline-v619-rc1-mid9`, branch
 commit `f058aa02d6b8441365c7b2adbf121a2a81c44b85`. At this checkpoint:
 **NOT_BUILT, NOT_PACKED, NOT_DEVICE_TESTED**.
 
+## Pause checkpoint — commit-level boot bisection
+
+The owner requested a pause before testing midpoint 9. Do **not** start a new
+build automatically. The current evidence-backed boundaries are:
+
+| Upstream base commit | Result |
+| --- | --- |
+| `f46a283bbc58d7871ab22f5882e942f889fa2b0e` | PASS — device booted |
+| `ba73713da50e5c24499ca8941171593466ea34f7` | FAIL — could not boot |
+
+The only untested candidate already prepared is midpoint 9:
+
+```text
+base:   2cdfe39dc9447a09c568da1b6351c70b770dd923
+branch: agent/implementation/v619-rc1-mid9-fa5-control
+tip:    f058aa02d6b8441365c7b2adbf121a2a81c44b85
+tree:   source/linux-mainline-v619-rc1-mid9
+output: out/linux-mainline-v619-rc1-mid9-fa5-control
+```
+
+For every completed test the immutable companions were the strict v74 config,
+v74 FA5 DTB, complete reference initramfs, and standard packing cmdline. The
+only intended variable was the upstream kernel base commit plus the identical
+FA5 driver port. The candidate history repository is
+`source/linux-mainline-v619-rc1-bisect`; it contains the connected mainline
+range `v6.19` (`05f7e89a`, PASS) to v7.0-rc1 (`6de23f81`, FAIL). Resume by
+testing midpoint 9, then recompute `git rev-list --bisect` from the updated
+PASS/FAIL endpoints. No culprit commit has been identified or attributed yet.
+
 ## Commit-level bisection — midpoint 5
 
 Git selected `f46a283bbc58d7871ab22f5882e942f889fa2b0e` from the 96-commit
