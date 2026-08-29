@@ -478,3 +478,10 @@ range (95/94 split). Test worktree
 `agent/implementation/v619-rc1-mid4-fa5-control`, adds only FA5 support
 commit `44f1312c4e18aa47c7986de921617811a5a7b777`. At this checkpoint:
 **NOT_BUILT, NOT_PACKED, NOT_DEVICE_TESTED**.
+
+### Midpoint 4 result (owner report)
+
+The owner built, packed, and boot-tested midpoint 4. The device **booted**:
+**PASS**. Active bounds are now
+`b3acb158ea1a2c9deb1bbff8360001a6a179dc9b` PASS →
+`68010e7b3daf0c2cf91eccb329703e82d1ef5aff` FAIL.
