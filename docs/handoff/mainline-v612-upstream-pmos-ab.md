@@ -528,6 +528,14 @@ The owner reports that midpoint 8 could not boot: **FAIL**. Active bounds are
 `f46a283bbc58d7871ab22f5882e942f889fa2b0e` PASS →
 `ba73713da50e5c24499ca8941171593466ea34f7` FAIL.
 
+## Commit-level bisection — midpoint 9
+
+Git selected `2cdfe39dc9447a09c568da1b6351c70b770dd923` (2/2 split). Test
+worktree `source/linux-mainline-v619-rc1-mid9`, branch
+`agent/implementation/v619-rc1-mid9-fa5-control`, adds only FA5 support
+commit `f058aa02d6b8441365c7b2adbf121a2a81c44b85`. At this checkpoint:
+**NOT_BUILT, NOT_PACKED, NOT_DEVICE_TESTED**.
+
 ## Commit-level bisection — midpoint 5
 
 Git selected `f46a283bbc58d7871ab22f5882e942f889fa2b0e` from the 96-commit
