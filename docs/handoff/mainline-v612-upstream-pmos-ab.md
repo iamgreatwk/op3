@@ -501,6 +501,25 @@ The owner reports a **fastboot-mode FAIL**. Active bounds are now
 `f46a283bbc58d7871ab22f5882e942f889fa2b0e` PASS →
 `0c2580a8094693578afa9b6cbcee406cf131920e` FAIL.
 
+## Commit-level bisection — final candidate
+
+The two commits between the known-good `f46a283b` and known-bad `0c2580a8`
+are, in order:
+
+```text
+1c48f7ab72a8c9d6419622931e622e5247e979f5 tracing: Rename `eval_map_wq` and allow other parts of tracing use it
+0c2580a8094693578afa9b6cbcee406cf131920e blktrace: Make init_blk_tracer() asynchronous
+```
+
+Final test worktree `source/linux-mainline-v619-rc1-final-candidate`, branch
+`agent/implementation/v619-rc1-final-fa5-control`, adds only FA5 support
+commit `4f2e7b3437c9c313a2a3f5084f319a850720fb22` on `1c48f7ab`.
+
+- PASS → `0c2580a8` is the first bad commit.
+- FAIL → `1c48f7ab` is the first bad commit.
+
+At this checkpoint: **NOT_BUILT, NOT_PACKED, NOT_DEVICE_TESTED**.
+
 ## Commit-level bisection — midpoint 6
 
 Git selected `fa4820b893843f7ad5e1b5c446a92426c5c946ce` (23/23 split).
