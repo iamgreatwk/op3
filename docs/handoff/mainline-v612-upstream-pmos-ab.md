@@ -383,7 +383,14 @@ commit `5dd1c37a28980ec45eb1669991b56509297024a2` beyond that tag.
 ### v7.0-rc1 result (owner report)
 
 The owner reports that rc1 also returned to **fastboot mode**: **FAIL**.
-Release-level bisection is complete: `v6.19.5` is the known-good endpoint and
-`v7.0-rc1` is the known-bad endpoint. The next task is a connected-history,
-commit-level bisection within that interval. Every candidate must retain the
+
+### Ancestry correction before commit-level bisection
+
+`v6.19.5` is a **stable-branch** release and is not an ancestor of the
+mainline `v7.0-rc1` tag; it can include stable backports dated after the rc1
+cut. Its PASS remains valuable as a boot control, but it is invalid as the
+good endpoint for a mainline Git bisect. The correct ancestral endpoint is
+mainline `v6.19`. It must be tested under the identical controls before any
+commit-level bisection is started. Only if v6.19 passes is
+`v6.19..v7.0-rc1` a valid monotonic bisect range. Every candidate retains the
 same fixed DTB, initramfs, cmdline, strict config, and FA5 driver port.
