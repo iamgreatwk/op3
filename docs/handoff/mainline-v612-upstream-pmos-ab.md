@@ -446,3 +446,11 @@ reduced range. Test worktree `source/linux-mainline-v619-rc1-mid2`, branch
 `7d2db181f2a9ab991646d8b569ab85152d6c14be` atop that midpoint. Non-kernel
 test inputs remain fixed. At this checkpoint: **NOT_BUILT, NOT_PACKED,
 NOT_DEVICE_TESTED**.
+
+### Midpoint 2 result (owner report)
+
+The owner built, packed, and boot-tested midpoint 2. The device returned to
+**fastboot mode**: **FAIL**. The active bisection bounds are `v6.19` PASS →
+`d4a292c5f8e65d2784b703c67179f4f7d0c7846c` FAIL. The fact that this commit
+is a DRM merge is not attribution; its entire reachable ancestor range remains
+in scope until later bisection steps isolate the first bad commit.
