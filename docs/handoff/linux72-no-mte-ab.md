@@ -8,7 +8,7 @@ Working branch: agent/implementation/s6e3fa5-linux72-port
 Changed files:
   kernel/configs/oneplus3-no-mte.fragment
   docs/handoff/linux72-no-mte-ab.md
-Commit SHA: pending
+Config commit SHA: 858ae884f59144d60996f6aa92299c54845b2990
 
 Layer: Kernel configuration / pre-MMU ARM64 entry
 Hypothesis tested: Linux 7.2 returns to fastboot because its default
@@ -16,13 +16,13 @@ CONFIG_ARM64_MTE=y adds TCR_EL1_TCMA1 to the value written by __cpu_setup()
 before the MMU is enabled on the MSM8996 Cortex-A53/A72.
 Only variable changed: CONFIG_ARM64_MTE changes from y to not set.
 
-Build run by project owner: NOT_RUN
-Build result: NOT_RUN
-Artifacts and SHA256: NOT_RUN
+Build run by project owner: RUN
+Build result: PASS (kernel built and boot image packed; artifact SHA256 was not supplied)
+Artifacts and SHA256: boot-oneplus3-linux72-v74strict-no-mte.img; SHA256 not supplied
 
-Device test run by project owner: NOT_RUN
-Device result: NOT_RUN
-Evidence links / log paths: pending owner result
+Device test run by project owner: RUN (`fastboot boot`)
+Device result: FAIL — returned to fastboot mode
+Evidence links / log paths: owner report in this Codex task; no serial/USB log
 ```
 
 ## Fixed inputs
@@ -117,10 +117,17 @@ observation and then pursue early logs. The test must not add a UUID, change
 the cmdline, replace the DTB/initrd, or combine any other configuration or
 source change.
 
-## Status and next decision
+## Result and next decision
 
-**READY_FOR_OWNER_BUILD.** No build, packaging, fastboot operation or device
-test has been performed by this agent. If the result is FAIL, preserve this
-same image evidence and consider the separately authorized HCR_ATA source A/B
-only after reviewing the device entry EL. If it is a provisional PASS, first
-collect early console/USB evidence before changing display code.
+**REJECTED.** The owner reports that the image with
+`CONFIG_ARM64_MTE is not set` still returns to fastboot mode. Therefore the
+extra Linux 7.2 `TCR_EL1_TCMA1` bit is not the primary cause of the observed
+failure under the fixed v74 companion inputs. This result does not establish
+that MTE is safe or useful on MSM8996; it only rejects this single-variable
+boot hypothesis.
+
+Keep the fragment as failure evidence, but do not add it to the formal 7.2
+configuration. The next candidate, if separately authorized, is the
+EL2-conditional HCR_ATA entry change. Early console/USB evidence remains
+preferable because it would establish whether the phone enters at EL2 before
+any ARM64 entry-source A/B is attempted.
