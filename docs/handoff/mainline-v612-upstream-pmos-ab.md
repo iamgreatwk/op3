@@ -224,3 +224,18 @@ cmdline, or initramfs change is included. At this checkpoint it is
 **NOT_BUILT, NOT_PACKED, NOT_DEVICE_TESTED**. The owner test must hold the
 strict v74 config, v74 FA5 DTB, complete reference initramfs, and standard
 cmdline constant; the sole variable is this DSI semantic port.
+
+### Result (owner report)
+
+The owner built, packed, and tested this exact Linux 7.2 source commit using
+the prescribed fixed v74 FA5 DTB and complete reference initramfs. The device
+returned directly to **fastboot mode**.
+
+This is a **FAIL at the bootloader/early-entry boundary**, not a panel or DSI
+runtime result: the changed DSI code cannot execute until the kernel has
+already been accepted and started. It therefore neither contradicts nor
+extends the v6.12.1 DSI PASS (which reached `recovery.c`). Do not add another
+display, GPU, PM, DTS, cmdline, or initramfs change to this image. The next
+falsifiable work item is a read-only comparison of the Linux 7.2 Image/boot
+entry properties against a known booting pmOS image, before retrying any 7.2
+runtime change.
