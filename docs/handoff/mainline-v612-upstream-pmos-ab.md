@@ -522,6 +522,12 @@ worktree `source/linux-mainline-v619-rc1-mid8`, branch
 commit `06c1ce768f8e98ebe0ee66a0027d1df5cf0bfc16`. At this checkpoint:
 **NOT_BUILT, NOT_PACKED, NOT_DEVICE_TESTED**.
 
+### Midpoint 8 result (owner report)
+
+The owner reports that midpoint 8 could not boot: **FAIL**. Active bounds are
+`f46a283bbc58d7871ab22f5882e942f889fa2b0e` PASS →
+`ba73713da50e5c24499ca8941171593466ea34f7` FAIL.
+
 ## Commit-level bisection — midpoint 5
 
 Git selected `f46a283bbc58d7871ab22f5882e942f889fa2b0e` from the 96-commit
