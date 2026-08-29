@@ -1,0 +1,11 @@
+# OnePlus 3 / MSM8996 early-entry A/B: disable ARMv8.5 Memory Tagging.
+#
+# With the v74 strict configuration, Linux 7.2 enables ARM64_MTE by default.
+# Unlike the booting pmOS 6.19.5 control, Linux 7.2 then includes
+# TCR_EL1_TCMA1 in the TCR_EL1 value written by __cpu_setup() before the MMU
+# is enabled. Cortex-A53/A72 in MSM8996 do not implement MTE. This one-symbol
+# fragment removes only that 7.2 pre-MMU contribution; it is not a permanent
+# policy or a substitute for early-boot evidence.
+#
+# Keep the v74 strict base config, v74 DTB, reference initrd and cmdline fixed.
+# CONFIG_ARM64_MTE is not set
