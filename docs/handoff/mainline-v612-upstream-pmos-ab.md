@@ -314,4 +314,11 @@ cmdline. This test's single changing variable is v7.0 Image.gz.
   v6.19.5..v7.0 interval; this is the first interval without another formal
   release tag.
 
-At this checkpoint: **NOT_BUILT, NOT_PACKED, NOT_DEVICE_TESTED**.
+### v7.0 result (owner report)
+
+The owner built and packed the exact v7.0 control with the specified fixed
+inputs. `fastboot boot` returned the device to **fastboot mode**: **FAIL**.
+The reproducible bounds are now `v6.19.5` PASS → `v7.0` FAIL. Do not test
+v7.1 yet; the next test must be the midpoint commit of this exact upstream
+range, retaining the same v74 DTB, initramfs, cmdline, strict config, and FA5
+driver port.
