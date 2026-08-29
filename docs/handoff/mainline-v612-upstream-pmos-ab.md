@@ -494,6 +494,12 @@ Test worktree `source/linux-mainline-v619-rc1-mid6`, branch
 commit `b9c699e742532049cebd65f5e2c6be39a49c9703`. At this checkpoint:
 **NOT_BUILT, NOT_PACKED, NOT_DEVICE_TESTED**.
 
+### Midpoint 6 result (owner report)
+
+The owner reports a **fastboot-mode FAIL**. Active bounds are
+`f46a283bbc58d7871ab22f5882e942f889fa2b0e` PASS →
+`fa4820b893843f7ad5e1b5c446a92426c5c946ce` FAIL.
+
 ## Commit-level bisection — midpoint 5
 
 Git selected `f46a283bbc58d7871ab22f5882e942f889fa2b0e` from the 96-commit
