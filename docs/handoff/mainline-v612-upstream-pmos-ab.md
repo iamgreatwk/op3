@@ -407,4 +407,9 @@ commit `8139be76205d5fecf4958907ef24e65bbc4f0c27`.
 - v6.19 FAIL → v6.19.5's PASS is attributable to stable-series changes;
   separately bisect the v6.19 stable branch before comparing to v7.0.
 
-At this checkpoint: **NOT_BUILT, NOT_PACKED, NOT_DEVICE_TESTED**.
+### v6.19 result (owner report)
+
+The owner built, packed, and boot-tested the v6.19 control. The device
+booted successfully: **PASS**. The valid, ancestral mainline bisection bounds
+are now `v6.19` PASS → `v7.0-rc1` FAIL. Proceed with commit-level binary
+search only within this range, holding all non-kernel test inputs fixed.
