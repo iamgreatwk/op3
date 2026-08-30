@@ -28,17 +28,24 @@ Build run by project owner: Buildroot (Mesa, libdrm, mesa-demos). Large build;
 Build result: NOT_RUN
 Artifacts and SHA256: filled in by the owner after the Buildroot build
 
-Device test run by project owner: NOT_RUN
-Device result: NOT_RUN
+Device test run by project owner: 2026-08-30, two consecutive boots; the
+  launcher auto-ran kmscube on each boot
+Device result: criteria 1 and 3 met — EGL 1.5, GL renderer `FD530`
+  (freedreno hardware), OpenGL ES 3.1 Mesa 26.0.1, kmscube 30 s, exit 0, no GL
+  errors. Criterion 2 (visible cube) pending. A later manual kmscube run after
+  the GPU runtime-suspended hard-reset the device; the launcher now disables
+  A530 runtime PM first (see docs/known-issues.md).
 Evidence links / log paths: /newroot/var/log/op3-egl.log (persistent on sda15),
-  /var/log/op3-egl.log (session copy), dmesg
+  /var/log/op3-egl.log (session copy), dmesg, kernel console on ACM
+  (`console=ttyGS0`, captured host-side with `cat /dev/ttyACM0`)
 
-Conclusion: INCONCLUSIVE — nothing built or tested yet
-Uncertainties: The GPU may still fail to initialise for reasons other than the
-  missing firmware. Mesa may fall back to a software renderer, which would be
-  evidence, not a PASS.
-Recommended next experiment: run the firmware image first, confirm from dmesg
-  that the GPU initialises, then build the EGL bundle and run this gate.
+Conclusion: EGL hardware-rendering path SUPPORTED by evidence; visible-output
+  confirmation and the runtime-PM resume hang remain open
+Uncertainties: criterion 2 not yet confirmed by the owner; the runtime-PM
+  resume hang has no console trace (hard reset) and no pstore record
+Recommended next experiment: boot the updated image (runtime PM disabled,
+  console=ttyGS0) with the ACM capture running, watch the 30 s kmscube window,
+  and re-test a late manual run once runtime PM is disabled
 ```
 
 ## Firmware step (prepared, image ready)
