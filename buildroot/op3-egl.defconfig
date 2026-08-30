@@ -24,6 +24,10 @@ BR2_TOOLCHAIN_BUILDROOT_GLIBC=y
 # No root filesystem image is needed; only output/target is used.
 BR2_TARGET_ROOTFS_TAR=y
 
+# Host ccache: the browser/weston/egl stacks get rebuilt repeatedly; cache
+# compiles in ~/.buildroot-ccache (requires ccache installed on the host).
+BR2_CCACHE=y
+
 # Kernel-mode-setting / buffer management.
 BR2_PACKAGE_LIBDRM=y
 
