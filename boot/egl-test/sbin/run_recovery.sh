@@ -54,6 +54,42 @@ sync_log() {
 	fi
 }
 
+start_acm_console() {
+	# Debugging over the USB ACM port, best effort. Two problems make
+	# console=ttyGS0 useless on this control image (docs/known-issues.md):
+	# 1. CONFIG_U_SERIAL_CONSOLE is not set, so the kernel argument never
+	#    registers ttyGS0 as a console (/proc/consoles shows only tty0 and
+	#    ramoops-1); init output and panics cannot reach the host.
+	# 2. The pmOS initramfs ships a stale placeholder /dev/ttyGS0 REGULAR
+	#    file (not a character device), so even user-space writes silently
+	#    disappear into the initramfs tmpfs.
+	# Workaround: recreate the real character device from sysfs, relay the
+	# kernel log with a blocking /dev/kmsg reader, and spawn a debug shell
+	# on the same port. Host side: kai must be able to open /dev/ttyACM0.
+	w=0
+	while [ ! -e /sys/class/tty/ttyGS0/dev ] && [ "$w" -lt 15 ]; do
+		sleep 1
+		w=$((w + 1))
+	done
+	if [ ! -e /sys/class/tty/ttyGS0/dev ]; then
+		log "ACM debug: ttyGS0 not registered, skipping"
+		return
+	fi
+	if [ ! -c /dev/ttyGS0 ]; then
+		rm -f /dev/ttyGS0
+		mknod /dev/ttyGS0 c \
+			"$(cut -d: -f1 /sys/class/tty/ttyGS0/dev)" \
+			"$(cut -d: -f2 /sys/class/tty/ttyGS0/dev)" 2>/dev/null
+	fi
+	if [ ! -c /dev/ttyGS0 ]; then
+		log "ACM debug: failed to create /dev/ttyGS0"
+		return
+	fi
+	setsid sh -c 'cat /dev/kmsg > /dev/ttyGS0 2>/dev/null < /dev/null' &
+	setsid sh -c 'exec < /dev/ttyGS0 > /dev/ttyGS0 2>&1; exec sh' &
+	log "ACM debug: kmsg relay and debug shell on /dev/ttyGS0 $(cat /sys/class/tty/ttyGS0/dev)"
+}
+
 log "EGL launcher start pid=$$"
 
 # Globally disable A530 runtime PM, before anything else. Validated on 6.3.1
@@ -69,6 +105,8 @@ if [ -f "$GPU_POWER" ]; then
 else
 	log "GPU runtime PM: $GPU_POWER not found"
 fi
+
+start_acm_console
 
 waited=0
 while [ ! -f "$BUNDLE_RUN" ]; do

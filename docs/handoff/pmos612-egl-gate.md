@@ -42,8 +42,13 @@ Device result: all three criteria met — EGL 1.5, GL renderer `FD530`
   `sleep "$TEST_SECONDS"` pipe. The launcher also disables A530 runtime PM
   before running the test (see docs/known-issues.md).
 Evidence links / log paths: /newroot/var/log/op3-egl.log (persistent on sda15),
-  /var/log/op3-egl.log (session copy), dmesg, kernel console on ACM
-  (`console=ttyGS0`, captured host-side with `cat /dev/ttyACM0`)
+  /var/log/op3-egl.log (session copy), dmesg. Kernel log over USB ACM does NOT
+  work via `console=ttyGS0` on this kernel (CONFIG_U_SERIAL_CONSOLE unset, see
+  docs/known-issues.md); the follow-up image
+  `boot-oneplus3-pmos612-v74dtb-egl-acm.img` (`581a94b2…`) relays
+  `/dev/kmsg` to `/dev/ttyGS0` from the launcher instead, verified live
+  (72 KB of kernel log reaching host `cat /dev/ttyACM0`, sysrq output visible).
+  The host account must be able to open `/dev/ttyACM0` (dialout group).
 
 Conclusion: all three PASS criteria met on the pmOS 6.12 control. The EGL
   hardware-rendering path is SUPPORTED by evidence. The runtime-PM resume hang
