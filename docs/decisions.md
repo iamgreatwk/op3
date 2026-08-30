@@ -11,3 +11,22 @@ unless the task explicitly permits legacy work.
 The project owner runs every kernel and large userspace compilation. Agent work
 may prepare and review source, configuration, scripts, commands, and reports,
 but may not start those builds.
+
+## 2026-08-30 — boot.img size limit: keep the initramfs minimal
+
+The OnePlus 3 bootloader imposes a size limit on `boot.img`, so the initramfs
+must stay small. Large test payloads belong on the persistent sda15 root
+filesystem, not inside the boot image.
+
+Rules that follow:
+
+- The appended initramfs overlay carries only the launcher and files the kernel
+  needs before userspace is usable, for example GPU firmware. Nothing bulky goes
+  there.
+- Test binaries and libraries (Mesa/EGL/GBM/libdrm, Wayland, WPE, and any test
+  program) are staged on sda15, for example under `/newroot/opt/…`, and run from
+  there with the needed `LD_LIBRARY_PATH`.
+- Logs are written to `/newroot/var/log/…` so they survive reboots; the
+  initramfs copy is session-local scratch.
+- A test that needs a large userspace stack must not be packaged into the boot
+  image; stage it on sda15 first and change only the launcher.
