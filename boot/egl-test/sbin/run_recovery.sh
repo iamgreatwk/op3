@@ -108,6 +108,10 @@ fi
 
 start_acm_console
 
+# Periodically sync the log to sda15 so the tail survives a hard reset
+# (the browser gate crash of 2026-08-30 left no trace otherwise).
+( while :; do sleep 5; sync_log; done ) & # log-sync
+
 waited=0
 while [ ! -f "$BUNDLE_RUN" ]; do
 	if [ "$waited" -ge "$WAIT_LIMIT" ]; then

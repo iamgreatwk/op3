@@ -108,9 +108,19 @@ fi
 
 start_acm_console
 
-# Periodically sync the log to sda15 so the tail survives a hard reset
-# (the browser gate crash of 2026-08-30 left no trace otherwise).
-( while :; do sleep 5; sync_log; done ) & # log-sync
+# Periodically capture the full kernel state into the log and sync it to
+# sda15. If the kernel hangs/resets mid-run (the 7.x fastboot-stuck mystery),
+# the last snapshot survives on sda15 and tells us how far the kernel got and
+# what it printed before dying. This is the post-mortem channel when USB
+# itself is broken (dwc3 probe defers on 7.x, suspected).
+periodic_capture() {
+	echo "----- periodic @ uptime=$(cut -d ' ' -f1 /proc/uptime 2>/dev/null) -----" >> "$LOG"
+	dmesg | tail -n 120 >> "$LOG" 2>&1
+	echo "--- ps ---" >> "$LOG"
+	ps >> "$LOG" 2>&1
+	sync_log
+}
+( while :; do sleep 5; periodic_capture; done ) & # log-sync
 
 waited=0
 while [ ! -f "$BUNDLE_RUN" ]; do
