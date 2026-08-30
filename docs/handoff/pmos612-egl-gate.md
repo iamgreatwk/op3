@@ -120,6 +120,35 @@ has been observed to blank the panel without the GPMU microcode. `a530v3_gpmu.fw
 was therefore added in the image above; the EGL gate must run with the GPMU
 image, not with `ae108bc8…`.
 
+### GPMU addition (2026-08-30): PASS
+
+Booting `cf4b0d49…`:
+
+```text
+[    2.050191] [drm:adreno_request_fw] loaded qcom/a530_pm4.fw from new location
+[    2.050412] [drm:adreno_request_fw] loaded qcom/a530_pfp.fw from new location
+[    2.050585] [drm:adreno_request_fw] loaded qcom/a530v3_gpmu.fw2 from new location
+```
+
+No `failed to load` line remains. All four firmware files (pm4, pfp, gpmu and
+the DTB-named zap image) are present and match the staged SHA256 values.
+
+GPU runtime PM is alive and the panel stays lit, which is the point of this
+step:
+
+```text
+runtime_status          suspended
+control                 auto
+autosuspend_delay_ms    250
+runtime_suspended_time  227337 ms
+runtime_active_time    310 ms
+devfreq b00000.gpu      cur 27 MHz, max 624 MHz, simple_ondemand
+card0-DSI-1             connected, enabled; backlight 255
+```
+
+The RGB sequence again exited 0 for red, green and blue. The EGL gate runs on
+this firmware set.
+
 ## Layout: what goes where
 
 | Location | Contents | Why |
