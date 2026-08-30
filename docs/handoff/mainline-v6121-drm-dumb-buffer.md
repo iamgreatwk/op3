@@ -19,13 +19,16 @@ Only variable changed: The direct-KMS test program placed on the existing
 sda15 root filesystem. Kernel, DTB, initramfs, cmdline, DRM/MSM, GPU, PM, and
 userspace stack are unchanged.
 
-Build run by project owner: NOT_RUN
+Build run by project owner: NOT_RUN (no kernel, Buildroot, Mesa, WebKit, WPE,
+or other large-project build)
 Build result: NOT_RUN
-Artifacts and SHA256: NOT_RUN; owner will produce artifacts/op3-drm-dumb
+Artifacts and SHA256: a static ARM64 test executable was generated locally as
+`artifacts/op3-drm-dumb`, SHA256
+`d74da26cc2914ea083a2c4d1cbc6095812673226b87c3e89de0ffbdd540e2675`.
 
-Device test run by project owner: NOT_RUN
-Device result: NOT_RUN
-Evidence links / log paths: use the fixed boot control below
+Device test run by project owner: partial diagnostic execution, 2026-08-30
+Device result: INCONCLUSIVE / test-program failure before modeset
+Evidence links / log paths: see “2026-08-30 deployment and first run” below
 
 Conclusion: INCONCLUSIVE
 Uncertainties: This legacy KMS path does not exercise atomic KMS, GBM, EGL,
@@ -94,6 +97,68 @@ exec /usr/bin/op3-drm-dumb red --hold
 Use Ctrl-C in that session to restore the previous CRTC state and exit.
 Repeat with `green --hold` and `blue --hold`; or use, for example,
 `red --seconds 30` for an automatic return after 30 seconds.
+
+## 2026-08-30 deployment and first run
+
+With explicit owner authorization, the static executable was copied through
+the already-running USB-network SSH endpoint to the persistent root filesystem:
+
+```text
+endpoint: 172.16.42.1 (SSH root account; credentials are not recorded here)
+sda15 mount observed on device: /dev/sda15 mounted at /newroot
+installed path: /newroot/usr/bin/op3-drm-dumb
+mode: 0755
+device SHA256: d74da26cc2914ea083a2c4d1cbc6095812673226b87c3e89de0ffbdd540e2675
+```
+
+The device exposes both `/dev/dri/card0` and `/dev/dri/renderD128`. The first
+diagnostic invocation was:
+
+```text
+/newroot/usr/bin/op3-drm-dumb red --seconds 60
+```
+
+It exited before dumb-buffer allocation or modesetting with:
+
+```text
+DRM_IOCTL_MODE_GETRESOURCES: Bad address
+```
+
+Therefore no RGB/scanout claim is valid. The failure is at the program's first
+KMS-resource enumeration ioctl, not evidence of a panel, GPU, or renderer
+failure. The current source must be corrected and recommitted before another
+binary is built or tested.
+
+The contemporaneous `dmesg` also contains `msm_mdp ... pp done time out` and a
+later missing `qcom/a530_pm4.fw` request. Neither is assigned as the cause of
+this test failure: the program failed earlier, before it could create a dumb
+buffer or issue `SETCRTC`.
+
+## Required next test image design
+
+The current initramfs keeps `/dev/sda15` mounted at `/newroot` and runs
+`/sbin/init_mainline.sh`. That established script sets up the tested RNDIS
+endpoint (`172.16.42.1`), configfs RNDIS+ACM gadget, `/dev/ttyGS0` shell,
+Dropbear SSH, `dmesg` archives, heartbeat, and `/root/boot_mainline.log`.
+Afterwards its inittab respawns `/sbin/run_recovery.sh`, which starts
+`recovery_mainline` and can compete with a direct display test.
+
+For the next test, retain the pmOS 6.12 image's kernel, DTB, header, cmdline,
+`/init`, and `init_mainline.sh`. In a derived initramfs only:
+
+1. Include the corrected static `op3-drm-dumb` binary.
+2. Replace the inittab target launcher `sbin/run_recovery.sh` with a dedicated
+   DRM-test launcher; do not start `recovery_mainline`.
+3. Have that launcher wait for `/dev/dri/card0`, capture its own standard
+   output/error and relevant `dmesg` both in initramfs and persistently at
+   `/newroot/var/log/op3-drm-dumb.log`, then run the RGB sequence.
+4. Keep `init_mainline.sh` unchanged so SSH, USB RNDIS, ACM shell, and its
+   existing logs remain available for observation.
+
+This is a one-variable boot-userspace diagnostic. It must be committed and
+explicitly authorized for packaging before any derived boot image is created;
+it must not modify kernel, DTB, DRM/MSM, GPU, PM, or sda15 content apart from
+the intended persistent log/test binary.
 
 ## PASS / FAIL record
 
