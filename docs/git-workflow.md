@@ -12,7 +12,8 @@ SHA256 in `docs/test-matrix.md`.
 | Branch | Purpose | Merge rule |
 | --- | --- | --- |
 | `main` | States accepted after device validation | Merge request only; protect remotely |
-| `upstream-7.2` | Unmodified Linux v7.2 source reference | No device patch commits |
+| `baseline-pmos-6.12` | pmOS MSM8996 v6.12.1 LTS baseline reference | No unrelated device patch commits |
+| `shelved-7x` | Archived Linux 7.x research | No default builds; resume only with UART-backed task |
 | `bringup` | Current, single-layer device bring-up | One hypothesis per commit |
 | `userspace-baseline` | Reproducible Buildroot/userspace work | Separate from kernel bring-up |
 | `test/*` | One isolated A/B experiment | Cherry-pick only after a recorded result |

@@ -5,8 +5,8 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=/dev/null
 source "$project_root/BASELINE.env"
 
-kernel_source="${KERNEL_SOURCE:-$project_root/source/linux-${TARGET_KERNEL_VERSION}}"
-output_dir="${KERNEL_OUTPUT:-$project_root/out/linux-${TARGET_KERNEL_VERSION}-defconfig}"
+kernel_source="${KERNEL_SOURCE:-$project_root/${TARGET_KERNEL_SOURCE_DIR:-source/linux-${TARGET_KERNEL_VERSION}}}"
+output_dir="${KERNEL_OUTPUT:-$project_root/${TARGET_KERNEL_OUTPUT_DIR:-out/linux-${TARGET_KERNEL_VERSION}-defconfig}}"
 jobs="${JOBS:-$(nproc)}"
 
 test -f "$kernel_source/Makefile"
@@ -27,6 +27,8 @@ if [ -f "$config_path" ]; then
 fi
 
 printf 'TARGET_KERNEL_VERSION=%s\n' "$TARGET_KERNEL_VERSION"
+printf 'TARGET_KERNEL_RELEASE=%s\n' "${TARGET_KERNEL_RELEASE:-$TARGET_KERNEL_VERSION}"
+printf 'TARGET_KERNEL_TREE=%s\n' "$TARGET_KERNEL_TREE"
 printf 'SOURCE_COMMIT=%s\n' "$(git -C "$kernel_source" rev-parse HEAD)"
 printf 'DEVICE=%s\n' "$TARGET_DEVICE"
 printf 'CONFIG_SHA=%s\n' "$config_sha"

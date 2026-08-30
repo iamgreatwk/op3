@@ -5,7 +5,7 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=/dev/null
 source "$project_root/BASELINE.env"
 
-kernel_source="${KERNEL_SOURCE:-$project_root/source/linux-${TARGET_KERNEL_VERSION}}"
+kernel_source="${KERNEL_SOURCE:-$project_root/${TARGET_KERNEL_SOURCE_DIR:-source/linux-${TARGET_KERNEL_VERSION}}}"
 
 if [ -e "$kernel_source" ]; then
   printf 'Refusing to overwrite existing path: %s\n' "$kernel_source" >&2

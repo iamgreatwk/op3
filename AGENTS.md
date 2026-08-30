@@ -4,7 +4,11 @@ This file is mandatory reading for every human or AI agent before making a chang
 
 ## Non-negotiable boundaries
 
-1. The formal baseline is Linux v7.2 pristine upstream. Linux 6.3.1 pmOS is legacy evidence only; do not build or patch it without an explicit `LEGACY-6.3.1` task.
+1. The formal baseline is the pmOS MSM8996 Linux v6.12.1 LTS line, pinned in
+   `BASELINE.env`. Linux 6.3.1 pmOS is legacy evidence only; do not build or
+   patch it without an explicit `LEGACY-6.3.1` task. The Linux 7.x line is
+   shelved research, not a default build or patch target; require an explicit
+   `SHELVED-7X` task and a physical-UART evidence plan before resuming it.
 2. The project owner alone runs kernel, Buildroot, Mesa, WebKit, WPE, and other large compilations. Agents may prepare source, configuration, scripts, and exact commands, but must not start those builds.
 3. One task has one layer, one falsifiable hypothesis, and one changed variable. Do not mix kernel, DTS, DRM/GPU, and userspace changes.
 4. Do not run device flashing, destructive device actions, or publish releases without explicit owner authorization.

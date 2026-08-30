@@ -23,10 +23,12 @@ Before doing any work:
    Never change global Git configuration.
 
 Formal baseline:
-- Linux v7.2 pristine upstream
+- pmOS MSM8996 Linux v6.12.1 LTS, commit `67b0bbc3cbf46bae712a2606a43361756fcbd829`
 - Device: OnePlus 3 / MSM8996
 - Linux 6.3.1 pmOS is legacy evidence only. Do not use, build, or modify it
   unless this task explicitly says `LEGACY-6.3.1`.
+- Linux 7.x is shelved research only. Do not use, build, or modify it unless
+  this task explicitly says `SHELVED-7X` and includes a physical-UART plan.
 
 Task scope:
 - Current layer: [for example: 01 boot / 03 DTS / 04 DRM RGB]
@@ -40,7 +42,7 @@ Task scope:
 Hard boundaries:
 1. Do not run kernel, Buildroot, Mesa, WebKit, WPE, or other large builds; the project owner runs them.
 2. Do not run fastboot, flash, boot, device tests, or destructive device actions without explicit owner authorization in this task.
-3. Do not modify main, bringup, upstream-7.2, userspace-baseline, or another agent's branch.
+3. Do not modify main, bringup, baseline-pmos-6.12, userspace-baseline, or another agent's branch.
 4. Create and use only `agent/[role]/[short-topic]`.
 5. Change one subsystem only. Do not mix DTS, DRM/GPU, userspace, or diagnostics.
 6. Do not introduce legacy patches without explicit authorization and an A/B design.

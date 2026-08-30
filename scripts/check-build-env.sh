@@ -27,6 +27,6 @@ printf 'ARM64 compiler: '
 "$CROSS_GCC" --version | head -n 1
 printf 'Free disk: '
 df -h . | awk 'NR == 2 { print $4 }'
-printf 'Kernel baseline: %s (%s)\n' "$TARGET_KERNEL_VERSION" "$TARGET_KERNEL_TAG"
+printf 'Kernel baseline: %s (%s)\n' "${TARGET_KERNEL_RELEASE:-$TARGET_KERNEL_VERSION}" "$TARGET_KERNEL_TAG"
 
 exit "$missing"

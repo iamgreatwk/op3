@@ -1,6 +1,9 @@
 # Known issues
 
-- **Linux 7.2 卡 fastboot（未解决）**：7.2（torvalds mainline + 本地显示补丁）即使用 v74 DTB 也卡 fastboot。已排除：DTB、cmdline/initramfs、`CONFIG_ARM64_LSUI`、关键驱动配置。7.2 有独立的内核早期问题，需早期日志定位（见 `docs/handoff/root-cause-dtb-key.md`）。
+- **Linux 7.x 卡 fastboot（已搁置，不是产品阻塞项）**：7.0-rc1 与 7.2 在
+  OnePlus 3 上均无可用早期输出；7.0-rc1 的 v74-DTB A/B 已把问题收敛到
+  6.19.5→7.0-rc1 合并窗口。该线仅在具备物理 MSM8996 UART 的
+  `SHELVED-7X` 任务中恢复（见 `docs/handoff/linux70rc1-minimal-ab.md`）。
 - **主线 v6.12.1 DSI 控制镜像无 USB 网卡/ACM（实测，2026-08-30）**：`artifacts/boot-oneplus3-mainline-6121-dsi-pm-v74dtb-full-initrd.img` 能跑到 `recovery.c`，但实测没有 USB RNDIS 网卡、也没有 ACM 串口，无法取日志。凡是需要日志证据的测试，基线改用 pmOS 6.12 的 `artifacts/boot-oneplus3-pmos612-v74dtb-full-initrd.img`（USB RNDIS/ACM/Dropbear 已验证可用）。
 - **Buildroot 2025.02 在本机 GCC 15.2 上构建失败（2026-08-30）**：`host-m4 1.4.19` 内置的 gnulib 与 GCC 15 默认的 `-std=gnu23` 不兼容（`GL_OSET_INLINE _GL_ATTRIBUTE_NODISCARD int` → `expected identifier or '(' before 'int'`）。改用 **2026.02.x** 分支（m4 1.4.21）。注意：本机仓库无 gcc-14 可装，不能用降级编译器绕过；备选方案是 `HOST_CFLAGS="-O2 -std=gnu17" HOST_CXXFLAGS="-O2 -std=gnu++17"`（两个都要给，因为 `HOST_CXXFLAGS` 会继承 `HOST_CFLAGS`，而 `-std=gnu17` 对 g++ 非法）。
 - **本机 coreutils 是 uutils 实现，Buildroot 会拒绝（2026-08-30）**：`install/stat/dd/mkdir/ln/sort/cut/tr/wc/od/split/uniq/basename/dirname` 都指向 `/usr/lib/cargo/bin/coreutils/`，Buildroot 的 `support/dependencies/dependencies.sh` 硬检查 `install` 版本并报错（uutils coreutils 0.8.0 issue 12166）。GNU 版以 `/usr/bin/gnu<name>` 形式存在（`gnuinstall` 为 GNU coreutils 9.7）。**构建时把 GNU 版前置到 PATH**：建 `~/gnubin` 软链后 `PATH="$HOME/gnubin:$PATH" make ...`。
@@ -17,5 +20,5 @@
 - **GPU runtime PM 恢复路径会让整机重启（2026-08-30，EGL 层发现，未解决）**：开机后 30 秒内由启动器运行的 kmscube 一切正常（FD530/GLES 3.1），但稍后（GPU 已 runtime suspend，`control=auto`、250ms 自动挂起）再通过 SSH 手动运行 kmscube，设备直接重启。背景：DTB 的 GPU 节点缺少 vdd/vddcx 供电，驱动打印 `supply vdd not found, using dummy regulator`，runtime resume 时没有真实的电源序列。可疑方向：给 `gpu@b00000` 补上真实的 GPU 供电节点（需要 DTB 层改动，独立任务）。当前规避：EGL 启动器开机即把 `b00000.gpu/power/control` 设为 `on`（注意：GPU 已挂起时切 `on` 会立即触发 resume，同样有风险）。
 - **6.12/6.16/6.19 用自己的 DTB 卡 fastboot（未解决）**：这些内核用 6.3.1-v74full 编译的 v74 DTB 都能启动，但用各自 DTB 卡。最可疑差异是新 `qcom,rpm-proc` DTS 结构（待验证）。
 - 6.19.5 之前卡 fastboot 的原因是 `CONFIG_SCSI_UFS_QCOM=m`（模块），v74 全内置配置修正为 `=y` 后解决（OP3-BOOT-037 PASS）。
-- Legacy 6.3.1 findings, including A530 runtime-PM and no-preempt behavior,
-  are evidence only and require new Linux 7.2 A/B reproduction.
+- Legacy 6.3.1 findings are evidence only and require a new v6.12.1-baseline
+  A/B before product use.

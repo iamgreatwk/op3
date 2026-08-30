@@ -1,15 +1,17 @@
 # Latest handoff
 
 ```text
-PROJECT MODE: CLEAN REBUILD
-TARGET KERNEL: Linux 7.2 pristine upstream
+PROJECT MODE: PRODUCT BASELINE
+TARGET KERNEL: pmOS MSM8996 Linux 6.12.1 LTS
+TARGET COMMIT: 67b0bbc3cbf46bae712a2606a43361756fcbd829
+SHELVED RESEARCH: Linux 7.x (physical UART required to resume)
 LEGACY KERNEL: Linux 6.3.1 pmOS-derived
-DO NOT BUILD LEGACY unless explicitly requested
+DO NOT BUILD LEGACY OR SHELVED 7.x UNLESS EXPLICITLY REQUESTED
 HOST TARGET: Ubuntu 26.04 LTS x86_64
 DEVICE: OnePlus 3 / MSM8996
 ```
 
-## Current state (2026-08-29) — DTB IS THE KEY, 7.2 STILL BLOCKED
+## Historical 7.x investigation (2026-08-29) — shelved
 
 **All 6.x pmOS kernels boot with the v74 DTB (compiled from 6.3.1-v74full);
 7.2 does not boot even with the v74 DTB.**

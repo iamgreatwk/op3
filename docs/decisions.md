@@ -30,3 +30,14 @@ Rules that follow:
   initramfs copy is session-local scratch.
 - A test that needs a large userspace stack must not be packaged into the boot
   image; stage it on sda15 first and change only the launcher.
+
+## 2026-08-30 — Adopt pmOS MSM8996 Linux 6.12.1 LTS product baseline
+
+The project owner selected pmOS MSM8996 Linux v6.12.1 LTS, commit
+`67b0bbc3cbf46bae712a2606a43361756fcbd829`, as the formal OnePlus 3 product
+baseline. It has device evidence through DRM RGB, A530 EGL, Weston Wayland,
+and Cog/WPE browser rendering (OP3-BROWSER-003).
+
+Linux 7.x is shelved, not a default alternative baseline. Its early-boot
+failure remains historical evidence and may be resumed only in an explicitly
+authorised `SHELVED-7X` task with physical MSM8996 UART evidence.
