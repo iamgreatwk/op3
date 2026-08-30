@@ -38,13 +38,13 @@ superseded: it contains the EFAULT defect.
 Device test run by project owner: 2026-08-30, derived image booted with USB
   RNDIS up; launcher ran the sequence; all colours exited 1 until commit
   `e261c4d`
-Device result: KMS ioctl PASS after the fix (`connector=33 crtc=106
-  mode=1080x1920@60`, `solid colour active`, exit 0). Visible panel colour
-  pending owner confirmation.
+Device result: PASS criteria 1 and 2 met. Exit 0 with `connector=33 crtc=106
+  mode=1080x1920@60`, and the owner reports a uniform red panel that stays on.
+  Criterion 3, reproducibility across two distinct colours, is not recorded yet.
 Evidence links / log paths: `/newroot/var/log/op3-drm-dumb.log` on sda15;
   see “2026-08-30 second run” below
 
-Conclusion: KMS PASS pending visual confirmation
+Conclusion: KMS PASS pending the second-colour check
 Uncertainties: This legacy KMS path does not exercise atomic KMS, GBM, EGL,
 Wayland, Weston, Cog, or WPE. A successful static binary also depends on the
 running image exposing /dev/dri/card0 to the sda15 root filesystem.
@@ -272,9 +272,9 @@ Non-blocking `dmesg` noise, not assigned as causes: missing
 `qcom/a530_pm4.fw` (Adreno GPU firmware; not needed for KMS scanout) and
 `msm_mdp ... pp done time out, lm=2`.
 
-## Owner rebuild so the image itself is fixed
+## Owner rebuild (done 2026-08-30)
 
-The image still carries the pre-fix binary. Rebuild and repackage:
+The owner rebuilt the binary from commit `e261c4d` and repackaged:
 
 ```bash
 aarch64-linux-gnu-gcc-11 -static -std=gnu11 -O2 -Wall -Wextra -Werror \
@@ -287,8 +287,10 @@ scripts/pack-boot.sh \
   artifacts/boot-oneplus3-pmos612-v74dtb-drm-test.img
 ```
 
-Record the new `artifacts/op3-drm-dumb`, `artifacts/initrd-op3-drm-test.cpio.gz`
-and boot-image SHA256 values here, replacing the ones above.
+The resulting SHAs are recorded in “Artifacts” above. Rebuilding the binary
+from `e261c4d` on the host reproduces
+`057a4604870afe19b570efa0de2ca60a635e73b8054dabbb287ce1c050e5c5cf` bit for bit,
+so the binary behind the observed red is exactly the committed source.
 
 ## Required next test image design
 
@@ -346,19 +348,26 @@ Artifacts:
 
 ```text
 overlay initrd: artifacts/initrd-op3-drm-test.cpio.gz
-  50996296 bytes, SHA256
-  18ea44868cb3dcb123ed8335ac4b197ae29b837fdd9fd26fd360263c0d52f791
+  50996287 bytes, SHA256
+  c9a01a62eed8da4e788193b27c62deda92c72543db72a9bba9dc7854f7a6d132
   first 50705116 bytes SHA256
   c3358a1cadb747996ddaa492e636827f2d72974040e8fd40d81f8a213e676366
   = artifacts/reference-initrd.img, byte-identical
 
 boot image: artifacts/boot-oneplus3-pmos612-v74dtb-drm-test.img
   62951424 bytes, SHA256
-  2553ba2ffcd9471bd21cbb27aed11babb80a76c1118d6b60abbd4cb70a578804
+  b37ef527a0307fba9fc561bea1360ab17f89314c33c729f00580984e094e1f5a
 
 test binary: artifacts/op3-drm-dumb
-  SHA256 a41b02d1976071f16f57afd6c365e9ddce93b7500864cd89141b4a1368fd4be3
+  SHA256 057a4604870afe19b570efa0de2ca60a635e73b8054dabbb287ce1c050e5c5cf
+  reproduced bit-for-bit from commit e261c4d with the same compile command.
+  The earlier a41b02d1976071f16f57afd6c365e9ddce93b7500864cd89141b4a1368fd4be3
+  predates e261c4d and is superseded.
 ```
+
+Verified on the rebuilt image: kernel payload still
+`50ffea424e6b7625b30acd5b14673ea287d2b04c7c283ee145f895247d8e881a`, identical to
+the control, and the ramdisk is exactly `artifacts/initrd-op3-drm-test.cpio.gz`.
 
 Packing and verification were run by the agent; no device action was taken.
 
@@ -417,8 +426,32 @@ PASS requires all of the following:
    interval.
 3. The result is reproducible for at least two distinct colours.
 
+Status on 2026-08-30, with the rebuilt image
+`b37ef527a0307fba9fc561bea1360ab17f89314c33c729f00580984e094e1f5a`:
+
+| Criterion | Status | Evidence |
+| --- | --- | --- |
+| 1 connector/CRTC/mode without ioctl error | met | `connector=33 crtc=106 mode=1080x1920@60`, `solid colour active`, `exit=0` |
+| 2 uniform colour on the panel | met for red | owner: “已经看到红色，持续显示着” |
+| 3 reproducible in two colours | **not recorded** | only red observed; green and blue not yet watched |
+
 FAIL is an open/ioctl/modeset error, no `/dev/dri/card0`, no connected
 connector, a black/non-uniform panel, or a hang. Record the exact standard
 error output and the observed panel state. A PASS proves only the DRM RGB
 gate; it does not establish EGL, Wayland, Cog, WPE, GPU runtime PM, or Linux
 7.2 readiness.
+
+## Next step to complete criterion 3
+
+Boot the rebuilt image once and watch the first ~70 s: it runs red, green and
+blue for 20 s each, then holds red for 600 s. Recording that two of the three
+colours appear completes criterion 3. Then read
+`/newroot/var/log/op3-drm-dumb.log` for the per-colour exit codes.
+
+```text
+fastboot boot artifacts/boot-oneplus3-pmos612-v74dtb-drm-test.img
+```
+
+Only the Integration role may promote this to an accepted result; this entry
+records evidence, not acceptance. The next layer after a full PASS is EGL, and
+it needs its own task with its own single variable.
