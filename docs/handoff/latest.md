@@ -196,6 +196,15 @@ out of scope for the product path.
 
 ## Key artifacts
 
+- pmOS 6.12 own-DTB + reproducible-initramfs boot PASS (OP3-BOOT-042/043):
+  `artifacts/boot-oneplus3-pmos612-own-dtb-repro-initrd.img`
+  (`0b2e85ee…`); source `91df7ccd…`, tree-built DTB `cb29ab65…`, generated
+  initramfs `61cf6338…`. The source uses the direct `rpm-glink` topology; it
+  replaces the v74 DTB only for the pmOS 6.12 product path. The generated
+  initramfs is a reproducible/auditable reserialization of the still-pinned
+  historical archive; independent firmware/base-userland provenance remains a
+  separate next task. Details: `docs/handoff/op3-dts-rpm-001.md` and
+  `docs/handoff/op3-initrd-001.md`.
 - 6.16.12 bootable (v74 DTB): `artifacts/boot-oneplus3-pmos616-v74strict-v74dtb.img`
 - 6.19.5 bootable (v74 DTB): `artifacts/boot-oneplus3-pmos6195-v74strict-v74dtb.img`
 - 6.16.12 worktree: `source/linux-pmos-msm8996-6.16` (tag `v6.16.12-msm8996`)

@@ -18,7 +18,7 @@
     - 从开机抓全量：抓取循环必须在 `fastboot boot` **之前**启动，且失败要退避，如 `while [ $(date +%s) -lt $end ]; do timeout 3 cat /dev/ttyACM0 >> log; sleep 1; done`。固定次数无退避的循环会在设备离线时瞬间烧完（cat 打开失败立即返回）——本轮实际踩坑，导致抓到 0 字节。
     - relay 启动到主机连接之间几秒的消息会丢（u_serial 无缓冲）；补看用 ACM 上的调试 shell：`exec 3<>/dev/ttyACM0; printf '\ndmesg\n' >&3`（或 screen/minicom），命令在设备上真实执行、结果从同一端口返回（已验证：发 `echo MARKER-$((40+2))` 返回 `MARKER-42`）。注意 kmsg 转发流会与 shell 输出交叉，属预期。
 - **GPU runtime PM 恢复路径会让整机重启（2026-08-30，EGL 层发现，未解决）**：开机后 30 秒内由启动器运行的 kmscube 一切正常（FD530/GLES 3.1），但稍后（GPU 已 runtime suspend，`control=auto`、250ms 自动挂起）再通过 SSH 手动运行 kmscube，设备直接重启。背景：DTB 的 GPU 节点缺少 vdd/vddcx 供电，驱动打印 `supply vdd not found, using dummy regulator`，runtime resume 时没有真实的电源序列。可疑方向：给 `gpu@b00000` 补上真实的 GPU 供电节点（需要 DTB 层改动，独立任务）。当前规避：EGL 启动器开机即把 `b00000.gpu/power/control` 设为 `on`（注意：GPU 已挂起时切 `on` 会立即触发 resume，同样有风险）。
-- **6.12/6.16/6.19 用自己的 DTB 卡 fastboot（未解决）**：这些内核用 6.3.1-v74full 编译的 v74 DTB 都能启动，但用各自 DTB 卡。最可疑差异是新 `qcom,rpm-proc` DTS 结构（待验证）。
+- **6.12 own-DTB RPM 拓扑已验证（2026-08-30）**：OP3-BOOT-042 将 pmOS 6.12 的 MSM8996 DTS 从 `rpm remoteproc → glink-edge` 回退为直接 `rpm-glink → rpm-requests` 后，使用该树编译的 DTB 成功进入 recovery/RNDIS/SSH，DSI 与 UFS 正常。历史 v74 DTB 不再是 6.12 产品路径的必需输入；6.16/6.19 的 own-DTB 结果仍是各自独立的历史问题。
 - 6.19.5 之前卡 fastboot 的原因是 `CONFIG_SCSI_UFS_QCOM=m`（模块），v74 全内置配置修正为 `=y` 后解决（OP3-BOOT-037 PASS）。
 - Legacy 6.3.1 findings are evidence only and require a new v6.12.1-baseline
   A/B before product use.
