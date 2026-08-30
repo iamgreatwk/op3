@@ -16,13 +16,15 @@ Previous PASS milestone: v6.12.1 DSI control reaches recovery.c
 Sole hypothesis: The booting v6.12.1 DSI-control image can allocate, map, and
 modeset a DRM dumb buffer through /dev/dri/card0, visibly producing a solid
 RGB frame.
-Only variable changed: The direct-KMS test program placed on the existing
-sda15 root filesystem. Kernel, DTB, initramfs, cmdline, DRM/MSM, GPU, PM, and
-userspace stack are unchanged.
+Only variable changed: One appended cpio member inside the initramfs of the
+fixed v6.12.1 control image: a replacement `sbin/run_recovery.sh` plus the
+static `op3-drm-dumb` binary. Kernel, DTB, header, cmdline, `/init`,
+`init_mainline.sh`, inittab, DRM/MSM, GPU, PM, and sda15 content are unchanged.
 
-Build run by project owner: NOT_RUN (no kernel, Buildroot, Mesa, WebKit, WPE,
-or other large-project build)
-Build result: NOT_RUN
+Build run by project owner: the single-file static test binary only
+(`artifacts/op3-drm-dumb`, built from commit `d43821a`, 2026-08-30). No kernel,
+Buildroot, Mesa, WebKit, WPE, or other large-project build.
+Build result: ELF 64-bit LSB ARM aarch64, statically linked
 Artifacts and SHA256: a static ARM64 test executable was generated locally as
 `artifacts/op3-drm-dumb`, SHA256
 `d74da26cc2914ea083a2c4d1cbc6095812673226b87c3e89de0ffbdd540e2675`. That
@@ -205,10 +207,95 @@ For the next test, retain the pmOS 6.12 image's kernel, DTB, header, cmdline,
 4. Keep `init_mainline.sh` unchanged so SSH, USB RNDIS, ACM shell, and its
    existing logs remain available for observation.
 
-This is a one-variable boot-userspace diagnostic. It must be committed and
-explicitly authorized for packaging before any derived boot image is created;
-it must not modify kernel, DTB, DRM/MSM, GPU, PM, or sda15 content apart from
-the intended persistent log/test binary.
+This is a one-variable boot-userspace diagnostic. It modifies no kernel, DTB,
+DRM/MSM, GPU, or PM code, and no sda15 content apart from the intended
+persistent log file.
+
+## Derived test image (built 2026-08-30, owner-authorized)
+
+The derived initramfs is an **overlay**, not a repack.
+`scripts/make-drm-test-initrd.sh` appends one gzip cpio member to the validated
+reference initramfs. The kernel unpacks concatenated compressed initramfs
+members in order (`init/initramfs.c`, `unpack_to_rootfs`) and opens a regular
+file entry with `O_WRONLY|O_CREAT|O_TRUNC`, so the appended launcher replaces
+the reference one while every other file, owner, and device node stays
+byte-identical. Repacking the 50 MB archive as an unprivileged host user would
+silently have changed uid/gid and dropped device nodes.
+
+Appended entries:
+
+| Path | Mode | Source |
+| --- | --- | --- |
+| `sbin/run_recovery.sh` | 0755 | `boot/drm-test-initramfs/sbin/run_recovery.sh` |
+| `usr/bin/op3-drm-dumb` | 0755 | `artifacts/op3-drm-dumb` |
+
+Launcher behaviour: wait up to 90 s for `/dev/dri/card0`, record the kernel
+identity, the `/dev/dri` state and filtered `dmesg`, run
+`op3-drm-dumb red/green/blue` with a 20 s hold each, then hold red for 600 s,
+then idle forever. The inittab entry is `::respawn:`, so the launcher must not
+exit; a fast exit would make busybox init disable the entry. It never starts
+`recovery_mainline`, so no other client can hold the DRM master.
+
+Artifacts:
+
+```text
+overlay initrd: artifacts/initrd-op3-drm-test.cpio.gz
+  50996090 bytes, SHA256
+  1315c2eb898ea6a5c60c6e4db86ec68f1ab10532d78c315287c93b19e15abedd
+  first 50705116 bytes SHA256
+  c3358a1cadb747996ddaa492e636827f2d72974040e8fd40d81f8a213e676366
+  = artifacts/reference-initrd.img, byte-identical
+
+boot image: artifacts/boot-oneplus3-mainline-6121-dsi-pm-v74dtb-drm-test.img
+  62939136 bytes, SHA256
+  1722d5a1dc8bc93917d681c165a79575b3acc589d508beb5c725382acd3e4cbb
+
+test binary: artifacts/op3-drm-dumb
+  SHA256 a41b02d1976071f16f57afd6c365e9ddce93b7500864cd89141b4a1368fd4be3
+```
+
+Packing and verification were run by the agent; no device action was taken.
+
+```bash
+scripts/make-drm-test-initrd.sh
+scripts/pack-boot.sh \
+  out/linux-mainline-6.12.1-dsi-pm-ab/arch/arm64/boot/Image.gz \
+  out/pmos-msm8996-6.3.1-v74full/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dtb \
+  artifacts/initrd-op3-drm-test.cpio.gz \
+  artifacts/boot-oneplus3-mainline-6121-dsi-pm-v74dtb-drm-test.img
+```
+
+The ramdisk is the only difference from the validated control image
+`boot-oneplus3-mainline-6121-dsi-pm-v74dtb-full-initrd.img`. Both kernel
+payloads (`Image.gz` followed by the raw v74 DTB) hash to
+`5aafe547704d63ba140968927e96d78a81c96b4719463c7e4db29dc6c3288249`, and both
+images use header v0, 4096-byte pages, kernel `0x80008000`, ramdisk
+`0x81000000`, tags `0x80000100`, and the cmdline
+`fbcon=nodefault console=tty0 pmos.debug-shell`.
+
+## Owner device procedure for this image
+
+Use the established non-persistent boot procedure; do not flash:
+
+```text
+fastboot boot artifacts/boot-oneplus3-mainline-6121-dsi-pm-v74dtb-drm-test.img
+```
+
+`init_mainline.sh` runs first, so the RNDIS endpoint (`172.16.42.1`), the ACM
+shell and Dropbear come up as before. The RGB sequence then starts by itself;
+no interactive command is needed. Watch the panel for 20 s red, 20 s green,
+20 s blue, then a 10 minute red hold.
+
+Collect the evidence from the device:
+
+```text
+/newroot/var/log/op3-drm-dumb.log   persistent copy on sda15 (survives reboot)
+/var/log/op3-drm-dumb.log           initramfs copy for the running session
+dmesg | grep -i -E "drm|msm|dsi|panel|mdp"
+```
+
+The launcher also writes its progress lines to `/dev/kmsg`, so they appear in
+`dmesg` and in `init_mainline.sh`'s existing dmesg archive.
 
 ## PASS / FAIL record
 
