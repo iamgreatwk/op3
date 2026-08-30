@@ -38,13 +38,15 @@ superseded: it contains the EFAULT defect.
 Device test run by project owner: 2026-08-30, derived image booted with USB
   RNDIS up; launcher ran the sequence; all colours exited 1 until commit
   `e261c4d`
-Device result: PASS criteria 1 and 2 met. Exit 0 with `connector=33 crtc=106
-  mode=1080x1920@60`, and the owner reports a uniform red panel that stays on.
-  Criterion 3, reproducibility across two distinct colours, is not recorded yet.
+Device result: all three PASS criteria met. Exit 0 with `connector=33 crtc=106
+  mode=1080x1920@60`, and the owner reports red → green → blue → red displayed
+  in that order and correct, from
+  `f9693a7baf9e1fae5ff8ce27517ac6c246782576b8eb739093a84c690b7a3670`.
 Evidence links / log paths: `/newroot/var/log/op3-drm-dumb.log` on sda15;
-  see “2026-08-30 second run” below
+  see “2026-08-30 second run” and “PASS / FAIL record” below
 
-Conclusion: KMS PASS pending the second-colour check
+Conclusion: KMS PASS on all three criteria; acceptance pending the Integration
+  role
 Uncertainties: This legacy KMS path does not exercise atomic KMS, GBM, EGL,
 Wayland, Weston, Cog, or WPE. A successful static binary also depends on the
 running image exposing /dev/dri/card0 to the sda15 root filesystem.
@@ -458,8 +460,8 @@ Status on 2026-08-30, with the rebuilt image
 | Criterion | Status | Evidence |
 | --- | --- | --- |
 | 1 connector/CRTC/mode without ioctl error | met | `connector=33 crtc=106 mode=1080x1920@60`, `solid colour active`, `exit=0` |
-| 2 uniform colour on the panel | met for red | owner: “已经看到红色，持续显示着” |
-| 3 reproducible in two colours | **not recorded** | only red observed; green and blue not yet watched |
+| 2 uniform colour on the panel | met | owner: uniform colours, correct and stable |
+| 3 reproducible in two colours | met | owner: red → green → blue → red, in that order, from `f9693a7b…` (60 s holds) |
 
 FAIL is an open/ioctl/modeset error, no `/dev/dri/card0`, no connected
 connector, a black/non-uniform panel, or a hang. Record the exact standard
@@ -467,17 +469,17 @@ error output and the observed panel state. A PASS proves only the DRM RGB
 gate; it does not establish EGL, Wayland, Cog, WPE, GPU runtime PM, or Linux
 7.2 readiness.
 
-## Next step to complete criterion 3
+## Status of criterion 3
 
-Boot the rebuilt image once and watch the first ~70 s: it runs red, green and
-blue for 20 s each, then holds red for 600 s. Recording that two of the three
-colours appear completes criterion 3. Then read
-`/newroot/var/log/op3-drm-dumb.log` for the per-colour exit codes.
+Met on 2026-08-30. With the 60 s-hold image
+`f9693a7baf9e1fae5ff8ce27517ac6c246782576b8eb739093a84c690b7a3670`, the owner
+reports red → green → blue → red in that order, correct and stable. Archive the
+per-colour exit codes from `/newroot/var/log/op3-drm-dumb.log` next to this
+handoff if the Integration role asks for them.
 
-```text
-fastboot boot artifacts/boot-oneplus3-pmos612-v74dtb-drm-test.img
-```
+Only the Integration role may promote this to an accepted result; this document
+records evidence, not acceptance.
 
-Only the Integration role may promote this to an accepted result; this entry
-records evidence, not acceptance. The next layer after a full PASS is EGL, and
-it needs its own task with its own single variable.
+Recommended next experiment (new task, new single variable): move one layer up
+and test EGL/GBM on the same pmOS 6.12 control, keeping this KMS path as the
+known-good reference. Do not carry the Linux 7.2 line into that task.
