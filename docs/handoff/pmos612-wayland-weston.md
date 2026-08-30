@@ -22,25 +22,46 @@ Only variable changed per test:
 
 Build run by project owner: Buildroot 2026.02.x incremental on the EGL output
   (toolchain + Mesa reused); weston 14.0.2, eudev, seatd, demo/simple clients.
-  Run by the agent with owner authorization, same as the Mesa build.
-Build result: NOT_RUN (in progress while this doc was written)
-Artifacts and SHA256: filled in after the build
+  Run by the agent with owner authorization, same as the Mesa build. One
+  follow-up Mesa rebuild (mesa3d-dirclean) was required: the first Mesa build
+  predated BR2_PACKAGE_WAYLAND, so libEGL shipped WITHOUT the wayland platform
+  ("Native platform type: surfaceless") and clients could not get usable
+  configs. With BR2_PACKAGE_WAYLAND=y mesa rebuilds with -Dplatforms=wayland.
+Build result: PASS
+Artifacts and SHA256:
+  bundle  0a8163cb7e01e20deadab058bd710573425093abbe6109d8ace8fc06d6f867fd
+          (op3-weston-bundle.tar.gz, whole Buildroot target, 22 MB)
+  image   ea6043cc4c507783e7e96c6b4e1bdff3483f6c6da60dbbcbfe1c6673a1a27ed5
+          (boot-oneplus3-pmos612-v74dtb-weston.img)
+  initrd  402dd21da27c0faeb346b52edff0b39c63090cd333a0b8bdbafd0a522d72a6c9
 
-Device test run by project owner: pending
-Device result: NOT_RUN
-Evidence links / log paths: /newroot/var/log/op3-weston.log (persistent on
-  sda15), ACM console (kernel log relay + debug shell, see
-  docs/known-issues.md)
+Device test run by project owner: 2026-08-30, two full runs plus a live
+  session; owner confirmed the weston desktop and the rotating
+  weston-simple-egl triangle on the panel
+Device result: PASS (all three criteria)
+  - weston 14 DRM backend + GL renderer on /dev/dri/card0, DSI-1 enabled
+    1080x1920@60, GL renderer FD530 (freedreno), no atomic-commit errors
+  - panel shows the weston desktop (desktop-shell) and the rotating
+    weston-simple-egl client for the whole window; client killed by the
+    runner at window end (exit 143), zero assertions
+  - reproduced across two runs + a live interactive session
+Evidence links / log paths: /newroot/var/log/op3-weston-run*.log,
+  /run/op3-weston/weston.log (session), ACM console relay
 
-Conclusion: pending
-Uncertainties: weston DRM backend module paths are compile-time-absolute
-  (/usr/lib/weston); run.sh bridges them with symlinks on the live initramfs
-  rootfs. libinput needs the udev database; the bundle starts udevd and runs
-  udevadm trigger/settle. No input devices may exist (touch panel driver
-  untested) — the gate does not require input.
-Recommended next experiment: boot the weston image with the ACM capture
-  running, watch the 40 s window (weston desktop + 25 s weston-simple-egl
-  cube), then record the result row
+Conclusion: all three PASS criteria met on the pmOS 6.12 control. The Wayland
+  hardware-compositing path is SUPPORTED by evidence; promotion to accepted is
+  the Integration role's decision. This does NOT yet cover the browser
+  (layer 07 Cog/WPE) or Linux 7.2.
+Uncertainties: weston-flower (cairo client) displayed white/static in one
+  session — cairo-toytoolkit animation path was not investigated further since
+  the EGL client (simple-egl) is the gate's criterion. The desktop clock
+  animation was not checked. Cosmetic data-file warnings (fontconfig, xkb
+  compose, weston cursors) appear because /usr/share symlinks cover only what
+  was needed; harmless for the gate.
+Recommended next experiment: layer 07 browser gate (Cog + WPE WebKit) — large
+  Buildroot build (WebKit), owner-run per AGENTS.md or with explicit owner
+  authorization. Also worth checking the weston top-bar clock animation as a
+  free extra data point.
 ```
 
 ## PASS / FAIL record
@@ -50,8 +71,8 @@ PASS requires all of the following:
 1. weston starts with the DRM backend and the GL renderer on `/dev/dri/card0`
    (`gl-renderer` in its log, no EGL/GBM errors).
 2. The panel shows the compositor output (weston desktop) for the hold
-   interval, and the weston-simple-egl cube is visible — a Wayland client
-   rendered end-to-end through the compositor and the GPU.
+   interval, and the weston-simple-egl spinning triangle is visible — a
+   Wayland client rendered end-to-end through the compositor and the GPU.
 3. The result is reproducible in a second run.
 
 FAIL is a weston abort, a missing `gl-renderer`/`drm-backend` module, an
@@ -61,6 +82,43 @@ evidence, not a PASS.
 
 A PASS here does not by itself accept the browser; layer 07 (Cog / WPE
 WebKit) is a separate gate and a separate Buildroot build.
+
+## Result (2026-08-30): PASS
+
+Reached over six device iterations; each fix is in
+`boot/weston-test/opt/op3-weston/run.sh` with a comment:
+
+1. Library path: the runner's `--library-path` must include `usr/lib` and
+   `usr/lib/libweston-14` in addition to `lib` (glibc), or nothing loads.
+2. Module paths: weston 14 dlopens backends/renderers from
+   `/usr/lib/libweston-14` and shells from `/usr/lib/weston`; both are bridged
+   with symlinks on the live rootfs.
+3. Input: buildroot's eudev ships no `input_id` rules file, so libinput
+   rejected every device ("not tagged as supported input device") and weston
+   aborted with zero inputs. run.sh writes a rule invoking the `input_id`
+   builtin; after that the Synaptics S3508 touchscreen and the power key are
+   both attached.
+4. Helpers: weston execs `/usr/libexec/weston-desktop-shell` and
+   `/usr/libexec/weston-keyboard` directly; the initramfs has no dynamic
+   loader, so both exited status 1 and weston quit ("apparently cannot run at
+   all"). They are replaced by wrapper scripts execing through the bundled
+   loader.
+5. Stale processes: a weston forked twin survives a TERM aimed at the tracked
+   pid; the survivor keeps DRM master ("Could not make device fd drm master:
+   Device or resource busy") and the old socket, so the next run renders
+   nothing and clients assert. run.sh sweeps `/proc` by full cmdline at start
+   and stop.
+6. Mesa wayland platform: the first Mesa build predated
+   `BR2_PACKAGE_WAYLAND`, so client-side EGL had no wayland platform
+   ("Native platform type: surfaceless") and `eglChooseConfig` returned zero
+   configs (simple-egl assert at init_egl). `mesa3d-dirclean` + rebuild with
+   `-Dplatforms=wayland` fixed it. Lesson: adding a package that changes
+   Mesa's dependencies requires a Mesa rebuild; incremental Buildroot does
+   not do it automatically.
+
+Also noted: the runtime dir must be cleaned before weston starts (stale locks
+push the socket to `wayland-1`); the runner detects the real socket name and
+passes it to the client via `WAYLAND_DISPLAY`.
 
 ## Bundle layout and absolute-path bridging
 

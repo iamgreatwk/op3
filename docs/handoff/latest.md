@@ -103,6 +103,26 @@ and pitfalls in `docs/known-issues.md`. Root fix for a real `console=ttyGS0`
 
 This does not change the Linux 7.2 line below.
 
+## Wayland gate PASS (2026-08-30, layer 06)
+
+weston 14 composites on the panel with the GL renderer and an animated Wayland
+client (`docs/handoff/pmos612-wayland-weston.md`, row `OP3-WAYLAND-001`):
+
+```text
+image:  artifacts/boot-oneplus3-pmos612-v74dtb-weston.img (ea6043cc…)
+bundle: artifacts/op3-weston-bundle.tar.gz (0a8163cb…, whole Buildroot target)
+result: weston DRM backend + GL renderer (FD530) on DSI-1 1080x1920@60;
+        weston-simple-egl spinning triangle visible on the panel; owner
+        confirmed; two runs + live session, zero assertions
+scope:  layer 06 only. Not the browser, and not a Linux 7.2 acceptance result.
+```
+
+Six issues were fixed on the way (loader/module paths, eudev input_id rule,
+/usr/libexec helper wrappers, stale weston twin holding DRM master, Mesa
+built without the wayland platform) — details in the gate doc.
+
+Next: layer 07 browser gate (Cog + WPE WebKit) — large Buildroot build.
+
 ## Key artifacts
 
 - 6.16.12 bootable (v74 DTB): `artifacts/boot-oneplus3-pmos616-v74strict-v74dtb.img`
