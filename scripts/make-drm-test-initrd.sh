@@ -30,9 +30,20 @@ tmpdir="$(mktemp -d)"
 trap 'rm -rf "$tmpdir"' EXIT
 
 stage="$tmpdir/stage"
+firmware_stage="$project_root/artifacts/a530-firmware"
+
 mkdir -p "$stage/sbin" "$stage/usr/bin"
 install -m 0755 "$overlay_source/sbin/run_recovery.sh" "$stage/sbin/run_recovery.sh"
 install -m 0755 "$binary" "$stage/usr/bin/op3-drm-dumb"
+
+# The GPU probes while the initramfs is still the root, so its firmware has to
+# be inside the initramfs. About 35 KB; irrelevant to the boot.img size limit.
+if [ -d "$firmware_stage" ]; then
+  mkdir -p "$stage/lib/firmware/qcom"
+  cp -a "$firmware_stage/." "$stage/"
+  printf 'GPU firmware staged from %s:\n' "$firmware_stage"
+  ( cd "$firmware_stage" && find . -type f -printf '  %P\n' | LC_ALL=C sort )
+fi
 
 ( cd "$stage" && find . -mindepth 1 -printf '%P\n' | LC_ALL=C sort |
 	cpio -o -H newc --owner=0:0 --quiet ) > "$tmpdir/overlay.cpio"
