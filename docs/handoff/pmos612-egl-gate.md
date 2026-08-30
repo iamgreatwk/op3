@@ -258,6 +258,26 @@ That produces a tarball of `opt/op3-egl/` and refuses to build it if
 `libEGL`, `libGLESv2`, `libgbm`, `libdrm`, `libglapi`, `msm_dri.so` or
 `kmscube` are missing.
 
+## Progress (2026-08-30)
+
+- EGL bundle built and deployed to sda15 by the agent, with owner authorisation:
+  `artifacts/op3-egl-bundle.tar.gz`,
+  SHA256 `e7b1df232524b93abc01749100369d7d6e098071d714d9d789b35f59166cdba2`
+  (7093126 bytes, self-contained: glibc loader, libc, libstdc++, Mesa 26 stack,
+  kmscube, run.sh). Deployed as `/newroot/opt/op3-egl/`.
+  Deployment note: the device busybox tar has no gzip support, so the transfer
+  used `cat | ssh 'cat > file'` plus `zcat file | tar -x -C /newroot`.
+- EGL boot image built by the agent:
+  `artifacts/boot-oneplus3-pmos612-v74dtb-egl.img`,
+  SHA256 `284936e65b53d947e6ecbdbb2fcbce005c7861ad3cfdd0d4aa2cc1c9976803f2`
+  (62967808 bytes). Kernel payload unchanged
+  (`50ffea424e6b7625b30acd5b14673ea287d2b04c7c283ee145f895247d8e881a`), ramdisk
+  `artifacts/initrd-op3-egl.cpio.gz`
+  (`648ab291d61f444c1f07bf8a695cb2f5879efbbc4476db0ccc90ff7115075fdf`) = EGL
+  launcher plus the three GPU firmware files, plus the small RGB test binary
+  kept for on-device comparison.
+- Device test: NOT_RUN.
+
 ## Owner step 2: deploy the bundle to sda15
 
 Boot the firmware image (or any image with USB RNDIS), then from the host:
