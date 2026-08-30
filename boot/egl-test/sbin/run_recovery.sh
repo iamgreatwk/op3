@@ -56,6 +56,20 @@ sync_log() {
 
 log "EGL launcher start pid=$$"
 
+# Globally disable A530 runtime PM, before anything else. Validated on 6.3.1
+# over many runs: without this, GPU suspend/resume cycles blank the panel or
+# hang the SoC. On this kernel a manual kmscube run after the GPU had
+# runtime-suspended hard-reset the device with no console output
+# (docs/known-issues.md). Setting control=on resumes the GPU (the same resume
+# kmscube would trigger anyway) and keeps it permanently powered.
+GPU_POWER=/sys/bus/platform/devices/b00000.gpu/power/control
+if [ -f "$GPU_POWER" ]; then
+	echo on > "$GPU_POWER" 2>/dev/null
+	log "GPU runtime PM disabled: control=$(cat "$GPU_POWER" 2>/dev/null), cur_freq=$(cat /sys/class/devfreq/b00000.gpu/cur_freq 2>/dev/null)"
+else
+	log "GPU runtime PM: $GPU_POWER not found"
+fi
+
 waited=0
 while [ ! -f "$BUNDLE_RUN" ]; do
 	if [ "$waited" -ge "$WAIT_LIMIT" ]; then
