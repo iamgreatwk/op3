@@ -159,12 +159,32 @@ this firmware set.
 
 ## Owner step 1: build the EGL bundle with Buildroot
 
+Use the **2026.02.x** branch, not 2025.02. Buildroot 2025.02 ships host-m4
+1.4.19, whose bundled gnulib does not build with the host GCC 15.2
+(`GL_OSET_INLINE _GL_ATTRIBUTE_NODISCARD int` → `expected identifier or '('
+before 'int'`): GCC 15 defaults to `-std=gnu23`, which enables the C23
+`[[nodiscard]]` spelling at a position gnulib does not expect. 2026.02.x ships
+m4 1.4.21 and builds cleanly. The four symbols this defconfig needs were
+verified to exist on that branch on 2026-08-30.
+
 ```bash
-git clone --depth 1 -b 2025.02 https://gitlab.com/buildroot.org/buildroot.git source/buildroot
+git clone --depth 1 -b 2026.02.x https://gitlab.com/buildroot.org/buildroot.git source/buildroot
 cp buildroot/op3-egl.defconfig source/buildroot/configs/op3_egl_defconfig
 make -C source/buildroot O="$PWD/out/buildroot-op3-egl" op3_egl_defconfig
 make -C source/buildroot O="$PWD/out/buildroot-op3-egl" -j"$(nproc)"
 ```
+
+If a different host package hits the same class of error, force the older
+language standard instead of switching branches again:
+
+```bash
+make -C source/buildroot O="$PWD/out/buildroot-op3-egl" \
+  HOST_CFLAGS="-O2 -std=gnu17" HOST_CXXFLAGS="-O2 -std=gnu++17" -j"$(nproc)"
+```
+
+Set both variables: Buildroot makes `HOST_CXXFLAGS` inherit `HOST_CFLAGS`, and
+`-std=gnu17` is not valid for g++. Downgrading the host compiler is not an
+option on this machine; no gcc-14 candidate exists in the current repositories.
 
 Symbol names in `buildroot/op3-egl.defconfig` were checked against Buildroot
 master on 2026-08-30. Two traps were already handled:
