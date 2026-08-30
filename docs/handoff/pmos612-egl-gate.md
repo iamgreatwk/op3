@@ -276,7 +276,19 @@ That produces a tarball of `opt/op3-egl/` and refuses to build it if
   (`648ab291d61f444c1f07bf8a695cb2f5879efbbc4476db0ccc90ff7115075fdf`) = EGL
   launcher plus the three GPU firmware files, plus the small RGB test binary
   kept for on-device comparison.
-- Device test: NOT_RUN.
+- Device test run by project owner: 2026-08-30, two consecutive boots of the
+  EGL image; the launcher auto-ran the bundle on each boot.
+- Device result: **criteria 1 and 3 met**. EGL 1.5 on `/dev/dri/card0`, GL
+  renderer `FD530` (freedreno, hardware — not llvmpipe), OpenGL ES 3.1 Mesa
+  26.0.1, GLSL ES 3.10; kmscube ran the full 30 s window and exited 0 on both
+  boots with no GL errors. Criterion 2 (visible cube) pending owner
+  confirmation.
+- Separately observed: running kmscube manually over SSH after the GPU had
+  runtime-suspended rebooted the device (see docs/known-issues.md; the DTB GPU
+  node has no vdd/vddcx supplies, so runtime resume has no real power
+  sequence). The boot-time runs are unaffected because the GPU is still active
+  then. This is recorded as OP3-EGL-001's caveat and is a candidate for its own
+  task.
 
 ## Owner step 2: deploy the bundle to sda15
 
