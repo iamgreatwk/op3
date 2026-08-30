@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>OP3 browser gate</title>
+<style>
+  body { margin: 0; background: #101828; color: #fff;
+         font-family: sans-serif; display: flex;
+         flex-direction: column; align-items: center;
+         justify-content: center; height: 100vh; }
+  h1 { font-size: 14vw; margin: 0;
+       animation: hue 3s linear infinite; }
+  @keyframes hue { from { color: #ff4d4d; } 50% { color: #4dff88; }
+                   to { color: #4d9fff; } }
+  p  { font-size: 6vw; margin: 2vw; }
+  #t { font-size: 12vw; color: #ffd24d; font-weight: bold; }
+</style>
+</head>
+<body>
+<h1>OP3 BROWSER</h1>
+<p>WPE WebKit is rendering this page</p>
+<p>JS seconds: <span id="t">0</span></p>
+<script>
+  var t = 0;
+  setInterval(function () {
+    t += 1;
+    document.getElementById("t").textContent = t;
+  }, 1000);
+</script>
+</body>
+</html>

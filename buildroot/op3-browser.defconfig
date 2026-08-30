@@ -1,0 +1,59 @@
+# Buildroot defconfig for the OnePlus 3 browser gate (aarch64 / MSM8996).
+#
+# Purpose: build the WPE WebKit browser stack (cog + WPEBackend-fdo) on top of
+# the validated Mesa/EGL/Weston stack. The result is staged as a self-contained
+# bundle onto sda15 by scripts/stage-browser-rootfs.sh.
+#
+# Layer 07 gate: cog renders a local HTML page on the panel through
+# WPEBackend-fdo → Wayland → weston → freedreno. JavaScript execution is
+# verified by a page-side counter.
+#
+# Copy to <buildroot>/configs/op3_browser_defconfig, then:
+#   make -C source/buildroot O=$PWD/out/buildroot-op3-egl op3_browser_defconfig
+#   make -C source/buildroot O=$PWD/out/buildroot-op3-egl -j"$(nproc)"
+#
+# WARNING: wpewebkit pulls in icu, harfbuzz, gstreamer1 and the full plugin
+# set. This is a multi-hour build; per AGENTS.md the project owner runs it.
+
+BR2_aarch64=y
+BR2_TOOLCHAIN_BUILDROOT_CXX=y
+BR2_INSTALL_LIBSTDCPP=y
+BR2_TOOLCHAIN_BUILDROOT_GLIBC=y
+
+BR2_TARGET_ROOTFS_TAR=y
+
+# Kernel-mode-setting / buffer management.
+BR2_PACKAGE_LIBDRM=y
+
+# Mesa with the freedreno (MSM/Adreno) Gallium driver and EGL/GLES.
+# NOTE: wpewebkit needs BR2_PACKAGE_WAYLAND, and Mesa picks up the wayland
+# EGL platform from the same symbol. If Mesa was built before wayland was
+# selected, force `make mesa3d-dirclean` before rebuilding (observed
+# 2026-08-30: incremental builds do not reconfigure Mesa automatically).
+BR2_PACKAGE_MESA3D=y
+BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_FREEDRENO=y
+BR2_PACKAGE_MESA3D_OPENGL_EGL=y
+BR2_PACKAGE_MESA3D_OPENGL_ES=y
+
+BR2_PACKAGE_KMSCUBE=y
+
+# udev database for libinput (weston) and for Mesa's device discovery.
+BR2_ROOTFS_DEVICE_CREATION_DYNAMIC_EUDEV=y
+BR2_PACKAGE_EUDEV=y
+BR2_PACKAGE_SEATD=y
+
+# The compositor the browser runs under.
+BR2_PACKAGE_WESTON=y
+BR2_PACKAGE_WESTON_DRM=y
+BR2_PACKAGE_WESTON_DEFAULT_DRM=y
+BR2_PACKAGE_WESTON_SIMPLE_CLIENTS=y
+BR2_PACKAGE_WESTON_DEMO_CLIENTS=y
+
+# The browser stack: cog selects dbus + wayland; wpewebkit selects
+# wpebackend-fdo + libwpe + icu + harfbuzz + webp + gstreamer1.
+BR2_PACKAGE_WPEWEBKIT=y
+BR2_PACKAGE_COG=y
+
+# Small helpers that make on-device debugging easier.
+BR2_PACKAGE_DROPBEAR=y
+BR2_PACKAGE_STRACE=y
