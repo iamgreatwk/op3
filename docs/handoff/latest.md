@@ -64,6 +64,45 @@ milestone is the Integration role’s decision.
 
 This does not change the Linux 7.2 line below.
 
+## EGL gate PASS + ACM debug console (2026-08-30, layer 05)
+
+**OP3-EGL-001 passes all three criteria** on the pmOS 6.12 control kernel plus
+the v74 DTB:
+
+```text
+image:   artifacts/boot-oneplus3-pmos612-v74dtb-egl.img (284936e6…)
+         bundle sda15:/opt/op3-egl (e7b1df23…), Mesa 26.0.1
+result:  EGL 1.5 on /dev/dri/card0, GL renderer FD530 (freedreno hardware,
+         not llvmpipe), OpenGL ES 3.1; kmscube 30 s windows, 1680 frames at
+         59.8 fps, exit 0; owner confirmed the rotating cube repeatedly,
+         including two image-only boots and three fastboot-boot runs
+scope:   layer 05 EGL only. Not Wayland, Weston, Cog, WPE, and not a Linux 7.2
+         acceptance result. Promotion is the Integration role's decision.
+```
+
+Fixed en route (details in `docs/handoff/pmos612-egl-gate.md`, row
+`OP3-EGL-001` in `docs/test-matrix.md`):
+
+- `run.sh` must not export `LD_LIBRARY_PATH` (broke busybox, SIGBUS in
+  kmscube), and must feed kmscube stdin from a `sleep` pipe (kmscube treats
+  any readable stdin as `user interrupted!` and exited after one frame).
+- GPU runtime PM resume hard-resets the device (DTB has dummy GPU regulators);
+  the launcher disables A530 runtime PM at boot as a workaround
+  (`docs/known-issues.md`, DTB fix is a separate task).
+
+**ACM debug console is now operational end to end**
+(`boot-oneplus3-pmos612-v74dtb-egl-acm.img`, `65cac825…`):
+the launcher fixes the stale `/dev/ttyGS0` placeholder node, relays
+`/dev/kmsg` to it and spawns a debug shell; the host needs the udev rule
+`scripts/99-op3-acm.rules` (group `dialout`) and `kai` in `dialout`. Verified:
+live kernel log reaches `cat /dev/ttyACM0`, and commands typed on the ACM port
+execute on the device (fallback channel when RNDIS/SSH is dead). Usage notes
+and pitfalls in `docs/known-issues.md`. Root fix for a real `console=ttyGS0`
+(panics, init output) needs a pmOS 6.12 kernel rebuild with
+`CONFIG_U_SERIAL_CONSOLE=y` — recorded as a separate task.
+
+This does not change the Linux 7.2 line below.
+
 ## Key artifacts
 
 - 6.16.12 bootable (v74 DTB): `artifacts/boot-oneplus3-pmos616-v74strict-v74dtb.img`
