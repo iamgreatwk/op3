@@ -34,8 +34,15 @@
  * repeated with larger arrays if the kernel reports more entries than fit.
  */
 #define KMS_MAX_RETRY 4
-/* drm_mode_get_connector.connection ABI value; libdrm normally supplies it. */
-#define DRM_CONNECTOR_STATUS_CONNECTED 2
+/*
+ * drm_mode_get_connector.connection is an enum drm_connector_status value.
+ * That enum is not exported through the UAPI headers, so it is restated here
+ * from include/drm/drm_connector.h, which defines
+ * connector_status_connected = 1, connector_status_disconnected = 2 and
+ * connector_status_unknown = 3. Do not guess the value: a wrong one silently
+ * rejects every connected connector.
+ */
+#define DRM_CONNECTOR_STATUS_CONNECTED 1
 
 static volatile sig_atomic_t stop;
 
