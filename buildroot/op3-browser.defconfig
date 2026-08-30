@@ -24,6 +24,7 @@ BR2_TARGET_ROOTFS_TAR=y
 
 # Host ccache: the browser/weston/egl stacks get rebuilt repeatedly; cache
 # compiles in ~/.buildroot-ccache (requires ccache installed on the host).
+BR2_JLEVEL=3
 BR2_CCACHE=y
 
 # Kernel-mode-setting / buffer management.
