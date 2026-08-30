@@ -14,6 +14,11 @@
 #   make -C source/buildroot O=$PWD/out/buildroot-op3-egl -j"$(nproc)"
 
 BR2_aarch64=y
+# Mesa needs a C++ compiler. Without these two symbols BR2_PACKAGE_MESA3D is
+# silently dropped from the configuration and only libdrm gets built
+# (observed 2026-08-30 with Buildroot 2026.02.x).
+BR2_TOOLCHAIN_BUILDROOT_CXX=y
+BR2_INSTALL_LIBSTDCPP=y
 BR2_TOOLCHAIN_BUILDROOT_GLIBC=y
 
 # No root filesystem image is needed; only output/target is used.

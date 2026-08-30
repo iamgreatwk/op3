@@ -204,7 +204,24 @@ verified to exist on that branch on 2026-08-30.
 git clone --depth 1 -b 2026.02.x https://gitlab.com/buildroot.org/buildroot.git source/buildroot
 cp buildroot/op3-egl.defconfig source/buildroot/configs/op3_egl_defconfig
 PATH="$HOME/gnubin:$PATH" make -C source/buildroot O="$PWD/out/buildroot-op3-egl" op3_egl_defconfig
-PATH="$HOME/gnubin:$PATH" make -C source/buildroot O="$PWD/out/buildroot-op3-egl" -j"$(nproc)"
+PATH="$HOME/gnubin:$PATH" make -C source/buildroot O="$PWD/out/buildroot-op3-egl" -j"$(nproc)" \
+  2>&1 | tee /tmp/buildroot-egl.log
+```
+
+After `op3_egl_defconfig`, verify that the Mesa symbols survived; kconfig drops
+a symbol silently when a dependency is unmet, and without
+`BR2_TOOLCHAIN_BUILDROOT_CXX`/`BR2_INSTALL_LIBSTDCPP` that is exactly what
+happens to `BR2_PACKAGE_MESA3D` (only libdrm gets built):
+
+```bash
+grep -E "^BR2_PACKAGE_MESA3D=y|^BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_FREEDRENO=y|^BR2_PACKAGE_MESA3D_OPENGL_EGL=y|^BR2_PACKAGE_KMSCUBE=y|^BR2_PACKAGE_LIBDRM_FREEDRENO=y|^BR2_INSTALL_LIBSTDCPP=y" \
+  out/buildroot-op3-egl/.config
+```
+
+All six lines must be present. After the build, check the target before staging:
+
+```bash
+ls out/buildroot-op3-egl/target/usr/lib | grep -iE "libEGL|libgbm|libGLES|libglapi"
 ```
 
 If a different host package hits the same class of error, force the older
