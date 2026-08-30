@@ -9,6 +9,7 @@ Baseline commit: 85792c20e50d6b27550b9c02b371e6ff37d4f697
 Working branch: agent/implementation/s6e3fa5-linux72-port
 Changed files: tests/drm/op3-drm-dumb.c; tests/drm/README.md
 Source commit SHA: 0e1d84b
+Fix commit SHA: d43821a (EFAULT root-cause fix, on top of 0e1d84b)
 
 Layer: 04 DRM RGB (parallel diagnostic; not a Linux 7.2 acceptance result)
 Previous PASS milestone: v6.12.1 DSI control reaches recovery.c
@@ -24,7 +25,9 @@ or other large-project build)
 Build result: NOT_RUN
 Artifacts and SHA256: a static ARM64 test executable was generated locally as
 `artifacts/op3-drm-dumb`, SHA256
-`d74da26cc2914ea083a2c4d1cbc6095812673226b87c3e89de0ffbdd540e2675`.
+`d74da26cc2914ea083a2c4d1cbc6095812673226b87c3e89de0ffbdd540e2675`. That
+binary is superseded: it was built from `0e1d84b`, which contains the EFAULT
+defect. Build a new one from `d43821a` and record its SHA256 here.
 
 Device test run by project owner: partial diagnostic execution, 2026-08-30
 Device result: INCONCLUSIVE / test-program failure before modeset
@@ -124,15 +127,62 @@ It exited before dumb-buffer allocation or modesetting with:
 DRM_IOCTL_MODE_GETRESOURCES: Bad address
 ```
 
-Therefore no RGB/scanout claim is valid. The failure is at the program's first
-KMS-resource enumeration ioctl, not evidence of a panel, GPU, or renderer
-failure. The current source must be corrected and recommitted before another
-binary is built or tested.
+Therefore no RGB/scanout claim is valid. The failure is in the test program's
+KMS-resource enumeration, not evidence of a panel, GPU, or renderer failure.
+The source has now been corrected in commit `d43821a`; a new binary must be
+built and retested. See “Root cause of the EFAULT” below.
 
 The contemporaneous `dmesg` also contains `msm_mdp ... pp done time out` and a
 later missing `qcom/a530_pm4.fw` request. Neither is assigned as the cause of
 this test failure: the program failed earlier, before it could create a dumb
 buffer or issue `SETCRTC`.
+
+## Root cause of the EFAULT (2026-08-30)
+
+The failing ioctl is the **second** `DRM_IOCTL_MODE_GETRESOURCES`, not the
+first; both calls print the same message. The old code allocated only the
+connector and CRTC arrays, so the second pass kept the counts returned by the
+first pass while leaving `fb_id_ptr` and `encoder_id_ptr` at 0.
+
+`drm_mode_getresources()` (v6.12.1 `drivers/gpu/drm/drm_mode_config.c`) copies an
+entry whenever its running count is below the count the caller supplied, and it
+does not validate the matching pointer:
+
+```c
+	encoder_id = u64_to_user_ptr(card_res->encoder_id_ptr);
+	drm_for_each_encoder(encoder, dev) {
+		if (count < card_res->count_encoders &&
+		    put_user(encoder->base.id, encoder_id + count))
+			return -EFAULT;
+```
+
+MSM always exposes at least one encoder, so `count_encoders` from the first pass
+is non-zero while `encoder_id_ptr` is NULL: `put_user()` writes to NULL and the
+ioctl returns `-EFAULT` (“Bad address”). It is deterministic on any device with
+an encoder and happens before any dumb buffer or `SETCRTC` is attempted.
+
+The same defect existed one layer down in the second
+`DRM_IOCTL_MODE_GETCONNECTOR`: `props_ptr` and `prop_values_ptr` stayed NULL
+while `count_props` was non-zero, and `drm_mode_object_get_properties()`
+(`drivers/gpu/drm/drm_mode_object.c`) also copies while
+`*arg_count_props > count` without checking the pointers. That failure would
+have appeared immediately after the first one was fixed.
+
+Commit `d43821a` allocates every array the UAPI defines and always passes each
+pointer together with the capacity it belongs to, inside a bounded retry loop so
+a list that grows between the two passes is refetched instead of truncated. Only
+the test program changed; kernel, DTB, initramfs, cmdline, and sda15 content are
+unchanged.
+
+## Expected outcomes for the next run
+
+| Program output | Meaning | Next single variable |
+| --- | --- | --- |
+| `connector=… crtc=… mode=…` then `solid colour active on /dev/dri/card0`, panel uniformly coloured | PASS candidate | confirm with a second colour, then record PASS |
+| `DRM_IOCTL_MODE_SETCRTC: Permission denied` | This process is not the DRM master. `SETCRTC` is a `DRM_MASTER` ioctl (v6.12.1 `drm_ioctl.c`); another client, most likely `recovery_mainline`, holds it | stop the recovery launcher, see next section |
+| `DRM has no connectors or CRTCs` | A DRM lease hides them, or the driver registered none | collect `dmesg`; do not change the kernel |
+| `no connected connector with a usable CRTC` | No connector reports `connected`; no sink detected on the DSI path | collect `dmesg`; this is display-layer evidence, not a program bug |
+| any other ioctl error or hang | unclassified | record the exact output; do not change kernel, DTB, or GPU first |
 
 ## Required next test image design
 
