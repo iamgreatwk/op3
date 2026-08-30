@@ -36,8 +36,9 @@ Artifacts and SHA256:
   initrd  402dd21da27c0faeb346b52edff0b39c63090cd333a0b8bdbafd0a522d72a6c9
 
 Device test run by project owner: 2026-08-30, two full runs plus a live
-  session; owner confirmed the weston desktop and the rotating
-  weston-simple-egl triangle on the panel
+  session, plus one cold-boot verification (fastboot boot of the weston image;
+  the launcher ran the whole window autonomously); owner confirmed the weston
+  desktop and the rotating weston-simple-egl triangle on the panel
 Device result: PASS (all three criteria)
   - weston 14 DRM backend + GL renderer on /dev/dri/card0, DSI-1 enabled
     1080x1920@60, GL renderer FD530 (freedreno), no atomic-commit errors
