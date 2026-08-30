@@ -29,23 +29,30 @@ Build result: NOT_RUN
 Artifacts and SHA256: filled in by the owner after the Buildroot build
 
 Device test run by project owner: 2026-08-30, two consecutive boots; the
-  launcher auto-ran kmscube on each boot
-Device result: criteria 1 and 3 met — EGL 1.5, GL renderer `FD530`
-  (freedreno hardware), OpenGL ES 3.1 Mesa 26.0.1, kmscube 30 s, exit 0, no GL
-  errors. Criterion 2 (visible cube) pending. A later manual kmscube run after
-  the GPU runtime-suspended hard-reset the device; the launcher now disables
-  A530 runtime PM first (see docs/known-issues.md).
+  launcher auto-ran kmscube on each boot. Two further manual runs (30 s each)
+  confirmed the visible output.
+Device result: all three criteria met — EGL 1.5, GL renderer `FD530`
+  (freedreno hardware), OpenGL ES 3.1 Mesa 26.0.1, kmscube 30 s at
+  59.83 fps (1680 frames) in both manual runs, cube visible and rotating
+  (owner confirmed twice), no GL errors. Two run.sh bugs were fixed during
+  this gate: exporting `LD_LIBRARY_PATH` broke every busybox applet the script
+  called and made the test mix loaders and crash with SIGBUS, and kmscube
+  treats any readable stdin (including /dev/null EOF) as `user interrupted!`
+  and exits after one frame; run.sh now feeds kmscube's stdin from a
+  `sleep "$TEST_SECONDS"` pipe. The launcher also disables A530 runtime PM
+  before running the test (see docs/known-issues.md).
 Evidence links / log paths: /newroot/var/log/op3-egl.log (persistent on sda15),
   /var/log/op3-egl.log (session copy), dmesg, kernel console on ACM
   (`console=ttyGS0`, captured host-side with `cat /dev/ttyACM0`)
 
-Conclusion: EGL hardware-rendering path SUPPORTED by evidence; visible-output
-  confirmation and the runtime-PM resume hang remain open
-Uncertainties: criterion 2 not yet confirmed by the owner; the runtime-PM
-  resume hang has no console trace (hard reset) and no pstore record
-Recommended next experiment: boot the updated image (runtime PM disabled,
-  console=ttyGS0) with the ACM capture running, watch the 30 s kmscube window,
-  and re-test a late manual run once runtime PM is disabled
+Conclusion: all three PASS criteria met on the pmOS 6.12 control. The EGL
+  hardware-rendering path is SUPPORTED by evidence. The runtime-PM resume hang
+  remains as a known issue (mitigated at boot time by the launcher, root cause
+  is the DTB's dummy GPU regulators)
+Uncertainties: the runtime-PM resume hang has no console trace (hard reset) and
+  no pstore record; a late manual run over SSH must keep runtime PM disabled
+Recommended next experiment: closed — next layer is 06 (Wayland/compositor),
+  which is a new gate and out of scope here
 ```
 
 ## Firmware step (prepared, image ready)
@@ -285,11 +292,23 @@ That produces a tarball of `opt/op3-egl/` and refuses to build it if
   kept for on-device comparison.
 - Device test run by project owner: 2026-08-30, two consecutive boots of the
   EGL image; the launcher auto-ran the bundle on each boot.
-- Device result: **criteria 1 and 3 met**. EGL 1.5 on `/dev/dri/card0`, GL
-  renderer `FD530` (freedreno, hardware — not llvmpipe), OpenGL ES 3.1 Mesa
-  26.0.1, GLSL ES 3.10; kmscube ran the full 30 s window and exited 0 on both
-  boots with no GL errors. Criterion 2 (visible cube) pending owner
-  confirmation.
+- Device result: **all three PASS criteria met**. EGL 1.5 on `/dev/dri/card0`,
+  GL renderer `FD530` (freedreno, hardware — not llvmpipe), OpenGL ES 3.1 Mesa
+  26.0.1, GLSL ES 3.10; two launcher-run boots exited 0, and two further
+  30-second manual runs each rendered 1680 frames at 59.83 fps with the cube
+  visible and rotating (owner confirmation, twice).
+- Two run.sh bugs found and fixed while reaching the visible output:
+  1. Exporting `LD_LIBRARY_PATH` put the bundle's glibc on every busybox
+     applet's path (crashes) and made kmscube mix loaders and die with SIGBUS.
+     run.sh now runs its own diagnostics in a clean environment and passes the
+     bundle libraries only through the bundled loader's `--library-path`.
+  2. kmscube polls its stdin and exits `user interrupted!` as soon as stdin is
+     readable — /dev/null, a closed channel and pipe EOF all count. Every
+     earlier "exit=0" run had rendered about one frame. run.sh now feeds
+     stdin from `sleep "$TEST_SECONDS" |`, which also provides the clean
+     end-of-window exit.
+  These live in the sda15 copy of `run.sh`; no image rebuild or re-flash was
+  needed.
 - Separately observed: running kmscube manually over SSH after the GPU had
   runtime-suspended rebooted the device (see docs/known-issues.md; the DTB GPU
   node has no vdd/vddcx supplies, so runtime resume has no real power
