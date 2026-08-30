@@ -1,0 +1,13 @@
+diff --git a/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts b/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts
+index de09ee691..978232ece 100644
+--- a/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts
++++ b/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts
+@@ -53,5 +53,7 @@ &venus {
+ };
+ 
+ &panel {
+-       compatible = "samsung,s6e3fa3";
++       /* Root cause fix (same as 6.3.1): OnePlus 3 is S6E3FA5; the DTB must
++        * declare s6e3fa5 so the built-in S6E3FA5 panel driver matches. */
++       compatible = "samsung,s6e3fa5";
+ };

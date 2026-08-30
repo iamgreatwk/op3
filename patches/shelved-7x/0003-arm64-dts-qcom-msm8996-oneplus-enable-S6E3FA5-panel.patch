@@ -1,0 +1,49 @@
+From d73a640c6af7ad461bce8f54967c0abdf44d1204 Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Wed, 26 Aug 2026 21:28:02 +0800
+Subject: [PATCH 3/6] arm64: dts: qcom: msm8996-oneplus: enable S6E3FA5 panel
+
+---
+ .../boot/dts/qcom/msm8996-oneplus-common.dtsi | 22 +++++++++++++++++++
+ 1 file changed, 22 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi b/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi
+index a4dcc88bb0..e852dc1391 100644
+--- a/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi
++++ b/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi
+@@ -190,10 +190,32 @@ &mdss_dsi0 {
+ 	vdda-supply = <&vreg_l2a_1p25>;
+ 	vcca-supply = <&vreg_l22a_3p0>;
+ 	status = "okay";
++
++	panel: panel@0 {
++		compatible = "samsung,s6e3fa5";
++		reg = <0>;
++
++		vddio-supply = <&vreg_l18a_3p3>;
++		vdda-supply = <&vreg_s5a_2p15>;
++
++		enable-gpios = <&tlmm 26 GPIO_ACTIVE_HIGH>;
++		reset-gpios = <&tlmm 8 GPIO_ACTIVE_HIGH>;
++
++		pinctrl-names = "default", "sleep";
++		pinctrl-0 = <&mdss_dsi_active &mdss_te>;
++		pinctrl-1 = <&mdss_dsi_suspend &mdss_te>;
++
++		port {
++			panel_in: endpoint {
++				remote-endpoint = <&mdss_dsi0_out>;
++			};
++		};
++	};
+ };
+ 
+ &mdss_dsi0_out {
+ 	data-lanes = <0 1 2 3>;
++	remote-endpoint = <&panel_in>;
+ };
+ 
+ &mdss_dsi0_phy {
+-- 
+2.53.0
+

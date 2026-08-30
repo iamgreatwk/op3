@@ -1,0 +1,12 @@
+diff --git a/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts b/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts
+index 82364f850805..de490eac32a8 100644
+--- a/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts
++++ b/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts
+@@ -53,5 +53,6 @@ &venus {
+ };
+ 
+ &panel {
+-       compatible = "samsung,s6e3fa3";
++       /* Root cause fix: OnePlus 3 is S6E3FA5. */
++       compatible = "samsung,s6e3fa5";
+ };

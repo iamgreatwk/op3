@@ -1,0 +1,30 @@
+From 44a2bd4483d15116ad68ff786f74a2dc4fccec1f Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Sun, 30 Aug 2026 07:54:09 +0800
+Subject: [PATCH 6/6] arm64: boot: omit HCR_ATA for MSM8996 A/B
+
+---
+ arch/arm64/kernel/head.S | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm64/kernel/head.S b/arch/arm64/kernel/head.S
+index 87a822e5c4..a21951dead 100644
+--- a/arch/arm64/kernel/head.S
++++ b/arch/arm64/kernel/head.S
+@@ -299,7 +299,12 @@ SYM_INNER_LABEL(init_el2, SYM_L_LOCAL)
+ 	isb
+ 0:
+ 
+-	init_el2_hcr	HCR_HOST_NVHE_FLAGS | HCR_ATA
++	/*
++	 * MSM8996 early-entry A/B: keep the v6.19.5 host HCR value.
++	 * HCR_ATA is an Armv8.5 MTE control and is not implemented by MSM8996.
++	 * This applies only when the bootloader enters the kernel at EL2.
++	 */
++	init_el2_hcr	HCR_HOST_NVHE_FLAGS
+ 	init_el2_state
+ 
+ 	/* Hypervisor stub */
+-- 
+2.53.0
+
