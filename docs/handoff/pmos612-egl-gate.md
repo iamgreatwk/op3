@@ -68,9 +68,35 @@ kernel payload 50ffea424e6b7625b30acd5b14673ea287d2b04c7c283ee145f895247d8e881a 
 ```
 
 This image uses the **DRM RGB launcher**, so it also runs the colour sequence
-and dumps `dmesg` into `/newroot/var/log/op3-drm-dumb.log`. Check there for
-`failed to load a530_pm4.fw`: its disappearance is the evidence that the GPU
-firmware step worked.
+and dumps `dmesg` into `/newroot/var/log/op3-drm-dumb.log`.
+
+### Result (2026-08-30): PASS
+
+The owner booted `ae108bc8…`; the RGB sequence still ran correctly, and:
+
+```text
+[    1.956857] [drm:adreno_request_fw] loaded qcom/a530_pm4.fw from new location
+[    1.956971] [drm:adreno_request_fw] loaded qcom/a530_pfp.fw from new location
+/sys/class/devfreq/b00000.gpu/  cur=19200000  max=624000000  governor=simple_ondemand
+```
+
+Both firmware files on the device hash to
+`6419f35956ec7307af83723fedfba752520bacd8389eda0d0120e185e4cb1d3f` and
+`7ab3cd917e1f875f6a8387f8bc5efcf11ce9c88542ef2fc3cbda7d4b7b163286`, matching the
+staged copies. The devfreq node for the GPU is the decisive evidence: it only
+exists once the Adreno core has initialised.
+
+Still failing, and deliberately left alone:
+
+```text
+[drm:adreno_request_fw] *ERROR* failed to load qcom/a530v3_gpmu.fw2: -2
+```
+
+GPMU is the power/frequency microcode. `a5xx_gpmu_init()` begins with
+`if (!a5xx_gpu->gpmu_dwords) return 0;`, so a missing GPMU image is non-fatal and
+the GPU runs without it. `qcom/a530v3_gpmu.fw2` exists on the host under
+`/lib/firmware/qcom/`, so it can be added in a separate step later; it is not
+part of this change and is not required for the EGL gate.
 
 ## Layout: what goes where
 
