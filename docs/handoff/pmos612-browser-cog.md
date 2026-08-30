@@ -91,6 +91,43 @@ target has no MIME database (`shared-mime-info` not installed), so WebKit's
 GLib MIME sniffing cannot classify `.html` as `text/html`. Fix: add
 `BR2_PACKAGE_SHARED_MIME_INFO=y`, rebuild, restage.
 
+## Result (2026-08-30): PASS
+
+After `BR2_PACKAGE_SHARED_MIME_INFO=y` (target `/usr/share/mime` bridged into
+the live rootfs and `XDG_DATA_DIRS` pointing at the bundle) and a cog patch
+(`buildroot/package-patches/cog/0001-op3-default-window-1080x1920.patch`,
+default window 1024x768 → 1080x1920 — no command-line size option exists in
+cog 0.18), the gate passed in two consecutive runs plus the deploy-session
+run:
+
+```text
+image:  artifacts/boot-oneplus3-pmos612-v74dtb-browser.img (802d803c…)
+bundle: artifacts/op3-browser-bundle.tar.gz (bec5ce8b…)
+run:    cog --platform=wl file:///opt/op3-browser/test-page.html, 60 s window
+        cog exit 143 (terminated by the runner), weston exit 137
+        page "Loaded successfully"; no WebProcess failures
+owner:  fullscreen 1080x1920; dark page with the large "OP3 BROWSER" heading,
+        CSS colour animation cycling, JavaScript seconds counter advancing
+scope:  layer 07 browser rendering of a local page. Network browsing,
+        multimedia (gstreamer OFF), and Linux 7.2 are out of scope.
+```
+
+Diagnostic tools established during this gate: a cross-compiled
+`eglGetProcAddress` probe (`/tmp/egltest.c`, built with the buildroot
+toolchain and run through the bundle loader) proved that the deployed libEGL
+lacked `eglCreateWaylandBufferFromImageWL` before the
+`legacy-wayland=bind-wayland-display` rebuild.
+
+Final fix list (all recorded in the Debug log section above): build parallelism
+(BR2_JLEVEL=3), harfbuzz-icu rebuild, Mesa wayland platform, Mesa
+bind-wayland-display, cog platform name `wl`, cog `--fullscreen` removal,
+ln -sfn bridge gotcha, DejaVu fonts, wpe-webkit-2.0 helper wrappers, MIME
+database, fullscreen cog patch.
+
+The full graphics/user-space chain on the pmOS 6.12 control is now validated
+end to end: DRM dumb buffer → GPU firmware → EGL → Wayland compositor →
+browser. Promotion to accepted is the Integration role's decision.
+
 ## PASS / FAIL record
 
 PASS requires all of the following:

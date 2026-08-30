@@ -1,0 +1,16 @@
+From: OP3 bring-up <249905534@qq.com>
+Subject: [PATCH] wayland platform: default window 1080x1920 (OP3 panel)
+
+--- a/platform/wayland/cog-platform-wl.c
++++ b/platform/wayland/cog-platform-wl.c
+@@ -62,8 +62,8 @@
+ #include <wayland-cursor.h>
+ #endif
+ 
+-#define DEFAULT_WIDTH  1024
+-#define DEFAULT_HEIGHT  768
++#define DEFAULT_WIDTH  1080
++#define DEFAULT_HEIGHT  1920
+ 
+ #define DEFAULT_ZOOM_STEP 0.1f
+ 

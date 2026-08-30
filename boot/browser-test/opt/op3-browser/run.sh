@@ -89,11 +89,13 @@ for m in weston libweston-14 udev cog; do
 	rm -rf "/usr/lib/$m"
 	ln -sfn "$BASE/usr/lib/$m" "/usr/lib/$m"
 done
-for d in libinput X11 weston fontconfig wpe-webkit-2.0 fonts; do
+for d in libinput X11 weston fontconfig wpe-webkit-2.0 fonts mime; do
 	[ -e "$BASE/usr/share/$d" ] || continue
 	rm -rf "/usr/share/$d"
 	ln -sfn "$BASE/usr/share/$d" "/usr/share/$d"
 done
+# GLib MIME sniffing (file:// → text/html) needs the mime db in XDG_DATA_DIRS.
+export XDG_DATA_DIRS="$BASE/usr/share:/usr/share"
 rm -rf /usr/libexec
 ln -sfn "$BASE/usr/libexec" "/usr/libexec"
 # fontconfig reads /etc/fonts/fonts.conf; the initramfs has no /etc/fonts.

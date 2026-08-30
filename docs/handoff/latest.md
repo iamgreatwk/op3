@@ -123,6 +123,35 @@ built without the wayland platform) — details in the gate doc.
 
 Next: layer 07 browser gate (Cog + WPE WebKit) — large Buildroot build.
 
+## Browser gate PASS (2026-08-30, layer 07)
+
+cog (WPE WebKit) renders a local HTML page fullscreen on the panel through
+WPEBackend-fdo → weston → freedreno (`docs/handoff/pmos612-browser-cog.md`,
+row `OP3-BROWSER-001`):
+
+```text
+image:  artifacts/boot-oneplus3-pmos612-v74dtb-browser.img (802d803c…)
+bundle: artifacts/op3-browser-bundle.tar.gz (bec5ce8b…)
+result: cog `wl` platform, fullscreen 1080x1920; page "Loaded successfully";
+        CSS colour animation + JavaScript seconds counter advancing
+        (owner-confirmed, two runs + deploy-session run)
+scope:  layer 07 local-page rendering. Network browsing and multimedia are
+        out of scope (gstreamer OFF in the build).
+```
+
+The graphics/user-space chain on the pmOS 6.12 control is validated end to
+end: **DRM dumb buffer → GPU firmware → EGL → Wayland compositor → browser**.
+Ten build/runtime fixes were required en route (all documented in the gate
+doc): build parallelism, harfbuzz-icu, Mesa `-Dplatforms=wayland`, Mesa
+`legacy-wayland=bind-wayland-display` (diagnosed with a cross-compiled
+eglGetProcAddress probe), cog platform name `wl`, `--fullscreen` removal,
+ln -sfn bridge gotcha, DejaVu fonts, wpe-webkit-2.0 helper wrappers,
+shared-mime-info, and a cog fullscreen-size patch.
+
+Next: the control-baseline bring-up is COMPLETE through layer 07. Remaining
+project lines: Linux 7.2 early-boot (last), GPU regulator nodes in DTB,
+`CONFIG_U_SERIAL_CONSOLE=y` kernel rebuild.
+
 ## Key artifacts
 
 - 6.16.12 bootable (v74 DTB): `artifacts/boot-oneplus3-pmos616-v74strict-v74dtb.img`
