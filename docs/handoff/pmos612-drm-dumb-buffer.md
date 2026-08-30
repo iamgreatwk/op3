@@ -292,6 +292,27 @@ from `e261c4d` on the host reproduces
 `057a4604870afe19b570efa0de2ca60a635e73b8054dabbb287ce1c050e5c5cf` bit for bit,
 so the binary behind the observed red is exactly the committed source.
 
+## Longer-hold variant (2026-08-30)
+
+20 s per colour was too short to observe. `HOLD_SECONDS` is now 60 and
+`FINAL_HOLD_SECONDS` is 1800; nothing else in the launcher changed. This is a
+separate image so the PASS-evidence image above is preserved untouched.
+
+```text
+boot image: artifacts/boot-oneplus3-pmos612-v74dtb-drm-test-60s.img
+  SHA256 f9693a7baf9e1fae5ff8ce27517ac6c246782576b8eb739093a84c690b7a3670
+  kernel payload 50ffea424e6b7625b30acd5b14673ea287d2b04c7c283ee145f895247d8e881a
+  ramdisk       fae0d703786840dce815ed572e2eee8f102f856c7c80a8476575b11e20992467
+  cmdline       fbcon=nodefault console=tty0 pmos.debug-shell
+```
+
+Timeline after boot: wait for `/dev/dri/card0` (it appeared after 0 s in the
+earlier run) → red 60 s → green 60 s → blue 60 s → red 1800 s → idle.
+
+```text
+fastboot boot artifacts/boot-oneplus3-pmos612-v74dtb-drm-test-60s.img
+```
+
 ## Required next test image design
 
 The current initramfs keeps `/dev/sda15` mounted at `/newroot` and runs
@@ -338,8 +359,9 @@ Appended entries:
 Launcher behaviour: wait up to 90 s for `/dev/dri/card0`, record the kernel
 identity, the `/dev/dri` state, the DRM connector `status`/`enabled`/`mode` and
 the backlight `brightness`/`max_brightness`/`bl_power` from sysfs, and filtered
-`dmesg`; run `op3-drm-dumb red/green/blue` with a 20 s hold each; then hold red
-for 600 s; then idle forever. The inittab entry is `::respawn:`, so the launcher
+`dmesg`; run `op3-drm-dumb red/green/blue` with a `HOLD_SECONDS` hold each; then
+hold red for `FINAL_HOLD_SECONDS`; then idle forever. Both durations are
+constants near the top of the launcher. The inittab entry is `::respawn:`, so the launcher
 must not exit; a fast exit would make busybox init disable the entry. It never
 starts `recovery_mainline`, so no other client can hold the DRM master. The sysfs
 dumps are read-only and do not change the KMS sequence.
@@ -347,14 +369,17 @@ dumps are read-only and do not change the KMS sequence.
 Artifacts:
 
 ```text
-overlay initrd: artifacts/initrd-op3-drm-test.cpio.gz
-  50996287 bytes, SHA256
-  c9a01a62eed8da4e788193b27c62deda92c72543db72a9bba9dc7854f7a6d132
-  first 50705116 bytes SHA256
-  c3358a1cadb747996ddaa492e636827f2d72974040e8fd40d81f8a213e676366
-  = artifacts/reference-initrd.img, byte-identical
+overlay initrd: artifacts/initrd-op3-drm-test.cpio.gz (intermediate; rewritten
+  in place, so only its newest content survives on disk)
+  PASS variant  c9a01a62eed8da4e788193b27c62deda92c72543db72a9bba9dc7854f7a6d132
+                (50996287 bytes)
+  60 s variant  fae0d703786840dce815ed572e2eee8f102f856c7c80a8476575b11e20992467
+                (50996295 bytes; current content)
+  both begin with the 50705116 bytes of artifacts/reference-initrd.img,
+  SHA256 c3358a1cadb747996ddaa492e636827f2d72974040e8fd40d81f8a213e676366
 
-boot image: artifacts/boot-oneplus3-pmos612-v74dtb-drm-test.img
+boot image (PASS evidence, owner-built, 20 s holds):
+  artifacts/boot-oneplus3-pmos612-v74dtb-drm-test.img
   62951424 bytes, SHA256
   b37ef527a0307fba9fc561bea1360ab17f89314c33c729f00580984e094e1f5a
 
@@ -398,8 +423,9 @@ fastboot boot artifacts/boot-oneplus3-pmos612-v74dtb-drm-test.img
 
 `init_mainline.sh` runs first, so the RNDIS endpoint (`172.16.42.1`), the ACM
 shell and Dropbear come up as before. The RGB sequence then starts by itself;
-no interactive command is needed. Watch the panel for 20 s red, 20 s green,
-20 s blue, then a 10 minute red hold.
+no interactive command is needed. For the longer-hold variant
+`boot-oneplus3-pmos612-v74dtb-drm-test-60s.img`, watch 60 s red, 60 s green,
+60 s blue, then a 30 minute red hold.
 
 Because recovery no longer runs, a black panel before the first colour is
 expected: nothing else lights the display. The log is the only way to tell
