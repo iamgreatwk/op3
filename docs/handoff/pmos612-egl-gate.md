@@ -166,9 +166,19 @@ make -C source/buildroot O="$PWD/out/buildroot-op3-egl" op3_egl_defconfig
 make -C source/buildroot O="$PWD/out/buildroot-op3-egl" -j"$(nproc)"
 ```
 
-If a symbol in `buildroot/op3-egl.defconfig` does not exist in the release you
-check out, Buildroot reports it during `op3_egl_defconfig`; correct it there and
-record the change. Record the Buildroot release and the resulting SHAs here.
+Symbol names in `buildroot/op3-egl.defconfig` were checked against Buildroot
+master on 2026-08-30. Two traps were already handled:
+
+- `kmscube` is its own package (`BR2_PACKAGE_KMSCUBE`). Older Buildroot shipped
+  it inside `mesa3d-demos`; if your release does, use `BR2_PACKAGE_MESA3D_DEMOS=y`
+  plus `BR2_PACKAGE_MESA3D_DEMOS_KMSCUBE=y` instead.
+- `BR2_PACKAGE_MESA3D_OPENGL_EGL` selects `BR2_PACKAGE_MESA3D_GBM`, so gbm needs
+  no separate symbol, and `BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_FREEDRENO` selects
+  `BR2_PACKAGE_LIBDRM_FREEDRENO` and requires arm/aarch64.
+
+If a symbol still does not exist in the release you check out, Buildroot reports
+it during `op3_egl_defconfig`; correct it there and record the change. Record the
+Buildroot release and the resulting SHAs here.
 
 ```bash
 scripts/stage-egl-rootfs.sh out/buildroot-op3-egl/target artifacts/op3-egl-bundle.tar.gz

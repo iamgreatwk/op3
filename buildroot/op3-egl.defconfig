@@ -23,14 +23,21 @@ BR2_TARGET_ROOTFS_TAR=y
 BR2_PACKAGE_LIBDRM=y
 
 # Mesa with the freedreno (MSM/Adreno) Gallium driver and EGL/GLES.
+# Symbol names verified against Buildroot master on 2026-08-30.
+# BR2_PACKAGE_MESA3D_OPENGL_EGL selects BR2_PACKAGE_MESA3D_GBM, so gbm is
+# covered; BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_FREEDRENO selects
+# BR2_PACKAGE_LIBDRM_FREEDRENO and requires arm or aarch64.
 BR2_PACKAGE_MESA3D=y
 BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_FREEDRENO=y
 BR2_PACKAGE_MESA3D_OPENGL_EGL=y
 BR2_PACKAGE_MESA3D_OPENGL_ES=y
 
-# EGL test program: kmscube.
-BR2_PACKAGE_MESA3D_DEMOS=y
-BR2_PACKAGE_MESA3D_DEMOS_KMSCUBE=y
+# EGL test program: kmscube. It is its own package in current Buildroot and
+# selects libdrm by itself. On releases where kmscube is still shipped inside
+# mesa3d-demos, replace this with
+#   BR2_PACKAGE_MESA3D_DEMOS=y
+#   BR2_PACKAGE_MESA3D_DEMOS_KMSCUBE=y
+BR2_PACKAGE_KMSCUBE=y
 
 # Small helpers that make on-device debugging easier.
 BR2_PACKAGE_DROPBEAR=y
