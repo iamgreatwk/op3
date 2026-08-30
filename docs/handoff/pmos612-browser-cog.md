@@ -43,6 +43,54 @@ Recommended next experiment: after the owner's build, stage + deploy + boot
   the browser image; the page's JS seconds counter must advance.
 ```
 
+## Debug log (in progress, 2026-08-30)
+
+The stack was brought up over several device iterations. Fixes so far, all in
+`boot/browser-test/opt/op3-browser/run.sh` unless noted:
+
+1. **Build**: `op3_browser_defconfig` verified (wpewebkit 2.50.5 + cog 0.18.5 +
+   wpebackend-fdo 1.16.1 + icu + harfbuzz + webp; gstreamer multimedia left
+   OFF). Owner ran the 3–5 h build (OOM on `-j13`: buildroot auto parallelism
+   is nproc+1 and overrides a command-line `-j`; fixed with
+   `BR2_JLEVEL=3` + 19 GB swap + `BR2_CCACHE=y`).
+2. **HarfBuzz missing ICU**: first wpewebkit CMake configure failed —
+   staged harfbuzz predated `BR2_PACKAGE_ICU` and lacked `libharfbuzz-icu`.
+   `make harfbuzz-dirclean` + resume fixed it.
+3. **Mesa wayland platform**: client-side EGL had no wayland platform
+   ("surfaceless") — same incremental trap as the weston gate;
+   `mesa3d-dirclean` + rebuild with `-Dplatforms=wayland`.
+4. **Mesa bind-wayland-display**: cog's wl platform asserts on
+   `eglCreateWaylandBufferFromImageWL` — the entry point is gated by
+   `#ifdef HAVE_BIND_WL_DISPLAY` (mesa `-Dlegacy-wayland=bind-wayland-display`,
+   `BR2_PACKAGE_MESA3D_LEGACY_BIND_WAYLAND_DISPLAY=y`, auto-selected by
+   wpewebkit but Mesa had been built before it was selected). Second
+   `mesa3d-dirclean`. Diagnosis made with a cross-compiled
+   `eglGetProcAddress` probe (`/tmp/egltest.c`) run on the device.
+5. **cog platform name**: it is `wl` in cog 0.18 (module
+   `libcogplatform-wl.so`); run.sh tries wl → fdo → wayland and keeps the
+   first that stays alive. `--fullscreen` does not exist in cog 2.x and
+   aborts argument parsing — removed (cog is fullscreen-ish by default; it
+   maps to a window on the desktop, not truly fullscreen).
+6. **ln -sfn gotcha**: `mkdir -p /usr/libexec` created a real directory which
+   `ln -sfn` refused to replace (it nested the link inside) → weston helper
+   execs failed with ENOENT → weston quit. All bridge paths now `rm -rf`
+   before linking. Same fix applied to the weston gate's run.sh.
+7. **Fonts**: no fonts in the target → added `BR2_PACKAGE_DEJAVU=y` (text
+   would render blank otherwise).
+8. **WebKit helpers**: they live in `/usr/libexec/wpe-webkit-2.0/`
+   (`WPEWebProcess`, `WPENetworkProcess`, `WPEGPUProcess`) and are wrapped
+   through the bundled loader like the weston helpers.
+
+Current state: cog runs on the `wl` platform for the full window and loads
+the page ("Loaded successfully" in cog.log). Owner observation: the page
+appears as a window on the weston desktop, but the HTML source is shown as
+plain text instead of being rendered.
+
+NEXT ISSUE (diagnosed, fix pending): file:// HTML displayed as text — the
+target has no MIME database (`shared-mime-info` not installed), so WebKit's
+GLib MIME sniffing cannot classify `.html` as `text/html`. Fix: add
+`BR2_PACKAGE_SHARED_MIME_INFO=y`, rebuild, restage.
+
 ## PASS / FAIL record
 
 PASS requires all of the following:

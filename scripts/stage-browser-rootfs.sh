@@ -24,9 +24,11 @@ required_libs=(usr/lib/libweston-14/drm-backend.so
                usr/lib/gbm/dri_gbm.so
                usr/lib/libEGL.so.1
                usr/lib/libWPEWebKit*.so*
-               usr/lib/wpebackend/*.so
-               usr/libexec/WebKitWebProcess
-               usr/libexec/WebKitNetworkProcess)
+               usr/lib/libWPEBackend-fdo*.so*
+               usr/lib/cog/modules/libcogplatform-wl.so
+               usr/libexec/wpe-webkit-2.0/WPEWebProcess
+               usr/libexec/wpe-webkit-2.0/WPENetworkProcess
+               usr/share/fonts/dejavu)
 
 for input in "$target" "$run_script" "$page"; do
   test -e "$input" || { printf 'Missing input: %s\n' "$input" >&2; exit 1; }

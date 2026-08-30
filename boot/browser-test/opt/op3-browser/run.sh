@@ -66,7 +66,7 @@ kill_stale() {
 		[ "$p" = "/proc/$$" ] && continue
 		c=$(tr '\0' ' ' < "$p/cmdline" 2>/dev/null)
 		case "$c" in
-			*"/usr/bin/weston "*|*"/sbin/udevd "*|*"/usr/libexec/weston-"*|*"/usr/bin/cog "*|*"/usr/libexec/WebKit"*)
+			*"/usr/bin/weston "*|*"/sbin/udevd "*|*"/usr/libexec/weston-"*|*"/usr/bin/cog "*|*"/usr/libexec/wpe-webkit-2.0/"*|*"/usr/libexec/WebKit"*)
 				leftovers="$leftovers ${p#/proc/}"
 				;;
 		esac
@@ -80,14 +80,27 @@ kill_stale() {
 kill_stale
 
 # --- Bridge compile-time-absolute paths into the bundle ----------------------
-mkdir -p /usr/lib /usr/share /usr/libexec /run
-for m in weston libweston-14 udev; do
+mkdir -p /usr/lib /usr/share /run /etc
+# GOTCHA (observed 2026-08-30): ln -sfn does NOT replace an existing real
+# directory — a mkdir of the bridge path earlier made /usr/libexec a real
+# empty dir and weston's helper execs then failed with ENOENT. rm -rf the
+# bridge path first; if it is a symlink, rm removes only the link.
+for m in weston libweston-14 udev cog; do
+	rm -rf "/usr/lib/$m"
 	ln -sfn "$BASE/usr/lib/$m" "/usr/lib/$m"
 done
-for d in libinput X11 weston fontconfig; do
-	[ -e "$BASE/usr/share/$d" ] && ln -sfn "$BASE/usr/share/$d" "/usr/share/$d"
+for d in libinput X11 weston fontconfig wpe-webkit-2.0 fonts; do
+	[ -e "$BASE/usr/share/$d" ] || continue
+	rm -rf "/usr/share/$d"
+	ln -sfn "$BASE/usr/share/$d" "/usr/share/$d"
 done
-[ -e "$BASE/usr/libexec" ] && ln -sfn "$BASE/usr/libexec" "/usr/libexec"
+rm -rf /usr/libexec
+ln -sfn "$BASE/usr/libexec" "/usr/libexec"
+# fontconfig reads /etc/fonts/fonts.conf; the initramfs has no /etc/fonts.
+if [ -e "$BASE/etc/fonts" ]; then
+	rm -rf /etc/fonts
+	ln -sfn "$BASE/etc/fonts" "/etc/fonts"
+fi
 
 # --- Wrap helper binaries that weston/WebKit exec by absolute path -----------
 # The initramfs has no dynamic loader, so raw execs die with status 127/1.
@@ -95,7 +108,7 @@ done
 # binaries (observed 2026-08-30).
 for helper in "$BASE"/usr/libexec/weston-desktop-shell \
               "$BASE"/usr/libexec/weston-keyboard \
-              "$BASE"/usr/libexec/WebKit*; do
+              "$BASE"/usr/libexec/wpe-webkit-2.0/WPE*; do
 	[ -x "$helper" ] || continue
 	case "$helper" in *.real|*\.sh) continue;; esac
 	if [ ! -e "$helper.real" ]; then
@@ -165,11 +178,31 @@ fi
 # --- the browser: cog on WPEBackend-fdo --------------------------------------
 # Local page: deterministic, no network needed. The page itself proves the
 # engine: a JS seconds counter, CSS animation and a canvas.
+#
+# The cog platform name changed across versions (wl / fdo / wayland); try the
+# candidates in order and keep the first that stays alive for 4 s.
 PAGE_URI="file://$BASE/test-page.html"
-echo "=== starting cog for ${BROWSER_SECONDS}s: $PAGE_URI ==="
-run "$BASE/usr/bin/cog" --platform=fdo --fullscreen "$PAGE_URI" \
-	> "$XDG_RUNTIME_DIR/cog.log" 2>&1 &
-cog_pid=$!
+cog_pid=""
+for plat in wl fdo wayland; do
+	echo "=== starting cog (platform $plat) for ${BROWSER_SECONDS}s: $PAGE_URI ==="
+	run "$BASE/usr/bin/cog" --platform="$plat" "$PAGE_URI" \
+		> "$XDG_RUNTIME_DIR/cog.log" 2>&1 &
+	cog_pid=$!
+	sleep 4
+	if kill -0 "$cog_pid" 2>/dev/null; then
+		break
+	fi
+	echo "cog with platform '$plat' failed:"
+	tail -n 6 "$XDG_RUNTIME_DIR/cog.log" 2>/dev/null
+	kill -9 "$cog_pid" 2>/dev/null
+	cog_pid=""
+done
+if [ -z "$cog_pid" ]; then
+	echo "FATAL: every cog platform attempt failed"
+	tail -n 15 "$XDG_RUNTIME_DIR/cog.log" 2>/dev/null
+	kill_stale
+	exit 1
+fi
 sleep "$BROWSER_SECONDS"
 
 echo "=== stopping browser ==="

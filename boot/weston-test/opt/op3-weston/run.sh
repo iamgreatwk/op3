@@ -71,13 +71,19 @@ fi
 # libweston-14 holds the backends/renderers, weston/ holds the shells, and
 # eudev's rules live in usr/lib/udev — all addressed by absolute paths.
 mkdir -p /usr/lib /usr/share /run
+# GOTCHA: ln -sfn does not replace an existing real directory; rm the bridge
+# path first (observed in the browser gate, 2026-08-30).
 for m in weston libweston-14 udev; do
+	rm -rf "/usr/lib/$m"
 	ln -sfn "$BASE/usr/lib/$m" "/usr/lib/$m"
 done
 for d in libinput X11 weston; do
-	[ -e "$BASE/usr/share/$d" ] && ln -sfn "$BASE/usr/share/$d" "/usr/share/$d"
+	[ -e "$BASE/usr/share/$d" ] || continue
+	rm -rf "/usr/share/$d"
+	ln -sfn "$BASE/usr/share/$d" "/usr/share/$d"
 done
-[ -e "$BASE/usr/libexec" ] && ln -sfn "$BASE/usr/libexec" "/usr/libexec"
+rm -rf /usr/libexec
+ln -sfn "$BASE/usr/libexec" "/usr/libexec"
 
 # weston launches its helpers (weston-desktop-shell, weston-keyboard) by
 # exec'ing /usr/libexec/<name> directly. The initramfs has no dynamic loader,
@@ -89,14 +95,16 @@ LIBPATH="$BASE/usr/lib:$BASE/usr/lib/libweston-14:$BASE/lib"
 for helper in weston-desktop-shell weston-keyboard; do
 	real="$BASE/usr/libexec/$helper"
 	[ -x "$real" ] || continue
+	# A bundle redeploy (tar -x over this tree) restores the original binary
+	# and leaves the old .real behind, so this must be unconditional.
 	if [ ! -e "$real.real" ]; then
 		mv "$real" "$real.real"
-		{
-			echo "#!/bin/sh"
-			echo "exec \"$LOADER\" --library-path \"$LIBPATH\" \"$real.real\" \"\$@\""
-		} > "$real"
-		chmod +x "$real"
 	fi
+	{
+		echo "#!/bin/sh"
+		echo "exec \"$LOADER\" --library-path \"$LIBPATH\" \"$real.real\" \"\$@\""
+	} > "$real"
+	chmod +x "$real"
 done
 
 # --- kill leftovers from previous runs ---------------------------------------
