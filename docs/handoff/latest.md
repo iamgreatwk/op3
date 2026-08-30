@@ -32,7 +32,7 @@ Test matrix (2026-08-29):
   issue. Disabling the only 7.2-unique ARMv9 feature `CONFIG_ARM64_LSUI`
   (unsupported on A53) did NOT fix it.
 
-## Next action (7.2, unresolved)
+## Next action (7.2, unresolved) — SUPERSEDED 2026-08-30: 7.x shelved, baseline is 6.12.1 (see below)
 
 1. Get early-boot log from 7.2 (USB ACM gadget or earlycon) to locate where it
    hangs — 7.2 is the only kernel failing with the v74 DTB.
@@ -165,6 +165,27 @@ worth investigating in the parallel project.
 user-space, not kernel.** The browser bundle + run.sh (fonts, MIME database,
 loader discipline, helper wrapping, `wl` platform) transfers directly.
 Details in `docs/handoff/pmos612-browser-cog.md` cross-test section.
+
+## PROJECT BASELINE DECISION (2026-08-30): pmOS 6.12.1 LTS — 7.x line SHELVED
+
+**The long-term project kernel is the pmOS 6.12.1 LTS line** (LTS EOL
+2028-12-31; already validated end-to-end through the layer-07 browser gate on
+this device). Non-LTS 6.19/7.0/7.1/7.2 carry no long-term maintenance and are
+out of scope for the product path.
+
+- **7.x line shelved** (owner decision): OP3's LK produces no early-boot
+  output without a physical UART, so every 7.x boot is blind (fastboot
+  return / no ACM / no pstore). Last data points: OP3-BOOT-040/041 — 7.0-rc1
+  fails with BOTH the upstream OP3 DTB and the v74 DTB under the gemini-proven
+  recipe; regression window is the 6.19.5 → 7.0-rc1 merge window. Full
+  analysis and resume criteria in `docs/handoff/linux70rc1-minimal-ab.md`.
+- **source/ reduced** to `linux-mainline-6.12.1`, `linux-pmos-msm8996-6.12`,
+  `linux-pmos-msm8996-6.3.1` (+ `buildroot`). Unpushed local work from the
+  removed trees (S6E3FA5 driver ports for 6.16/6.19.5, the 7.2 A/B patches)
+  is archived in `patches/shelved-7x/` — the reusable asset if a newer LTS
+  (e.g. 6.18) is ever picked up again.
+- Still-open project lines (unchanged): GPU regulator nodes in DTB,
+  `CONFIG_U_SERIAL_CONSOLE=y` kernel rebuild for a real `console=ttyGS0`.
 
 ## Key artifacts
 
