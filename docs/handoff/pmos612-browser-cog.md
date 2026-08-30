@@ -76,11 +76,21 @@ Loaded as `file:///opt/op3-browser/test-page.html` — no network required.
 
 The defconfig is already applied to the existing output directory; the
 toolchain, Mesa and weston are reused incrementally. The wpewebkit build is
-the long pole (expect hours):
+the long pole (3–5 hours observed on this host; icu/harfbuzz/webkit dominate).
+Always tee the output to a log — with a multi-hour build, a silent failure is
+undebuggable after the fact:
 
 ```bash
 cd /home/kai/src/oneplus3-mainline
-PATH="$HOME/gnubin:$PATH" make -C source/buildroot O=$PWD/out/buildroot-op3-egl -j"$(nproc)"
+PATH="$HOME/gnubin:$PATH" make -C source/buildroot O=$PWD/out/buildroot-op3-egl \
+  -j"$(nproc)" 2>&1 | tee /tmp/buildroot-browser.log
+```
+
+Progress from another terminal:
+
+```bash
+grep -E ">>> (wpewebkit|cog|icu|harfbuzz|glib|libpsl|libsoup3)" \
+  /tmp/buildroot-browser.log | tail -10
 ```
 
 If a host tool error appears (e.g. cmake), do NOT switch branches; install the
