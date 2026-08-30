@@ -18,7 +18,9 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 reference="${1:-$project_root/artifacts/reference-initrd.img}"
 binary="${2:-$project_root/artifacts/op3-drm-dumb}"
 output="${3:-$project_root/artifacts/initrd-op3-drm-test.cpio.gz}"
-overlay_source="$project_root/boot/drm-test-initramfs"
+# boot/drm-test-initramfs holds the DRM RGB launcher, boot/egl-test the EGL
+# launcher. Both are overlays on the same validated reference initramfs.
+overlay_source="${OVERLAY_SOURCE:-$project_root/boot/drm-test-initramfs}"
 
 for input in "$reference" "$binary" "$overlay_source/sbin/run_recovery.sh"; do
   test -f "$input" || { printf 'Missing input: %s\n' "$input" >&2; exit 1; }

@@ -1,0 +1,37 @@
+# Buildroot defconfig for the OnePlus 3 EGL gate (aarch64 / MSM8996).
+#
+# Purpose: build only the user-space EGL stack and one EGL test program. The
+# result is staged onto the device's sda15 root filesystem by
+# scripts/stage-egl-rootfs.sh; it is never packaged into the boot image, which
+# the OnePlus 3 boot.img size limit forbids (docs/decisions.md).
+#
+# Verify the symbol names against the Buildroot release you check out; a
+# defconfig symbol that no longer exists is reported by `make <name>_defconfig`
+# and must be corrected there.
+#
+# Copy to <buildroot>/configs/op3_egl_defconfig, then:
+#   make -C source/buildroot O=$PWD/out/buildroot-op3-egl op3_egl_defconfig
+#   make -C source/buildroot O=$PWD/out/buildroot-op3-egl -j"$(nproc)"
+
+BR2_aarch64=y
+BR2_TOOLCHAIN_BUILDROOT_GLIBC=y
+
+# No root filesystem image is needed; only output/target is used.
+BR2_TARGET_ROOTFS_TAR=y
+
+# Kernel-mode-setting / buffer management.
+BR2_PACKAGE_LIBDRM=y
+
+# Mesa with the freedreno (MSM/Adreno) Gallium driver and EGL/GLES.
+BR2_PACKAGE_MESA3D=y
+BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_FREEDRENO=y
+BR2_PACKAGE_MESA3D_OPENGL_EGL=y
+BR2_PACKAGE_MESA3D_OPENGL_ES=y
+
+# EGL test program: kmscube.
+BR2_PACKAGE_MESA3D_DEMOS=y
+BR2_PACKAGE_MESA3D_DEMOS_KMSCUBE=y
+
+# Small helpers that make on-device debugging easier.
+BR2_PACKAGE_DROPBEAR=y
+BR2_PACKAGE_STRACE=y
