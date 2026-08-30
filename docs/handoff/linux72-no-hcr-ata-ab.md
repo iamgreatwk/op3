@@ -11,20 +11,20 @@ Kernel source commit: 44a2bd4483d15116ad68ff786f74a2dc4fccec1f
 Changed files:
   source/linux-7.2/arch/arm64/kernel/head.S
   docs/handoff/linux72-no-hcr-ata-ab.md
-Commit SHA: pending (documentation record)
+Source A/B commit: 44a2bd4483d15116ad68ff786f74a2dc4fccec1f
 
 Layer: Kernel ARM64 EL2 entry
 Hypothesis tested: The OnePlus 3 bootloader enters Linux at EL2 and Linux 7.2's
 unconditional HCR_ATA bit causes the return to fastboot on MSM8996.
 Only variable changed: init_el2_hcr argument removes HCR_ATA.
 
-Build run by project owner: NOT_RUN
-Build result: NOT_RUN
-Artifacts and SHA256: NOT_RUN
+Build run by project owner: RUN
+Build result: PASS (kernel built and boot image packed; artifact SHA256 not supplied)
+Artifacts and SHA256: boot-oneplus3-linux72-v74strict-no-hcr-ata.img; SHA256 not supplied
 
-Device test run by project owner: NOT_RUN
-Device result: NOT_RUN
-Evidence links / log paths: pending owner result
+Device test run by project owner: RUN (`fastboot boot`)
+Device result: FAIL — returned to fastboot mode
+Evidence links / log paths: owner report in this Codex task; no serial/USB log
 ```
 
 ## Exact source delta
@@ -109,7 +109,16 @@ fastboot is **FAIL**. Any non-fastboot state is a provisional early-entry
 **PASS** only; it does not establish panel or display success. Record the
 artifact SHA256 and observed device result before selecting another variable.
 
-## Status
+## Result and next decision
 
-**READY_FOR_OWNER_BUILD.** This agent committed the source A/B and prepared
-the command, but did not compile, package, flash or boot a device.
+**REJECTED.** The owner reports that the no-HCR_ATA image still returns to
+fastboot mode. Therefore the Linux 7.2 HCR_ATA addition is not the primary
+cause under the fixed strict configuration and companion inputs. This result
+does not prove the entry EL: the line can be irrelevant on EL1 entry, or can
+execute at EL2 without being the failing operation.
+
+Keep source commit `44a2bd4483` as failure evidence and do not merge it into
+the formal Linux 7.2 branch. Both direct 7.2-versus-6.19.5 pre-MMU candidates
+identified by the prior audit (`TCMA1` and `HCR_ATA`) are now rejected. The
+next task should obtain an early log or perform a newly scoped read-only audit;
+do not combine another ARM64 source change with this test.
