@@ -196,6 +196,12 @@ out of scope for the product path.
 
 ## Key artifacts
 
+- **Next agent task — OP3-INITRD-FW-001**: Issue #3, handoff
+  `docs/handoff/op3-initrd-fw-001.md`. Scope is solely explicit provenance and
+  deterministic staging for the MSM8996 firmware group. Hold fixed the
+  OP3-BOOT-043 Image.gz, own DTB, boot profile, cmdline, all non-firmware
+  initramfs entries, and sda15; do not mix GPU DTS, console config, or
+  userspace work into this experiment.
 - pmOS 6.12 own-DTB + reproducible-initramfs boot PASS (OP3-BOOT-042/043):
   `artifacts/boot-oneplus3-pmos612-own-dtb-repro-initrd.img`
   (`0b2e85ee…`); source `91df7ccd…`, tree-built DTB `cb29ab65…`, generated
