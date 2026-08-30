@@ -1,0 +1,64 @@
+# Buildroot defconfig for the OnePlus 3 Wayland/Weston gate (aarch64 / MSM8996).
+#
+# Purpose: build the user-space Wayland stack (weston DRM backend + clients)
+# on top of the same Mesa/EGL stack as the EGL gate. The result is staged as a
+# self-contained bundle onto the device's sda15 root filesystem by
+# scripts/stage-weston-rootfs.sh; it is never packed into the boot image
+# (docs/decisions.md, OnePlus 3 boot.img size limit).
+#
+# Layer 06 gate: weston (DRM backend, gl-renderer) composites on the panel and
+# a weston-simple-egl client renders through the compositor. The browser (Cog /
+# WPE, layer 07) requires this layer to pass first.
+#
+# Copy to <buildroot>/configs/op3_weston_defconfig, then:
+#   make -C source/buildroot O=$PWD/out/buildroot-op3-weston op3_weston_defconfig
+#   make -C source/buildroot O=$PWD/out/buildroot-op3-weston -j"$(nproc)"
+#
+# Incremental tip: pointing O= at the existing out/buildroot-op3-egl output
+# reuses the whole toolchain and Mesa; only the new packages build.
+
+BR2_aarch64=y
+# Mesa needs a C++ compiler; without these two symbols BR2_PACKAGE_MESA3D is
+# silently dropped from the configuration (observed 2026-08-30).
+BR2_TOOLCHAIN_BUILDROOT_CXX=y
+BR2_INSTALL_LIBSTDCPP=y
+BR2_TOOLCHAIN_BUILDROOT_GLIBC=y
+
+# No root filesystem image is needed; only output/target is used.
+BR2_TARGET_ROOTFS_TAR=y
+
+# Kernel-mode-setting / buffer management.
+BR2_PACKAGE_LIBDRM=y
+
+# Mesa with the freedreno (MSM/Adreno) Gallium driver and EGL/GLES.
+BR2_PACKAGE_MESA3D=y
+BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_FREEDRENO=y
+BR2_PACKAGE_MESA3D_OPENGL_EGL=y
+BR2_PACKAGE_MESA3D_OPENGL_ES=y
+
+# EGL test program kept for on-device comparison.
+BR2_PACKAGE_KMSCUBE=y
+
+# weston depends on BR2_PACKAGE_HAS_UDEV, provided by eudev, which in turn
+# depends on the dynamic-eudev device-creation choice. libinput (selected by
+# weston) needs the udev database at runtime, so the bundle carries eudev and
+# run.sh starts udevd + udevadm trigger before weston.
+BR2_ROOTFS_DEVICE_CREATION_DYNAMIC_EUDEV=y
+BR2_PACKAGE_EUDEV=y
+
+# Seat management. weston 14 talks to libseat; as root libseat's builtin
+# backend needs no daemon, but the bundle carries seatd as the fallback.
+BR2_PACKAGE_SEATD=y
+
+# The compositor itself: DRM backend with the GL renderer, plus clients.
+# SIMPLE_CLIENTS gains weston-simple-egl / weston-simple-dmabuf-egl because
+# the Mesa block above provides EGL + GBM + GLES (weston.mk logic).
+BR2_PACKAGE_WESTON=y
+BR2_PACKAGE_WESTON_DRM=y
+BR2_PACKAGE_WESTON_DEFAULT_DRM=y
+BR2_PACKAGE_WESTON_SIMPLE_CLIENTS=y
+BR2_PACKAGE_WESTON_DEMO_CLIENTS=y
+
+# Small helpers that make on-device debugging easier.
+BR2_PACKAGE_DROPBEAR=y
+BR2_PACKAGE_STRACE=y
