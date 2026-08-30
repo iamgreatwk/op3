@@ -28,6 +28,12 @@
 
 #define CARD_PATH "/dev/dri/card0"
 #define DEFAULT_SECONDS 30
+/*
+ * Bounded retries for the two-pass "ask for the counts, then fetch the arrays"
+ * ioctls.  A list can grow between the two passes, so the second pass must be
+ * repeated with larger arrays if the kernel reports more entries than fit.
+ */
+#define KMS_MAX_RETRY 4
 /* drm_mode_get_connector.connection ABI value; libdrm normally supplies it. */
 #define DRM_CONNECTOR_STATUS_CONNECTED 2
 
@@ -37,6 +43,36 @@ struct kms_target {
 	uint32_t connector_id;
 	uint32_t crtc_id;
 	struct drm_mode_modeinfo mode;
+};
+
+struct kms_resources {
+	uint32_t *fb_ids;
+	uint32_t *crtc_ids;
+	uint32_t *connector_ids;
+	uint32_t *encoder_ids;
+	uint32_t count_fbs;
+	uint32_t count_crtcs;
+	uint32_t count_connectors;
+	uint32_t count_encoders;
+	uint32_t capacity_fbs;
+	uint32_t capacity_crtcs;
+	uint32_t capacity_connectors;
+	uint32_t capacity_encoders;
+};
+
+struct kms_connector {
+	struct drm_mode_modeinfo *modes;
+	uint32_t *encoder_ids;
+	uint32_t *prop_ids;
+	uint64_t *prop_values;
+	uint32_t connection;
+	uint32_t encoder_id;
+	uint32_t count_modes;
+	uint32_t count_encoders;
+	uint32_t count_props;
+	uint32_t capacity_modes;
+	uint32_t capacity_encoders;
+	uint32_t capacity_props;
 };
 
 static void usage(const char *program)
@@ -62,7 +98,201 @@ static int drm_call(int fd, unsigned long request, void *argument,
 	return -1;
 }
 
-static int choose_crtc(int fd, const struct drm_mode_card_res *resources,
+static void free_kms_resources(struct kms_resources *resources)
+{
+	free(resources->fb_ids);
+	free(resources->crtc_ids);
+	free(resources->connector_ids);
+	free(resources->encoder_ids);
+	memset(resources, 0, sizeof(*resources));
+}
+
+static void free_kms_connector(struct kms_connector *connector)
+{
+	free(connector->modes);
+	free(connector->encoder_ids);
+	free(connector->prop_ids);
+	free(connector->prop_values);
+	memset(connector, 0, sizeof(*connector));
+}
+
+static int reserve_u32(uint32_t **array, uint32_t *capacity, uint32_t count,
+		       const char *name)
+{
+	uint32_t *grown;
+
+	if (count <= *capacity)
+		return 0;
+
+	grown = realloc(*array, (size_t)count * sizeof(*grown));
+	if (!grown) {
+		fprintf(stderr, "cannot allocate %s list (%" PRIu32 " entries)\n",
+			name, count);
+		return -1;
+	}
+
+	*array = grown;
+	*capacity = count;
+	return 0;
+}
+
+static int reserve_modes(struct drm_mode_modeinfo **modes, uint32_t *capacity,
+			 uint32_t count)
+{
+	struct drm_mode_modeinfo *grown;
+
+	if (count <= *capacity)
+		return 0;
+
+	grown = realloc(*modes, (size_t)count * sizeof(*grown));
+	if (!grown) {
+		fprintf(stderr, "cannot allocate mode list (%" PRIu32 " modes)\n",
+			count);
+		return -1;
+	}
+
+	*modes = grown;
+	*capacity = count;
+	return 0;
+}
+
+static int reserve_props(struct kms_connector *connector, uint32_t count)
+{
+	uint32_t *ids;
+	uint64_t *values;
+
+	if (count <= connector->capacity_props)
+		return 0;
+
+	ids = realloc(connector->prop_ids, (size_t)count * sizeof(*ids));
+	if (!ids) {
+		fprintf(stderr,
+			"cannot allocate property list (%" PRIu32 " entries)\n",
+			count);
+		return -1;
+	}
+	connector->prop_ids = ids;
+
+	values = realloc(connector->prop_values,
+			 (size_t)count * sizeof(*values));
+	if (!values) {
+		fprintf(stderr,
+			"cannot allocate property value list (%" PRIu32 " entries)\n",
+			count);
+		return -1;
+	}
+	connector->prop_values = values;
+
+	connector->capacity_props = count;
+	return 0;
+}
+
+/*
+ * The kernel copies an array entry while its running count is below the count
+ * the caller supplied, and it does not validate the matching pointer.  A second
+ * pass that raises some counts while leaving their pointers NULL therefore
+ * makes the kernel write to NULL and fail with -EFAULT.  Both passes below
+ * always set every pointer together with the capacity it belongs to.
+ */
+static int fetch_resources(int fd, struct kms_resources *resources)
+{
+	struct drm_mode_card_res card = { 0 };
+	int attempt;
+
+	for (attempt = 0; attempt < KMS_MAX_RETRY; attempt++) {
+		card.count_fbs = resources->capacity_fbs;
+		card.count_crtcs = resources->capacity_crtcs;
+		card.count_connectors = resources->capacity_connectors;
+		card.count_encoders = resources->capacity_encoders;
+		card.fb_id_ptr = (uintptr_t)resources->fb_ids;
+		card.crtc_id_ptr = (uintptr_t)resources->crtc_ids;
+		card.connector_id_ptr = (uintptr_t)resources->connector_ids;
+		card.encoder_id_ptr = (uintptr_t)resources->encoder_ids;
+
+		if (drm_call(fd, DRM_IOCTL_MODE_GETRESOURCES, &card,
+			     "DRM_IOCTL_MODE_GETRESOURCES"))
+			return -1;
+
+		if (card.count_fbs <= resources->capacity_fbs &&
+		    card.count_crtcs <= resources->capacity_crtcs &&
+		    card.count_connectors <= resources->capacity_connectors &&
+		    card.count_encoders <= resources->capacity_encoders)
+			break;
+
+		if (reserve_u32(&resources->fb_ids, &resources->capacity_fbs,
+				card.count_fbs, "framebuffer") ||
+		    reserve_u32(&resources->crtc_ids, &resources->capacity_crtcs,
+				card.count_crtcs, "CRTC") ||
+		    reserve_u32(&resources->connector_ids,
+				&resources->capacity_connectors,
+				card.count_connectors, "connector") ||
+		    reserve_u32(&resources->encoder_ids,
+				&resources->capacity_encoders,
+				card.count_encoders, "encoder"))
+			return -1;
+	}
+
+	if (attempt == KMS_MAX_RETRY) {
+		fprintf(stderr, "DRM resource counts keep growing\n");
+		return -1;
+	}
+
+	resources->count_fbs = card.count_fbs;
+	resources->count_crtcs = card.count_crtcs;
+	resources->count_connectors = card.count_connectors;
+	resources->count_encoders = card.count_encoders;
+	return 0;
+}
+
+static int fetch_connector(int fd, uint32_t connector_id,
+			   struct kms_connector *info)
+{
+	struct drm_mode_get_connector connector = {
+		.connector_id = connector_id,
+	};
+	int attempt;
+
+	for (attempt = 0; attempt < KMS_MAX_RETRY; attempt++) {
+		connector.count_modes = info->capacity_modes;
+		connector.count_encoders = info->capacity_encoders;
+		connector.count_props = info->capacity_props;
+		connector.modes_ptr = (uintptr_t)info->modes;
+		connector.encoders_ptr = (uintptr_t)info->encoder_ids;
+		connector.props_ptr = (uintptr_t)info->prop_ids;
+		connector.prop_values_ptr = (uintptr_t)info->prop_values;
+
+		if (drm_call(fd, DRM_IOCTL_MODE_GETCONNECTOR, &connector,
+			     "DRM_IOCTL_MODE_GETCONNECTOR"))
+			return -1;
+
+		if (connector.count_modes <= info->capacity_modes &&
+		    connector.count_encoders <= info->capacity_encoders &&
+		    connector.count_props <= info->capacity_props)
+			break;
+
+		if (reserve_modes(&info->modes, &info->capacity_modes,
+				  connector.count_modes) ||
+		    reserve_u32(&info->encoder_ids, &info->capacity_encoders,
+				connector.count_encoders, "connector encoder") ||
+		    reserve_props(info, connector.count_props))
+			return -1;
+	}
+
+	if (attempt == KMS_MAX_RETRY) {
+		fprintf(stderr, "connector %" PRIu32 " keeps growing\n",
+			connector_id);
+		return -1;
+	}
+
+	info->connection = connector.connection;
+	info->encoder_id = connector.encoder_id;
+	info->count_modes = connector.count_modes;
+	info->count_encoders = connector.count_encoders;
+	info->count_props = connector.count_props;
+	return 0;
+}
+
+static int choose_crtc(int fd, const struct kms_resources *resources,
 		       uint32_t encoder_id, uint32_t *crtc_id)
 {
 	struct drm_mode_get_encoder encoder = {
@@ -81,7 +311,7 @@ static int choose_crtc(int fd, const struct drm_mode_card_res *resources,
 
 	for (index = 0; index < resources->count_crtcs; index++) {
 		if (encoder.possible_crtcs & (1U << index)) {
-			*crtc_id = ((uint32_t *)(uintptr_t)resources->crtc_id_ptr)[index];
+			*crtc_id = resources->crtc_ids[index];
 			return 0;
 		}
 	}
@@ -90,102 +320,72 @@ static int choose_crtc(int fd, const struct drm_mode_card_res *resources,
 	return -1;
 }
 
+static int try_connector(int fd, const struct kms_resources *resources,
+			 uint32_t connector_id, struct kms_target *target)
+{
+	struct kms_connector connector = { 0 };
+	uint32_t encoder_id;
+	uint32_t mode_index;
+	int result = -1;
+
+	if (fetch_connector(fd, connector_id, &connector))
+		goto out;
+
+	if (connector.connection != DRM_CONNECTOR_STATUS_CONNECTED ||
+	    !connector.count_modes || !connector.count_encoders)
+		goto out;
+
+	encoder_id = connector.encoder_id ? connector.encoder_id
+					  : connector.encoder_ids[0];
+	if (choose_crtc(fd, resources, encoder_id, &target->crtc_id))
+		goto out;
+
+	target->connector_id = connector_id;
+	target->mode = connector.modes[0];
+	for (mode_index = 0; mode_index < connector.count_modes; mode_index++) {
+		if (connector.modes[mode_index].type & DRM_MODE_TYPE_PREFERRED) {
+			target->mode = connector.modes[mode_index];
+			break;
+		}
+	}
+
+	printf("connector=%" PRIu32 " crtc=%" PRIu32 " mode=%ux%u@%u\n",
+	       target->connector_id, target->crtc_id, target->mode.hdisplay,
+	       target->mode.vdisplay, target->mode.vrefresh);
+	result = 0;
+out:
+	free_kms_connector(&connector);
+	return result;
+}
+
 static int find_connected_target(int fd, struct kms_target *target)
 {
-	struct drm_mode_card_res resources = { 0 };
-	uint32_t *connector_ids = NULL;
-	uint32_t *crtc_ids = NULL;
+	struct kms_resources resources = { 0 };
 	uint32_t connector_index;
 	int result = -1;
 
-	if (drm_call(fd, DRM_IOCTL_MODE_GETRESOURCES, &resources,
-		     "DRM_IOCTL_MODE_GETRESOURCES"))
-		return -1;
+	if (fetch_resources(fd, &resources))
+		goto out;
 
 	if (!resources.count_connectors || !resources.count_crtcs) {
 		fprintf(stderr, "DRM has no connectors or CRTCs\n");
-		return -1;
-	}
-
-	connector_ids = calloc(resources.count_connectors, sizeof(*connector_ids));
-	crtc_ids = calloc(resources.count_crtcs, sizeof(*crtc_ids));
-	if (!connector_ids || !crtc_ids) {
-		fprintf(stderr, "cannot allocate DRM resource lists\n");
 		goto out;
 	}
-
-	resources.connector_id_ptr = (uintptr_t)connector_ids;
-	resources.crtc_id_ptr = (uintptr_t)crtc_ids;
-	if (drm_call(fd, DRM_IOCTL_MODE_GETRESOURCES, &resources,
-		     "DRM_IOCTL_MODE_GETRESOURCES"))
-		goto out;
 
 	for (connector_index = 0; connector_index < resources.count_connectors;
 	     connector_index++) {
-		struct drm_mode_get_connector connector = {
-			.connector_id = connector_ids[connector_index],
-		};
-		struct drm_mode_modeinfo *modes = NULL;
-		uint32_t *encoder_ids = NULL;
-		uint32_t encoder_id;
-		uint32_t mode_index;
-
-		if (drm_call(fd, DRM_IOCTL_MODE_GETCONNECTOR, &connector,
-			     "DRM_IOCTL_MODE_GETCONNECTOR"))
-			continue;
-
-		if (connector.connection != DRM_CONNECTOR_STATUS_CONNECTED ||
-		    !connector.count_modes || !connector.count_encoders)
-			continue;
-
-		modes = calloc(connector.count_modes, sizeof(*modes));
-		encoder_ids = calloc(connector.count_encoders, sizeof(*encoder_ids));
-		if (!modes || !encoder_ids) {
-			fprintf(stderr, "cannot allocate connector data\n");
-			free(modes);
-			free(encoder_ids);
-			goto out;
+		if (!try_connector(fd, &resources,
+				   resources.connector_ids[connector_index],
+				   target)) {
+			result = 0;
+			break;
 		}
-
-		connector.modes_ptr = (uintptr_t)modes;
-		connector.encoders_ptr = (uintptr_t)encoder_ids;
-		if (drm_call(fd, DRM_IOCTL_MODE_GETCONNECTOR, &connector,
-			     "DRM_IOCTL_MODE_GETCONNECTOR")) {
-			free(modes);
-			free(encoder_ids);
-			continue;
-		}
-
-		encoder_id = connector.encoder_id ? connector.encoder_id : encoder_ids[0];
-		if (choose_crtc(fd, &resources, encoder_id, &target->crtc_id)) {
-			free(modes);
-			free(encoder_ids);
-			continue;
-		}
-
-		target->connector_id = connector.connector_id;
-		target->mode = modes[0];
-		for (mode_index = 0; mode_index < connector.count_modes; mode_index++) {
-			if (modes[mode_index].type & DRM_MODE_TYPE_PREFERRED) {
-				target->mode = modes[mode_index];
-				break;
-			}
-		}
-
-		printf("connector=%" PRIu32 " crtc=%" PRIu32 " mode=%ux%u@%u\n",
-		       target->connector_id, target->crtc_id, target->mode.hdisplay,
-		       target->mode.vdisplay, target->mode.vrefresh);
-		free(modes);
-		free(encoder_ids);
-		result = 0;
-		break;
 	}
 
 	if (result)
 		fprintf(stderr, "no connected connector with a usable CRTC\n");
 out:
-	free(connector_ids);
-	free(crtc_ids);
+	free_kms_resources(&resources);
 	return result;
 }
 
