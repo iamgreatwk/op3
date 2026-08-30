@@ -157,6 +157,39 @@ this firmware set.
 | sda15 `/opt/op3-egl/` | `bin/kmscube`, `lib/libEGL*`, `libGLESv2*`, `libgbm*`, `libdrm*`, `libglapi*`, `lib/dri/msm_dri.so`, `run.sh` | Tens of megabytes; the OnePlus 3 boot.img size limit forbids putting it in the boot image. Editing `run.sh` here changes the test without repacking or re-flashing. |
 | sda15 `/var/log/op3-egl.log` | Test output, sysfs state, `dmesg` | Survives reboot. |
 
+## Host environment: uutils coreutils
+
+This host (Ubuntu 26.04) ships uutils implementations for many coreutils
+commands: `install`, `stat`, `dd`, `mkdir`, `ln`, `sort`, `cut`, `tr`, `wc`, `od`,
+`split`, `uniq`, `basename` and `dirname` all resolve to
+`/usr/lib/cargo/bin/coreutils/`. Buildroot's
+`support/dependencies/dependencies.sh` rejects uutils `install` outright:
+
+```text
+You have an uutils 'install' version installed which is affected by:
+  https://github.com/uutils/coreutils/issues/12166
+```
+
+GNU coreutils are installed alongside them as `/usr/bin/gnu<name>`
+(`/usr/bin/gnuinstall` is GNU coreutils 9.7). Put them first on `PATH` for the
+build; this needs no root and changes no system file:
+
+```bash
+mkdir -p "$HOME/gnubin"
+for gnu in /usr/bin/gnu*; do
+  n=${gnu#/usr/bin/gnu}
+  case "$n" in '['|test) continue;; esac
+  ln -sf "$gnu" "$HOME/gnubin/$n"
+done
+PATH="$HOME/gnubin:$PATH" install --version | head -1   # expect "GNU coreutils"
+```
+
+Then prefix every Buildroot `make` invocation with that `PATH`, as in step 1
+below. The system-wide alternative is
+`sudo update-alternatives --install /usr/bin/install install /usr/bin/gnuinstall 100`,
+but `/usr/bin/install` is a plain symlink that alternatives does not manage, so
+that command may refuse.
+
 ## Owner step 1: build the EGL bundle with Buildroot
 
 Use the **2026.02.x** branch, not 2025.02. Buildroot 2025.02 ships host-m4
@@ -170,8 +203,8 @@ verified to exist on that branch on 2026-08-30.
 ```bash
 git clone --depth 1 -b 2026.02.x https://gitlab.com/buildroot.org/buildroot.git source/buildroot
 cp buildroot/op3-egl.defconfig source/buildroot/configs/op3_egl_defconfig
-make -C source/buildroot O="$PWD/out/buildroot-op3-egl" op3_egl_defconfig
-make -C source/buildroot O="$PWD/out/buildroot-op3-egl" -j"$(nproc)"
+PATH="$HOME/gnubin:$PATH" make -C source/buildroot O="$PWD/out/buildroot-op3-egl" op3_egl_defconfig
+PATH="$HOME/gnubin:$PATH" make -C source/buildroot O="$PWD/out/buildroot-op3-egl" -j"$(nproc)"
 ```
 
 If a different host package hits the same class of error, force the older
