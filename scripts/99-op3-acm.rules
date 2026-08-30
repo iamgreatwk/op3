@@ -1,0 +1,9 @@
+# OnePlus 3 bring-up USB gadget console.
+#
+# The op3 configfs gadget (VID:PID 1d6b:0104, Multifunction Composite
+# Gadget) exposes the debug console on its CDC ACM interface. Without this
+# rule /dev/ttyACM0 is root:dialout 0660 and, because ACLs set with
+# setfacl do not survive a replug, every replug silently broke host-side
+# ACM capture again. GROUP=dialout covers every host account that is a
+# member of dialout (kai was added with usermod).
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1d6b", ATTRS{idProduct}=="0104", MODE="0660", GROUP="dialout"
