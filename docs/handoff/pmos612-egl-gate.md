@@ -154,7 +154,7 @@ this firmware set.
 | Location | Contents | Why |
 | --- | --- | --- |
 | initramfs overlay | `sbin/run_recovery.sh` (a few KB), `lib/firmware/qcom/a530_*.fw` (35 KB) | The launcher must run before sda15 is usable, and the kernel needs the firmware during GPU probe. Nothing else. |
-| sda15 `/opt/op3-egl/` | `bin/kmscube`, `lib/libEGL*`, `libGLESv2*`, `libgbm*`, `libdrm*`, `libglapi*`, `lib/dri/msm_dri.so`, `run.sh` | Tens of megabytes; the OnePlus 3 boot.img size limit forbids putting it in the boot image. Editing `run.sh` here changes the test without repacking or re-flashing. |
+| sda15 `/opt/op3-egl/` | `bin/kmscube`, `lib/` (libEGL, libGLESv2, libgbm, libdrm, `libgallium-26.0.1.so`, glibc loader and libraries), `lib/gbm/dri_gbm.so`, `run.sh` | Tens of megabytes; the OnePlus 3 boot.img size limit forbids putting it in the boot image. Editing `run.sh` here changes the test without repacking or re-flashing. Mesa 26 has no `libglapi` and no per-driver `msm_dri.so`: every Gallium driver, freedreno included, is inside `libgallium-26.0.1.so`. The bundle carries its own glibc loader and libc, and `run.sh` invokes the test through that loader, so it does not depend on the libc of the sda15 rootfs. |
 | sda15 `/var/log/op3-egl.log` | Test output, sysfs state, `dmesg` | Survives reboot. |
 
 ## Host environment: uutils coreutils
