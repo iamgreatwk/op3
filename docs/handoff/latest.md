@@ -184,6 +184,11 @@ out of scope for the product path.
   removed trees (S6E3FA5 driver ports for 6.16/6.19.5, the 7.2 A/B patches)
   is archived in `patches/shelved-7x/` — the reusable asset if a newer LTS
   (e.g. 6.18) is ever picked up again.
+- **Baseline retest PASS (OP3-BROWSER-003, 2026-08-30)**: the layer-07 browser
+  gate re-runs clean on the pmOS 6.12.1 baseline after the source/out cleanup —
+  weston desktop + cog fullscreen animated page owner-confirmed, and for the
+  first time with a full ACM kernel-log capture from boot (554 lines,
+  `artifacts/console-browser-retest-20260830.log`).
 - Still-open project lines (unchanged): GPU regulator nodes in DTB,
   `CONFIG_U_SERIAL_CONSOLE=y` kernel rebuild for a real `console=ttyGS0`.
 
