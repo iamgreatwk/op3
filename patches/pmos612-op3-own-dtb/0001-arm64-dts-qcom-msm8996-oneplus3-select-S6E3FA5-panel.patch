@@ -1,0 +1,24 @@
+From 88826709b54bf6ba55b23cbb147d49e8ad9bd008 Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Sun, 30 Aug 2026 23:15:13 +0800
+Subject: [PATCH 1/2] arm64: dts: qcom: msm8996-oneplus3: select S6E3FA5 panel
+
+---
+ arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts b/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts
+index b4c0e0eb9d6f..80f7b705b48d 100644
+--- a/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts
++++ b/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts
+@@ -51,5 +51,6 @@ &venus {
+ };
+ 
+ &panel {
+-       compatible = "samsung,s6e3fa3";
++       /* Root cause fix: OnePlus 3 is S6E3FA5. */
++       compatible = "samsung,s6e3fa5";
+ };
+-- 
+2.53.0
+

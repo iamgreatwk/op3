@@ -205,6 +205,10 @@ out of scope for the product path.
   historical archive; independent firmware/base-userland provenance remains a
   separate next task. Details: `docs/handoff/op3-dts-rpm-001.md` and
   `docs/handoff/op3-initrd-001.md`.
+- Project-owned pmOS source patch archive (GitLab upstream remains read-only):
+  `patches/pmos612-op3-own-dtb/` contains the ordered S6E3FA5 and direct
+  RPM-GLINK patches needed to reproduce OP3-BOOT-042 on the pinned 6.12.1
+  source commit.
 - 6.16.12 bootable (v74 DTB): `artifacts/boot-oneplus3-pmos616-v74strict-v74dtb.img`
 - 6.19.5 bootable (v74 DTB): `artifacts/boot-oneplus3-pmos6195-v74strict-v74dtb.img`
 - 6.16.12 worktree: `source/linux-pmos-msm8996-6.16` (tag `v6.16.12-msm8996`)

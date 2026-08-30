@@ -7,6 +7,7 @@ Baseline commit: pmOS MSM8996 6.12.1, 67b0bbc3cbf46bae712a2606a43361756fcbd829
 Working branch: agent/implementation/op3-dts-rpm-001
 Changed files: arch/arm64/boot/dts/qcom/msm8996.dtsi
 Commit SHA: 91df7ccd284e5c62c5aed13c2738192b96c1f8dd
+Project-owned patch archive: patches/pmos612-op3-own-dtb/
 
 Layer: DTS / early boot
 Hypothesis tested: The 6.12 RPM remoteproc/glink-edge wrapping, rather than
