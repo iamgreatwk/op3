@@ -1,35 +1,39 @@
-# OnePlus 3 upstream v6.12.1 direct DRM dumb-buffer gate
+# OnePlus 3 pmOS 6.12 direct DRM dumb-buffer gate
 
 ```text
 Task / GitHub Issue: Owner-authorized no-Issue direct KMS smoke test
 Role: Implementation
 Formal baseline: Linux v7.2 pristine upstream (unchanged)
-Diagnostic kernel: upstream v6.12.1 DSI control only
+Diagnostic kernel: pmOS 6.12 (v6.12-v74strict) full-initrd control, the only
+  control with owner-verified USB RNDIS and ACM monitoring
 Baseline commit: 85792c20e50d6b27550b9c02b371e6ff37d4f697
 Working branch: agent/implementation/s6e3fa5-linux72-port
-Changed files: tests/drm/op3-drm-dumb.c; tests/drm/README.md
+Changed files: tests/drm/op3-drm-dumb.c; tests/drm/README.md;
+  boot/drm-test-initramfs/sbin/run_recovery.sh; boot/drm-test-initramfs/README.md;
+  scripts/make-drm-test-initrd.sh
 Source commit SHA: 0e1d84b
 Fix commit SHA: d43821a (EFAULT root-cause fix, on top of 0e1d84b)
 
 Layer: 04 DRM RGB (parallel diagnostic; not a Linux 7.2 acceptance result)
-Previous PASS milestone: v6.12.1 DSI control reaches recovery.c
-Sole hypothesis: The booting v6.12.1 DSI-control image can allocate, map, and
+Previous PASS milestone: pmOS 6.12 full-initrd control boots with USB RNDIS,
+  ACM shell and Dropbear (owner-verified). The upstream v6.12.1 control reaches
+  recovery.c but exposes neither USB network nor ACM.
+Sole hypothesis: The booting pmOS 6.12 control image can allocate, map, and
 modeset a DRM dumb buffer through /dev/dri/card0, visibly producing a solid
 RGB frame.
 Only variable changed: One appended cpio member inside the initramfs of the
-fixed v6.12.1 control image: a replacement `sbin/run_recovery.sh` plus the
+fixed pmOS 6.12 control image: a replacement `sbin/run_recovery.sh` plus the
 static `op3-drm-dumb` binary. Kernel, DTB, header, cmdline, `/init`,
 `init_mainline.sh`, inittab, DRM/MSM, GPU, PM, and sda15 content are unchanged.
 
 Build run by project owner: the single-file static test binary only
 (`artifacts/op3-drm-dumb`, built from commit `d43821a`, 2026-08-30). No kernel,
 Buildroot, Mesa, WebKit, WPE, or other large-project build.
-Build result: ELF 64-bit LSB ARM aarch64, statically linked
-Artifacts and SHA256: a static ARM64 test executable was generated locally as
-`artifacts/op3-drm-dumb`, SHA256
-`d74da26cc2914ea083a2c4d1cbc6095812673226b87c3e89de0ffbdd540e2675`. That
-binary is superseded: it was built from `0e1d84b`, which contains the EFAULT
-defect. Build a new one from `d43821a` and record its SHA256 here.
+Build result: ELF 64-bit LSB ARM aarch64, statically linked, SHA256
+`a41b02d1976071f16f57afd6c365e9ddce93b7500864cd89141b4a1368fd4be3`.
+The 2026-08-30 `0e1d84b` binary
+(`d74da26cc2914ea083a2c4d1cbc6095812673226b87c3e89de0ffbdd540e2675`) is
+superseded: it contains the EFAULT defect.
 
 Device test run by project owner: partial diagnostic execution, 2026-08-30
 Device result: INCONCLUSIVE / test-program failure before modeset
@@ -45,21 +49,33 @@ the program output and the visible panel result. Only after a PASS, test EGL.
 
 ## Fixed boot control
 
-Do not rebuild or repack anything for this gate. Boot the already validated
-upstream v6.12.1 DSI-control image:
+Do not rebuild the kernel for this gate. Boot the already validated pmOS 6.12
+full-initrd control image. It is the control for this gate because it is the one
+image the owner has seen expose USB RNDIS and the ACM shell:
 
 ```text
-kernel source: source/linux-mainline-6.12.1
-source branch: agent/implementation/mainline-v6121-dsi-pm-ab
-source commit: 548b0dc49481bf0c4d6fe63cec76b0e516ec3f91
-boot image: artifacts/boot-oneplus3-mainline-6121-dsi-pm-v74dtb-full-initrd.img
-boot image SHA256: 87bcc4ba5fe76768d8a0b310d68ecde07c2aa2ee0f63fde4c79ebc6abbf65f19
+kernel build: out/pmos-msm8996-v6.12-v74strict/arch/arm64/boot/Image.gz
+DTB: out/pmos-msm8996-6.3.1-v74full/.../msm8996-oneplus3.dtb
+boot image: artifacts/boot-oneplus3-pmos612-v74dtb-full-initrd.img
+kernel payload SHA256 (Image.gz + raw DTB):
+  50ffea424e6b7625b30acd5b14673ea287d2b04c7c283ee145f895247d8e881a
+ramdisk: artifacts/reference-initrd.img
+  c3358a1cadb747996ddaa492e636827f2d72974040e8fd40d81f8a213e676366
 cmdline: fbcon=nodefault console=tty0 pmos.debug-shell
 ```
 
-The owner previously reported this exact control reaches `recovery.c`. Its
-v74 DTB and complete reference initramfs are fixed test companions here; they
-are not a formal Linux 7.2 DTS or rootfs decision.
+Its configuration has `CONFIG_DRM=y`, `CONFIG_DRM_MSM=y`,
+`CONFIG_DRM_MSM_DSI=y`, `CONFIG_DRM_MSM_DSI_14NM_PHY=y`,
+`CONFIG_DRM_PANEL_SAMSUNG_S6E3FA5=y` and `CONFIG_BACKLIGHT_CLASS_DEVICE=y`, so
+the display path is present.
+
+The earlier plan used the upstream v6.12.1 DSI control
+(`artifacts/boot-oneplus3-mainline-6121-dsi-pm-v74dtb-full-initrd.img`). The
+owner reported that image reaches `recovery.c` but exposes **no USB RNDIS
+network and no ACM shell**, so it cannot produce log evidence. It is superseded
+as the control for this gate, and
+`artifacts/boot-oneplus3-mainline-6121-dsi-pm-v74dtb-drm-test.img`, which was
+built from it, must not be tested.
 
 ## Owner command: compile the test binary
 
@@ -87,21 +103,33 @@ creates an XRGB8888 dumb buffer, fills it, and calls legacy `SETCRTC`.
 
 ## Owner device procedure
 
-Use the existing owner-established procedure to copy `op3-drm-dumb` into the
-root filesystem on sda15 (for example, `/usr/bin/op3-drm-dumb`). Do not change
-the kernel image or its companions, and do not infer a new USB address,
-credential, mount point, or boot command. Once that established procedure has
-started the v6.12.1 control image and made the sda15 root filesystem active,
-run:
+This is the fallback path if the automatic launcher below is not used. Copy
+`op3-drm-dumb` into the sda15 root filesystem (for example
+`/newroot/usr/bin/op3-drm-dumb`) using the existing owner-established procedure.
+Do not change the kernel image or its companions, and do not infer a new USB
+address, credential, mount point, or boot command. Once that procedure has
+started the pmOS 6.12 control image, stop the recovery client so it cannot hold
+the DRM master, then run:
 
 ```bash
-chmod 0755 /usr/bin/op3-drm-dumb
-exec /usr/bin/op3-drm-dumb red --hold
+chmod 0755 /newroot/usr/bin/op3-drm-dumb
+
+# Recovery holds the DRM master and would make legacy SETCRTC fail with EACCES.
+# Replace the respawn target in the running system, then stop the client.
+cp -a /sbin/run_recovery.sh /sbin/run_recovery.sh.bak
+printf '#!/bin/sh\nexec sleep 3600\n' > /sbin/run_recovery.sh
+chmod 0755 /sbin/run_recovery.sh
+killall recovery_mainline
+
+/newroot/usr/bin/op3-drm-dumb red --hold
 ```
 
 Use Ctrl-C in that session to restore the previous CRTC state and exit.
 Repeat with `green --hold` and `blue --hold`; or use, for example,
 `red --seconds 30` for an automatic return after 30 seconds.
+
+Restore the original launcher on the device afterwards, or simply re-flash the
+control image, so later boots return to the validated state.
 
 ## 2026-08-30 deployment and first run
 
@@ -230,25 +258,27 @@ Appended entries:
 | `usr/bin/op3-drm-dumb` | 0755 | `artifacts/op3-drm-dumb` |
 
 Launcher behaviour: wait up to 90 s for `/dev/dri/card0`, record the kernel
-identity, the `/dev/dri` state and filtered `dmesg`, run
-`op3-drm-dumb red/green/blue` with a 20 s hold each, then hold red for 600 s,
-then idle forever. The inittab entry is `::respawn:`, so the launcher must not
-exit; a fast exit would make busybox init disable the entry. It never starts
-`recovery_mainline`, so no other client can hold the DRM master.
+identity, the `/dev/dri` state, the DRM connector `status`/`enabled`/`mode` and
+the backlight `brightness`/`max_brightness`/`bl_power` from sysfs, and filtered
+`dmesg`; run `op3-drm-dumb red/green/blue` with a 20 s hold each; then hold red
+for 600 s; then idle forever. The inittab entry is `::respawn:`, so the launcher
+must not exit; a fast exit would make busybox init disable the entry. It never
+starts `recovery_mainline`, so no other client can hold the DRM master. The sysfs
+dumps are read-only and do not change the KMS sequence.
 
 Artifacts:
 
 ```text
 overlay initrd: artifacts/initrd-op3-drm-test.cpio.gz
-  50996090 bytes, SHA256
-  1315c2eb898ea6a5c60c6e4db86ec68f1ab10532d78c315287c93b19e15abedd
+  50996296 bytes, SHA256
+  18ea44868cb3dcb123ed8335ac4b197ae29b837fdd9fd26fd360263c0d52f791
   first 50705116 bytes SHA256
   c3358a1cadb747996ddaa492e636827f2d72974040e8fd40d81f8a213e676366
   = artifacts/reference-initrd.img, byte-identical
 
-boot image: artifacts/boot-oneplus3-mainline-6121-dsi-pm-v74dtb-drm-test.img
-  62939136 bytes, SHA256
-  1722d5a1dc8bc93917d681c165a79575b3acc589d508beb5c725382acd3e4cbb
+boot image: artifacts/boot-oneplus3-pmos612-v74dtb-drm-test.img
+  62951424 bytes, SHA256
+  2553ba2ffcd9471bd21cbb27aed11babb80a76c1118d6b60abbd4cb70a578804
 
 test binary: artifacts/op3-drm-dumb
   SHA256 a41b02d1976071f16f57afd6c365e9ddce93b7500864cd89141b4a1368fd4be3
@@ -259,16 +289,16 @@ Packing and verification were run by the agent; no device action was taken.
 ```bash
 scripts/make-drm-test-initrd.sh
 scripts/pack-boot.sh \
-  out/linux-mainline-6.12.1-dsi-pm-ab/arch/arm64/boot/Image.gz \
+  out/pmos-msm8996-v6.12-v74strict/arch/arm64/boot/Image.gz \
   out/pmos-msm8996-6.3.1-v74full/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dtb \
   artifacts/initrd-op3-drm-test.cpio.gz \
-  artifacts/boot-oneplus3-mainline-6121-dsi-pm-v74dtb-drm-test.img
+  artifacts/boot-oneplus3-pmos612-v74dtb-drm-test.img
 ```
 
 The ramdisk is the only difference from the validated control image
-`boot-oneplus3-mainline-6121-dsi-pm-v74dtb-full-initrd.img`. Both kernel
-payloads (`Image.gz` followed by the raw v74 DTB) hash to
-`5aafe547704d63ba140968927e96d78a81c96b4719463c7e4db29dc6c3288249`, and both
+`boot-oneplus3-pmos612-v74dtb-full-initrd.img`. Both kernel payloads
+(`Image.gz` followed by the raw v74 DTB) hash to
+`50ffea424e6b7625b30acd5b14673ea287d2b04c7c283ee145f895247d8e881a`, and both
 images use header v0, 4096-byte pages, kernel `0x80008000`, ramdisk
 `0x81000000`, tags `0x80000100`, and the cmdline
 `fbcon=nodefault console=tty0 pmos.debug-shell`.
@@ -278,13 +308,17 @@ images use header v0, 4096-byte pages, kernel `0x80008000`, ramdisk
 Use the established non-persistent boot procedure; do not flash:
 
 ```text
-fastboot boot artifacts/boot-oneplus3-mainline-6121-dsi-pm-v74dtb-drm-test.img
+fastboot boot artifacts/boot-oneplus3-pmos612-v74dtb-drm-test.img
 ```
 
 `init_mainline.sh` runs first, so the RNDIS endpoint (`172.16.42.1`), the ACM
 shell and Dropbear come up as before. The RGB sequence then starts by itself;
 no interactive command is needed. Watch the panel for 20 s red, 20 s green,
 20 s blue, then a 10 minute red hold.
+
+Because recovery no longer runs, a black panel before the first colour is
+expected: nothing else lights the display. The log is the only way to tell
+“no modeset” apart from “modeset succeeded but the backlight is off”.
 
 Collect the evidence from the device:
 

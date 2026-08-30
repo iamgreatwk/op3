@@ -48,11 +48,32 @@ sync_log() {
 	fi
 }
 
+dump_sysfs() {
+	log "drm sysfs:"
+	for d in /sys/class/drm/card0-*; do
+		[ -e "$d" ] || continue
+		printf '%s status=%s enabled=%s mode=%s\n' "$d" \
+			"$(cat "$d/status" 2>/dev/null)" \
+			"$(cat "$d/enabled" 2>/dev/null)" \
+			"$(head -n 1 "$d/modes" 2>/dev/null)" >> "$LOG"
+	done
+	log "backlight sysfs:"
+	for b in /sys/class/backlight/*; do
+		[ -e "$b" ] || continue
+		printf '%s brightness=%s actual=%s max=%s power=%s\n' "$b" \
+			"$(cat "$b/brightness" 2>/dev/null)" \
+			"$(cat "$b/actual_brightness" 2>/dev/null)" \
+			"$(cat "$b/max_brightness" 2>/dev/null)" \
+			"$(cat "$b/bl_power" 2>/dev/null)" >> "$LOG"
+	done
+}
+
 snapshot() {
 	log "----- $1 -----"
 	log "kernel: $(uname -a)"
 	ls -l "$CARD" >> "$LOG" 2>&1
 	ls -l /dev/dri >> "$LOG" 2>&1
+	dump_sysfs
 	log "dmesg display lines:"
 	dmesg 2>/dev/null | grep -i -E "drm|msm|dsi|panel|mdp|dsi_phy" | tail -n 25 >> "$LOG"
 	log "dmesg tail:"

@@ -6,12 +6,16 @@ dumb buffer, fills it with one RGB colour, and calls the legacy KMS modeset
 ioctl. It does not test Mesa, GBM, EGL, Wayland, Weston, Cog, WPE, GPU runtime
 PM, or browser rendering.
 
-The target test kernel is the existing booting upstream v6.12.1 DSI control:
-`source/linux-mainline-6.12.1`, branch
-`agent/implementation/mainline-v6121-dsi-pm-ab`, commit
-`548b0dc49481bf0c4d6fe63cec76b0e516ec3f91`.
+The target test kernel is the pmOS 6.12 full-initrd control
+(`out/pmos-msm8996-v6.12-v74strict` plus the v74 DTB). Use that one, not the
+upstream v6.12.1 DSI control: the v6.12.1 image reaches `recovery.c` but the
+owner has never seen it expose USB RNDIS or the ACM shell, so it cannot produce
+log evidence.
 
 The project owner compiles and deploys the test binary. Agents must not build
-or operate the device. See
-`docs/handoff/mainline-v6121-drm-dumb-buffer.md` for the exact command and
-PASS/FAIL conditions.
+or operate the device. See `docs/handoff/pmos612-drm-dumb-buffer.md` for the
+exact command and PASS/FAIL conditions.
+
+`boot/drm-test-initramfs/sbin/run_recovery.sh` is the automatic launcher, and
+`scripts/make-drm-test-initrd.sh` appends it, together with the binary, to the
+validated reference initramfs as one extra cpio member.
