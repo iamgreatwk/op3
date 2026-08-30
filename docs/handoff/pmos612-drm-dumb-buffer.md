@@ -35,11 +35,16 @@ The 2026-08-30 `0e1d84b` binary
 (`d74da26cc2914ea083a2c4d1cbc6095812673226b87c3e89de0ffbdd540e2675`) is
 superseded: it contains the EFAULT defect.
 
-Device test run by project owner: partial diagnostic execution, 2026-08-30
-Device result: INCONCLUSIVE / test-program failure before modeset
-Evidence links / log paths: see “2026-08-30 deployment and first run” below
+Device test run by project owner: 2026-08-30, derived image booted with USB
+  RNDIS up; launcher ran the sequence; all colours exited 1 until commit
+  `e261c4d`
+Device result: KMS ioctl PASS after the fix (`connector=33 crtc=106
+  mode=1080x1920@60`, `solid colour active`, exit 0). Visible panel colour
+  pending owner confirmation.
+Evidence links / log paths: `/newroot/var/log/op3-drm-dumb.log` on sda15;
+  see “2026-08-30 second run” below
 
-Conclusion: INCONCLUSIVE
+Conclusion: KMS PASS pending visual confirmation
 Uncertainties: This legacy KMS path does not exercise atomic KMS, GBM, EGL,
 Wayland, Weston, Cog, or WPE. A successful static binary also depends on the
 running image exposing /dev/dri/card0 to the sda15 root filesystem.
@@ -213,6 +218,77 @@ unchanged.
 | `DRM has no connectors or CRTCs` | A DRM lease hides them, or the driver registered none | collect `dmesg`; do not change the kernel |
 | `no connected connector with a usable CRTC` | No connector reports `connected`; no sink detected on the DSI path | collect `dmesg`; this is display-layer evidence, not a program bug |
 | any other ioctl error or hang | unclassified | record the exact output; do not change kernel, DTB, or GPU first |
+
+## 2026-08-30 second run: root cause found, KMS PASS
+
+The derived image booted, USB RNDIS came up and the launcher ran the whole
+sequence. Every colour exited 1 with `no connected connector with a usable
+CRTC`, while sysfs reported `card0-DSI-1 status=connected enabled=enabled
+mode=1080x1920` and backlight `brightness=255 actual=255 max=255 power=0`. The
+panel was never the problem.
+
+A read-only KMS probe (only `GETRESOURCES`, `GETCONNECTOR`, `GETENCODER` and
+`GETCRTC`; run from `/tmp`, never packaged into any image) showed what the
+kernel actually returns:
+
+```text
+resources: fbs=0 crtcs=1 connectors=1 encoders=1
+crtc ids: 106
+encoder ids: 32
+connector ids: 33
+crtc 106: fb=107 mode_valid=1 x=0 y=0
+encoder 32: type=6 crtc=106 possible_crtcs=0x1 clones=0x1
+connector 33: type=16 type_id=1 connection=1 encoder_id=32 modes=1 encoders=1 props=5
+  mode[0] 1080x1920@60 clock=150348 flags=0x0 type=0x48
+  possible encoder 32: crtc=106 possible_crtcs=0x1
+```
+
+`connection=1` is `connector_status_connected`. The test program had defined
+`DRM_CONNECTOR_STATUS_CONNECTED` as 2, which is
+`connector_status_disconnected`, so it rejected the only connected connector on
+every run. That enum is not exported through the UAPI headers, so its value was
+guessed, and guessed wrong.
+
+Commit `e261c4d` restates the enum from `include/drm/drm_connector.h`
+(`connected = 1`, `disconnected = 2`, `unknown = 3`) with a comment. Nothing
+else changed.
+
+Result after the fix, run interactively on the device from `/tmp` (diagnostic
+only: the binary inside the image is still the old one until the owner
+rebuilds it):
+
+```text
+connector=33 crtc=106 mode=1080x1920@60
+solid colour active on /dev/dri/card0; press Ctrl-C or wait for timeout
+exit=0
+```
+
+That is a KMS PASS at the ioctl level: connector, CRTC, 1080x1920@60 mode, dumb
+buffer, `ADDFB`, `MAP_DUMB` and legacy `SETCRTC` all succeed. It does not yet
+claim a visible panel result; the owner confirms the colour while a 900 s red
+hold is active.
+
+Non-blocking `dmesg` noise, not assigned as causes: missing
+`qcom/a530_pm4.fw` (Adreno GPU firmware; not needed for KMS scanout) and
+`msm_mdp ... pp done time out, lm=2`.
+
+## Owner rebuild so the image itself is fixed
+
+The image still carries the pre-fix binary. Rebuild and repackage:
+
+```bash
+aarch64-linux-gnu-gcc-11 -static -std=gnu11 -O2 -Wall -Wextra -Werror \
+  -o artifacts/op3-drm-dumb tests/drm/op3-drm-dumb.c
+scripts/make-drm-test-initrd.sh
+scripts/pack-boot.sh \
+  out/pmos-msm8996-v6.12-v74strict/arch/arm64/boot/Image.gz \
+  out/pmos-msm8996-6.3.1-v74full/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dtb \
+  artifacts/initrd-op3-drm-test.cpio.gz \
+  artifacts/boot-oneplus3-pmos612-v74dtb-drm-test.img
+```
+
+Record the new `artifacts/op3-drm-dumb`, `artifacts/initrd-op3-drm-test.cpio.gz`
+and boot-image SHA256 values here, replacing the ones above.
 
 ## Required next test image design
 
