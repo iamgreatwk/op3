@@ -128,6 +128,30 @@ The full graphics/user-space chain on the pmOS 6.12 control is now validated
 end to end: DRM dumb buffer → GPU firmware → EGL → Wayland compositor →
 browser. Promotion to accepted is the Integration role's decision.
 
+## Cross test: the same bundle on the v100 (6.3.1) kernel — PASS
+
+Motivation: the parallel 6.3.1 project could never get a browser working;
+this test isolates kernel vs user-space. Artifacts
+`artifacts/v100-reference-{Image.gz,msm8996-oneplus3.dtb,initrd.img}`
+(`Linux version 6.3.1-msm8996+ #31`) packed with the browser initramfs:
+
+```text
+image:  artifacts/boot-oneplus3-v100-browser.img (7d546b2a…)
+bundle: unchanged, sda15 /opt/op3-browser (bec5ce8b…)
+result: 6.3.1 kernel boots the browser initramfs, reaches user space, mounts
+        sda15; weston GL renderer FD530 (GLES 3.1 Mesa 26.0.1 — same bundle);
+        cog `wl` platform runs the full 60 s window, page "Loaded
+        successfully"; owner confirms desktop + rendered page
+caveat: ~452 GPU SMMU context faults during the window (arm-smmu b40000.iommu,
+        fsr=0x402/0x80000402, iova=0x0, cb=0) — 6.3.1's a5xx code path faults
+        under GPU load; rendering proceeded regardless. Worth investigating
+        in the parallel project, non-blocking for basic rendering.
+conclusion: the parallel project's "browser never works" was NOT a kernel
+        problem — it was the user-space environment (fonts, MIME database,
+        loader discipline, helper wrapping, platform name). The
+        bundle + run.sh approach transfers directly; adopt it there.
+```
+
 ## PASS / FAIL record
 
 PASS requires all of the following:

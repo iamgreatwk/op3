@@ -152,6 +152,20 @@ Next: the control-baseline bring-up is COMPLETE through layer 07. Remaining
 project lines: Linux 7.2 early-boot (last), GPU regulator nodes in DTB,
 `CONFIG_U_SERIAL_CONSOLE=y` kernel rebuild.
 
+## Cross test: browser on the 6.3.1 (v100) kernel — PASS (2026-08-30)
+
+The same browser bundle ran unchanged on `6.3.1-msm8996+ #31`
+(`artifacts/boot-oneplus3-v100-browser.img`, v100 Image+DTB + browser
+initramfs): weston GL renderer FD530, cog `wl` platform, page loaded,
+desktop + rendered page owner-confirmed. Caveat: ~452 GPU SMMU context
+faults (b40000.iommu, iova=0x0) on 6.3.1's a5xx path — non-blocking,
+worth investigating in the parallel project.
+
+**Conclusion: the 6.3.1 parallel project's browser failures were
+user-space, not kernel.** The browser bundle + run.sh (fonts, MIME database,
+loader discipline, helper wrapping, `wl` platform) transfers directly.
+Details in `docs/handoff/pmos612-browser-cog.md` cross-test section.
+
 ## Key artifacts
 
 - 6.16.12 bootable (v74 DTB): `artifacts/boot-oneplus3-pmos616-v74strict-v74dtb.img`
