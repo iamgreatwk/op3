@@ -45,10 +45,24 @@ Recommended next experiment: run the firmware image first, confirm from dmesg
 
 The kernel requests `qcom/a530_pm4.fw` and `qcom/a530_pfp.fw` while the GPU
 probes, which happens before any user-space root filesystem exists, so those two
-files must be inside the initramfs. `zap-shader` is separate: without a
-`zap-shader` device-tree node the driver only sets `zap_available = false` and
-continues, so the `a530_zap.mbn` already in the reference initramfs is not part
-of this change.
+files must be inside the initramfs, and so does `qcom/a530v3_gpmu.fw2`.
+
+GPMU is loaded even though `a5xx_gpmu_init()` tolerates its absence: the owner
+observed GPU runtime PM blanking the panel when the GPMU microcode is missing,
+so it is treated as required, not optional.
+
+Zap is already covered and is not part of this change: the v74 DTB contains
+
+```text
+zap-shader {
+	memory-region = <0x3f>;
+	firmware-name = "qcom/msm8996/oneplus3/a530_zap.mbn";
+};
+```
+
+and the reference initramfs already ships that file at exactly that path
+(`lib/firmware/qcom/msm8996/oneplus3/a530_zap.mbn`). The driver only prints on
+zap failure, and no zap error appears in `dmesg`.
 
 ```bash
 scripts/prepare-a530-firmware.sh    # verifies SHA256 against pinned values
@@ -57,15 +71,23 @@ scripts/pack-boot.sh \
   out/pmos-msm8996-v6.12-v74strict/arch/arm64/boot/Image.gz \
   out/pmos-msm8996-6.3.1-v74full/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dtb \
   artifacts/initrd-op3-drm-test.cpio.gz \
-  artifacts/boot-oneplus3-pmos612-v74dtb-gpu-fw.img
+  artifacts/boot-oneplus3-pmos612-v74dtb-gpu-fw-gpmu.img
 ```
 
 ```text
-a530_pm4.fw  6419f35956ec7307af83723fedfba752520bacd8389eda0d0120e185e4cb1d3f  19572 bytes
-a530_pfp.fw  7ab3cd917e1f875f6a8387f8bc5efcf11ce9c88542ef2fc3cbda7d4b7b163286  16144 bytes
-image        ae108bc8aefeb34dcd2c1f07a952b6067469049ff3ed00c422575df3cfc6d004
-kernel payload 50ffea424e6b7625b30acd5b14673ea287d2b04c7c283ee145f895247d8e881a (unchanged)
+a530_pm4.fw      6419f35956ec7307af83723fedfba752520bacd8389eda0d0120e185e4cb1d3f  19572 bytes
+a530_pfp.fw      7ab3cd917e1f875f6a8387f8bc5efcf11ce9c88542ef2fc3cbda7d4b7b163286  16144 bytes
+a530v3_gpmu.fw2  3124b0c8cf84fd6db5cb063b37c51386dc64b5416c4ba2713e12106d9ffa5daf   8184 bytes
+
+image             cf4b0d49b8ce8b4b352fcb5b672cbf35339c4f91ecf739b6fd955b5889592d40
+                  (boot-oneplus3-pmos612-v74dtb-gpu-fw-gpmu.img, 62967808 bytes)
+kernel payload    50ffea424e6b7625b30acd5b14673ea287d2b04c7c283ee145f895247d8e881a (unchanged)
+ramdisk           2a25597df0061faf3d94173624b9f0a616538ab99b681ed243580ad2f6510505
+previous image    ae108bc8aefeb34dcd2c1f07a952b6067469049ff3ed00c422575df3cfc6d004
+                  (pm4 + pfp only; superseded, kept as the evidence artifact)
 ```
+
+Adding GPMU grew the boot image by exactly one 4096-byte page.
 
 This image uses the **DRM RGB launcher**, so it also runs the colour sequence
 and dumps `dmesg` into `/newroot/var/log/op3-drm-dumb.log`.
@@ -86,17 +108,17 @@ Both firmware files on the device hash to
 staged copies. The devfreq node for the GPU is the decisive evidence: it only
 exists once the Adreno core has initialised.
 
-Still failing, and deliberately left alone:
+That run also showed one remaining failure:
 
 ```text
 [drm:adreno_request_fw] *ERROR* failed to load qcom/a530v3_gpmu.fw2: -2
 ```
 
-GPMU is the power/frequency microcode. `a5xx_gpmu_init()` begins with
-`if (!a5xx_gpu->gpmu_dwords) return 0;`, so a missing GPMU image is non-fatal and
-the GPU runs without it. `qcom/a530v3_gpmu.fw2` exists on the host under
-`/lib/firmware/qcom/`, so it can be added in a separate step later; it is not
-part of this change and is not required for the EGL gate.
+`a5xx_gpmu_init()` tolerates it (`if (!a5xx_gpu->gpmu_dwords) return 0;`), so the
+GPU still came up. The owner nevertheless required it, because GPU runtime PM
+has been observed to blank the panel without the GPMU microcode. `a530v3_gpmu.fw2`
+was therefore added in the image above; the EGL gate must run with the GPMU
+image, not with `ae108bc8…`.
 
 ## Layout: what goes where
 
