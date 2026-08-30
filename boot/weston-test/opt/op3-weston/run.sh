@@ -49,7 +49,7 @@ LOADER=$1
 run() { # run <bundle-binary> [args...] — through the bundled loader
 	echo "+ $*"
 	if [ -n "$LOADER" ]; then
-		"$LOADER" --library-path "$BASE/lib" "$@"
+		"$LOADER" --library-path "$BASE/usr/lib:$BASE/usr/lib/libweston-14:$BASE/lib" "$@"
 	else
 		"$@"
 	fi
@@ -68,18 +68,80 @@ fi
 
 # --- Bridge compile-time-absolute paths into the bundle ----------------------
 # The live rootfs is the initramfs tmpfs; these links vanish on reboot.
+# libweston-14 holds the backends/renderers, weston/ holds the shells, and
+# eudev's rules live in usr/lib/udev — all addressed by absolute paths.
 mkdir -p /usr/lib /usr/share /run
-for m in weston udev; do
+for m in weston libweston-14 udev; do
 	ln -sfn "$BASE/usr/lib/$m" "/usr/lib/$m"
 done
 for d in libinput X11 weston; do
 	[ -e "$BASE/usr/share/$d" ] && ln -sfn "$BASE/usr/share/$d" "/usr/share/$d"
 done
+[ -e "$BASE/usr/libexec" ] && ln -sfn "$BASE/usr/libexec" "/usr/libexec"
+
+# weston launches its helpers (weston-desktop-shell, weston-keyboard) by
+# exec'ing /usr/libexec/<name> directly. The initramfs has no dynamic loader,
+# so those helpers died with status 1 and weston quit ("apparently cannot run
+# at all"). Replace each helper with a wrapper script that execs the real
+# binary through the bundled loader. fd 3 (the WAYLAND_SOCKET) and the
+# environment survive the exec chain (observed 2026-08-30).
+LIBPATH="$BASE/usr/lib:$BASE/usr/lib/libweston-14:$BASE/lib"
+for helper in weston-desktop-shell weston-keyboard; do
+	real="$BASE/usr/libexec/$helper"
+	[ -x "$real" ] || continue
+	if [ ! -e "$real.real" ]; then
+		mv "$real" "$real.real"
+		{
+			echo "#!/bin/sh"
+			echo "exec \"$LOADER\" --library-path \"$LIBPATH\" \"$real.real\" \"\$@\""
+		} > "$real"
+		chmod +x "$real"
+	fi
+done
+
+# --- kill leftovers from previous runs ---------------------------------------
+# A weston forked twin survives a plain TERM of the tracked pid: the survivor
+# keeps DRM master ("Could not make device fd drm master: Device or resource
+# busy") and the old socket, so the next weston renders nothing and the client
+# cannot connect (observed 2026-08-30). Sweep /proc by full cmdline — busybox
+# ps truncates, and our own command lines contain neither usr/bin/weston nor
+# sbin/udevd, so this cannot kill us.
+kill_stale() {
+	leftovers=""
+	for p in /proc/[0-9]*; do
+		[ "$p" = "/proc/$$" ] && continue
+		c=$(tr '\0' ' ' < "$p/cmdline" 2>/dev/null)
+		case "$c" in
+			*"/usr/bin/weston "*|*"/sbin/udevd "*|*"/usr/libexec/weston-"*)
+				leftovers="$leftovers ${p#/proc/}"
+				;;
+		esac
+	done
+	if [ -n "$leftovers" ]; then
+		echo "killing stale processes:$leftovers"
+		kill -9 $leftovers 2>/dev/null
+		sleep 1
+	fi
+}
+kill_stale
 
 # --- udev: libinput needs the udev database to enumerate devices -------------
+# Buildroot's eudev does not ship the input_id rules file, so devices like the
+# Synaptics touchscreen get no ID_INPUT tags and libinput rejects every device
+# ("not tagged as supported input device") — weston then aborts because it has
+# zero input devices. udevd has the input_id builtin compiled in; this rule
+# invokes it (observed 2026-08-30).
+RULES="$BASE/usr/lib/udev/rules.d"
+mkdir -p "$RULES"
+cat > "$RULES/60-op3-input-id.rules" <<'EOF'
+ACTION=="remove", GOTO="op3_input_id_end"
+SUBSYSTEM=="input", ENV{ID_INPUT}=="", IMPORT{builtin}="input_id"
+LABEL="op3_input_id_end"
+EOF
+
 echo "=== starting udevd ==="
-if [ -x "$BASE/usr/lib/udev/udevd" ]; then
-	run "$BASE/usr/lib/udev/udevd" --daemon 2>&1
+if [ -x "$BASE/sbin/udevd" ]; then
+	run "$BASE/sbin/udevd" --daemon 2>&1
 	run "$BASE/usr/bin/udevadm" trigger 2>&1 | tail -n 1
 	run "$BASE/usr/bin/udevadm" settle --timeout=10 2>&1
 	echo "udev: $(ls /run/udev/data 2>/dev/null | wc -l) device records"
@@ -90,6 +152,7 @@ fi
 # --- weston ------------------------------------------------------------------
 # libseat: running as root, the builtin backend needs no seatd daemon.
 export XDG_RUNTIME_DIR=/run/op3-weston
+rm -rf "$XDG_RUNTIME_DIR"
 mkdir -p "$XDG_RUNTIME_DIR" && chmod 0700 "$XDG_RUNTIME_DIR"
 
 echo "=== starting weston (DRM backend, GL renderer) ==="
@@ -99,25 +162,26 @@ run "$BASE/usr/bin/weston" \
 	--log="$XDG_RUNTIME_DIR/weston.log" &
 weston_pid=$!
 
-# Wait for the compositor to be ready before starting the client.
+# Wait for the Wayland socket, then export the actual socket name: stale lock
+# files from crashed runs can push weston to wayland-1/2, and the client must
+# follow (observed 2026-08-30: simple-egl asserted on wayland-0 vs wayland-1).
 i=0
-ready=""
+sock=""
 while [ "$i" -lt 20 ]; do
-	if grep -q "compositor ready\|waiting for clients" \
-			"$XDG_RUNTIME_DIR/weston.log" 2>/dev/null; then
-		ready=1
-		break
-	fi
+	sock=$(ls "$XDG_RUNTIME_DIR"/wayland-* 2>/dev/null | head -n 1)
+	[ -n "$sock" ] && break
 	if ! kill -0 "$weston_pid" 2>/dev/null; then
 		break
 	fi
 	sleep 1
 	i=$((i + 1))
 done
-if [ -n "$ready" ]; then
-	echo "weston is ready after ${i}s"
+if [ -n "$sock" ]; then
+	sock=${sock##*/}
+	export WAYLAND_DISPLAY=$sock
+	echo "weston is ready after ${i}s; Wayland socket: $sock"
 else
-	echo "WARN: weston readiness not confirmed after ${i}s (pid alive: $(kill -0 "$weston_pid" 2>/dev/null && echo yes || echo no))"
+	echo "FATAL: no Wayland socket after ${i}s (weston pid alive: $(kill -0 "$weston_pid" 2>/dev/null && echo yes || echo no))"
 fi
 
 # --- the visible client: weston-simple-egl -----------------------------------
@@ -137,6 +201,9 @@ fi
 
 echo "=== stopping weston ==="
 kill -TERM "$weston_pid" 2>/dev/null
+sleep 2
+# The forked twin (if any) must go too, or it keeps DRM master and the socket.
+kill_stale
 wait "$weston_pid" 2>/dev/null
 echo "weston exit=$?"
 

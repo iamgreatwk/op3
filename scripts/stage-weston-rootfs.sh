@@ -24,11 +24,13 @@ target="${1:-$project_root/out/buildroot-op3-egl/target}"
 output="${2:-$project_root/artifacts/op3-weston-bundle.tar.gz}"
 run_script="$project_root/boot/weston-test/opt/op3-weston/run.sh"
 
-# bin/lib pieces that must exist for the gate to make any sense.
+# bin/lib pieces that must exist for the gate to make any sense. weston 14
+# keeps backends/renderers in /usr/lib/libweston-14 and shells in
+# /usr/lib/weston; eudev installs its daemon at /sbin/udevd.
 required_bins=(weston weston-simple-egl udevadm)
-required_libs=(usr/lib/weston/drm-backend.so
-               usr/lib/weston/gl-renderer.so
-               usr/lib/udev/udevd
+required_libs=(usr/lib/libweston-14/drm-backend.so
+               usr/lib/libweston-14/gl-renderer.so
+               sbin/udevd
                usr/lib/gbm/dri_gbm.so
                usr/lib/libEGL.so.1
                usr/lib/libgallium-*.so*)
@@ -45,7 +47,8 @@ for bin in "${required_bins[@]}"; do
   }
 done
 for lib in "${required_libs[@]}"; do
-  ls "$target/$lib" >/dev/null 2>&1 || {
+  # unquoted glob on purpose: patterns like libgallium-*.so* must expand
+  ls $target/$lib >/dev/null 2>&1 || {
     printf 'Missing library in target: %s\n' "$lib" >&2
     missing=1
   }
