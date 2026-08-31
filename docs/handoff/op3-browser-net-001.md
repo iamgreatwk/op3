@@ -66,6 +66,25 @@ Recommended next experiment: OP3-BROWSER-006 — stage a CJK font (WQY
 
 ## Debug log
 
+### Reset F (2026-08-31): battery-low triggered reset during display — likely root cause found
+
+A later kiosk-session run (start kiosk-shell + cog, part of the fbcon
+takeover verification) hard-reset the phone seconds after the page was
+displayed, on the 6.12 browser-net image with all previous fixes in place.
+The owner then reported the phone was out of battery. Low-battery voltage
+sag under a GPU load spike → PMIC SoC reset is the best-fit explanation,
+and it retroactively explains why earlier resets happened at different
+phases (association, display) with identical software: the battery state
+was the hidden variable.
+
+Protocol changes adopted:
+- Every device test record must include battery/charging state; resets
+  without it are inconclusive.
+- Retest stability claims with the battery charged (or on charge).
+- The DTB GPU-regulator fix stays valuable (dummy regulators give the load
+  spikes no buffer at low battery too) but drops below WEBDRIVER in
+  priority.
+
 ### Run 1 (2026-08-31): network PASS, hard reset at wlan0 association
 
 Manual SSH run against the Wi-Fi-gate image (GPU firmware absent → GPU inert):
