@@ -1,0 +1,21 @@
+# OnePlus 3 (MSM8996) audio integration for the pmOS 6.12.1 baseline.
+#
+# The product DTS already describes the WCD9335 SLIMbus codec, TFA9890
+# speaker amplifier, MultiMedia3 front end, QUAT MI2S speaker back end and
+# AMIC4 route.  The baseline defconfig builds each required driver as a module,
+# but the product boot path has no matching module deployment.  Keep the
+# complete ADSP-to-codec chain built in so ALSA card registration happens after
+# the firmware-proven ADSP remoteproc starts.
+
+CONFIG_QCOM_Q6V5_ADSP=y
+CONFIG_QCOM_SYSMON=y
+CONFIG_RPMSG_QCOM_GLINK_SMEM=y
+CONFIG_QCOM_APR=y
+
+CONFIG_SLIMBUS=y
+CONFIG_SLIM_QCOM_NGD_CTRL=y
+
+CONFIG_SND_SOC_QCOM=y
+CONFIG_SND_SOC_MSM8996=y
+CONFIG_SND_SOC_WCD9335=y
+CONFIG_SND_SOC_TFA989X=y
