@@ -96,11 +96,11 @@ mkdir -p /usr/lib /usr/share /run /etc
 # directory — a mkdir of the bridge path earlier made /usr/libexec a real
 # empty dir and weston's helper execs then failed with ENOENT. rm -rf the
 # bridge path first; if it is a symlink, rm removes only the link.
-for m in weston libweston-14 udev cog; do
+for m in weston libweston-14 udev cog gio; do
 	rm -rf "/usr/lib/$m"
 	ln -sfn "$BASE/usr/lib/$m" "/usr/lib/$m"
 done
-for d in libinput X11 weston fontconfig wpe-webkit-2.0 fonts mime; do
+for d in libinput X11 weston fontconfig wpe-webkit-2.0 fonts mime p11-kit; do
 	[ -e "$BASE/usr/share/$d" ] || continue
 	rm -rf "/usr/share/$d"
 	ln -sfn "$BASE/usr/share/$d" "/usr/share/$d"
@@ -113,6 +113,16 @@ ln -sfn "$BASE/usr/libexec" "/usr/libexec"
 if [ -e "$BASE/etc/fonts" ]; then
 	rm -rf /etc/fonts
 	ln -sfn "$BASE/etc/fonts" "/etc/fonts"
+fi
+# TLS (OP3-BROWSER-005 phase 2): GIO loads its GLib TLS backend from the
+# compile-time path /usr/lib/gio/modules, and gnutls/p11-kit validate https
+# certificates against the trust store under /etc/ssl. Both live in the
+# bundle and must be bridged like every other compile-time-absolute path;
+# without the bridges https fails with "TLS support is not available" even
+# with glib-networking installed.
+if [ -e "$BASE/etc/ssl" ]; then
+	rm -rf /etc/ssl
+	ln -sfn "$BASE/etc/ssl" "/etc/ssl"
 fi
 
 # --- Wrap helper binaries that weston/WebKit exec by absolute path -----------

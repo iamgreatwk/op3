@@ -28,7 +28,9 @@ required_libs=(usr/lib/libweston-14/drm-backend.so
                usr/lib/cog/modules/libcogplatform-wl.so
                usr/libexec/wpe-webkit-2.0/WPEWebProcess
                usr/libexec/wpe-webkit-2.0/WPENetworkProcess
-               usr/share/fonts/dejavu)
+               usr/share/fonts/dejavu
+               usr/lib/gio/modules/libgiognutls.so
+               etc/ssl/certs/ca-certificates.crt)
 
 for input in "$target" "$run_script" "$page"; do
   test -e "$input" || { printf 'Missing input: %s\n' "$input" >&2; exit 1; }
