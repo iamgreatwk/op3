@@ -44,10 +44,10 @@ Passwords are intentionally never displayed.
    This is owner-only because it requires a kernel build:
 
    ```sh
-   make -C source/linux-pmos-msm8996-6.12 O=out/linux-pmos-msm8996-6.12-defconfig \
-     ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- modules
-   make -C source/linux-pmos-msm8996-6.12 O=out/linux-pmos-msm8996-6.12-defconfig \
-     ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
+   make -C source/linux-pmos-msm8996-6.12 O=out/pmos-msm8996-6.12-rpm-glink-own-dtb \
+     ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 modules
+   make -C source/linux-pmos-msm8996-6.12 O=out/pmos-msm8996-6.12-rpm-glink-own-dtb \
+     ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
      INSTALL_MOD_PATH="$PWD/artifacts/op3-wifi-modules-root" modules_install
    ```
 

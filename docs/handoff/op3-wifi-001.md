@@ -22,5 +22,5 @@ Evidence links / log paths: scripts passed bash/sh syntax checks. The historical
 
 Conclusion: INCONCLUSIVE
 Uncertainties: exact 6.12.1 module closure and device association/DHCP behavior require owner-built modules and an on-device run. The default network cannot be provisioned in Git because it contains credentials.
-Recommended next experiment: owner builds + modules_install for the pinned 6.12.1 source, stages the bundle with scripts/stage-op3-wifi-rootfs.sh, applies scripts/make-op3-wifi-initrd.sh, provisions the default profile locally through USB RNDIS with wifi connect, then performs the Issue #4 PASS checks and captures /root/wifi_auto.log plus ath10k dmesg lines.
+Recommended next experiment: owner builds + modules_install for the pinned 6.12.1 source using the existing own-DTB output `out/pmos-msm8996-6.12-rpm-glink-own-dtb` and `CC=aarch64-linux-gnu-gcc-11`, stages the bundle with scripts/stage-op3-wifi-rootfs.sh, applies scripts/make-op3-wifi-initrd.sh, provisions the default profile locally through USB RNDIS with wifi connect, then performs the Issue #4 PASS checks and captures /root/wifi_auto.log plus ath10k dmesg lines.
 ```
