@@ -29,7 +29,7 @@ required_libs=(usr/lib/libweston-14/drm-backend.so
                usr/libexec/wpe-webkit-2.0/WPEWebProcess
                usr/libexec/wpe-webkit-2.0/WPENetworkProcess
                usr/share/fonts/dejavu
-               usr/lib/gio/modules/libgiognutls.so
+               usr/lib/gio/modules/libgio*.so
                etc/ssl/certs/ca-certificates.crt)
 
 for input in "$target" "$run_script" "$page"; do
