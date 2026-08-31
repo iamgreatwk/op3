@@ -12,9 +12,9 @@ Layer: Audio integration
 Hypothesis tested: When the already-described OnePlus 3 ASoC topology has its complete ADSP, APR, SLIMbus, WCD9335, MSM8996 machine-driver and TFA9890 dependency chain built in, it registers ALSA controlC0 and the MultiMedia3 playback/capture PCMs after the provisioned ADSP starts.
 Only variable changed: The pmOS 6.12 OnePlus 3 audio integration layer: its built-in kernel configuration and device-local, runtime-validating route diagnostic helper.  The DTS topology, boot profile, ADSP firmware payload, GPU/DRM, Wi-Fi and other services remain unchanged.
 
-Build run by project owner: NOT_RUN
+Build run by project owner: Configuration preparation only, 2026-08-31
 Build result: NOT_RUN
-Artifacts and SHA256: NOT_RUN
+Artifacts and SHA256: The prepared configuration is `out/linux-pmos-msm8996-6.12-defconfig-audio/.config`, SHA256 `56d2f1307bbd9cc502ab4b6f33e5b2b80387a0198f6137f6870c5de996a9ee52`. Static verification confirms `QCOM_Q6V5_ADSP`, `QCOM_APR`, `SLIMBUS`, `SLIM_QCOM_NGD_CTRL`, `SND_SOC_MSM8996`, `SND_SOC_WCD9335`, `SND_SOC_TFA989X`, and their QDSP6/REGMAP/RPROC closure resolve to `=y`.
 
 Device test run by project owner: NOT_RUN
 Device result: NOT_RUN
