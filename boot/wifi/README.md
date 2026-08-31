@@ -5,6 +5,10 @@ modules produced for the pinned pmOS 6.12.1 kernel. The QCA6174 firmware
 already belongs in the baseline initramfs; this task keeps it there and loads
 the matching modules only after `/newroot` is mounted.
 
+The initramfs BusyBox `modprobe` has no `-d` option, so `wifi-start` uses
+absolute `insmod` paths in the dependency order recorded by this bundle. This
+does not rely on the stale `/lib/modules/6.18.7` tree in the initramfs.
+
 ## Persistent layout
 
 The owner stages `op3-wifi-bundle.tar.gz` into `/newroot`. It supplies:

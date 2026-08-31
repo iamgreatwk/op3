@@ -1,6 +1,8 @@
 #!/bin/sh
-# Load only modules from the running kernel's installed module tree.  The
-# historical initramfs modules are Linux 6.3.1 and are deliberately ignored.
+# Load only modules from the running kernel's installed module tree. The
+# BusyBox modprobe in the validated initramfs has no -d/--dirname option, so it
+# cannot use /newroot/lib/modules directly. Load the recorded dependency order
+# with absolute insmod paths instead. Historical 6.3.1 modules are ignored.
 
 set -u
 
@@ -12,12 +14,23 @@ if [ ! -d "$module_root" ]; then
 	exit 1
 fi
 
-for module in cfg80211 rfkill mac80211 ath ath10k_core ath10k_pci; do
-	if ! modprobe -d /newroot "$module"; then
-		echo "op3-wifi: cannot load $module for $release" >&2
+load_module() {
+	name=$1
+	path=$2
+	grep -q "^${name} " /proc/modules 2>/dev/null && return 0
+	if ! insmod "$module_root/$path"; then
+		echo "op3-wifi: cannot load $name for $release" >&2
 		exit 1
 	fi
-done
+}
+
+load_module rfkill kernel/net/rfkill/rfkill.ko
+load_module cfg80211 kernel/net/wireless/cfg80211.ko
+load_module libarc4 kernel/lib/crypto/libarc4.ko
+load_module mac80211 kernel/net/mac80211/mac80211.ko
+load_module ath kernel/drivers/net/wireless/ath/ath.ko
+load_module ath10k_core kernel/drivers/net/wireless/ath/ath10k/ath10k_core.ko
+load_module ath10k_pci kernel/drivers/net/wireless/ath/ath10k/ath10k_pci.ko
 
 for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
 	[ -e /sys/class/net/wlan0 ] && exit 0
