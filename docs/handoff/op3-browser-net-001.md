@@ -253,7 +253,42 @@ Verified/known facts backing this:
 - Cage (wlroots kiosk) stays deferred: adds an unvalidated compositor to the
   chain for no power benefit in this on-demand model.
 
-## Deferred feature list (2026-08-31, owner decision)
+## 6.3.1 (v100) verification status (2026-08-31 evening)
+
+Goal: browser on demand over the owner's foreground recovery on the v100
+image. Findings:
+
+- The v100 recovery initramfs does not carry the A530 firmware: GPU probe
+  dies at boot (`a530_pm4.fw failed with error -2`), weston fails with
+  "failed to initialize egl". sda15 has no firmware either.
+- Hot-fix attempt FAILED and is recorded as impossible: after pushing the
+  firmware to the initramfs root, rebinding `901000.display-controller`
+  fails with `-ENOSPC` (`mdp5_ctl.c:710` / `mdp5_smp.c:84` — MDP5 CTL/SMP
+  resources are not fully released on unbind, so the first bind is the only
+  one). The attempt also destroys fbdev (`/dev/dri` and
+  `/sys/class/graphics` disappear) — a reboot is required to recover. Do
+  not hot-rebind msm on this device.
+- Structural fix shipped: `scripts/make-op3-a530fw-initrd.sh` appends only
+  the three A530 firmware files to a reference initramfs (no launcher/init
+  replacement — recovery keeps the foreground):
+  `artifacts/initrd-v100-a530fw.cpio.gz` (`b4ffbe86…`).
+- Owner steps to finish the v100 verification (the reboot also recovers the
+  broken console; battery state protocol applies):
+
+```sh
+scripts/pack-boot.sh artifacts/v100-reference-Image.gz \
+  artifacts/v100-reference-msm8996-oneplus3.dtb \
+  artifacts/initrd-v100-a530fw.cpio.gz \
+  artifacts/boot-oneplus3-v100-recovery-a530fw.img
+sudo fastboot boot artifacts/boot-oneplus3-v100-recovery-a530fw.img
+# then over SSH (wifi/RNDIS): run the browser session via run.sh,
+# observe: baidu on panel → session ends → recovery text console returns
+```
+
+- Note: the v100 a5xx path emits ~450 GPU SMMU context faults per minute
+  under browser load (OP3-BROWSER-002 caveat, non-fatal).
+
+## Design notes
 
 - The Wi-Fi CLI (`/newroot/opt/op3-wifi/wifi auto`) already performs module
   loading (absolute insmod order), wpa association against the saved default
