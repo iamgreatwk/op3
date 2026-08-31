@@ -8,9 +8,12 @@
 # WPEBackend-fdo → Wayland → weston → freedreno. JavaScript execution is
 # verified by a page-side counter.
 #
-# Copy to <buildroot>/configs/op3_browser_defconfig, then:
+# Copy into the BUILDROOT SOURCE TREE (not the repo's buildroot/ dir — make
+# only reads configs from source/buildroot/configs/, and a stale copy there
+# silently applies an old defconfig), then:
+#   cp buildroot/op3-browser.defconfig source/buildroot/configs/op3_browser_defconfig
 #   make -C source/buildroot O=$PWD/out/buildroot-op3-egl op3_browser_defconfig
-#   make -C source/buildroot O=$PWD/out/buildroot-op3-egl -j"$(nproc)"
+#   make -C source/buildroot O=$PWD/out/buildroot-op3-egl BR2_JLEVEL=3
 #
 # WARNING: wpewebkit pulls in icu, harfbuzz, gstreamer1 and the full plugin
 # set. This is a multi-hour build; per AGENTS.md the project owner runs it.
