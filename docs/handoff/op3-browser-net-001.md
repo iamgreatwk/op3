@@ -85,6 +85,17 @@ to run.sh, after the Wi-Fi link is up and right before weston. The
 browser-net launcher no longer touches GPU PM; run.sh does it idempotently
 (the browser-test launcher duplicate is harmless).
 
+### Baidu target adjustment (2026-08-31)
+
+Owner confirmed on a PC that `http://www.baidu.com` 302-redirects to https.
+The current bundle has no GLib TLS backend, so phase 1 cannot render the real
+baidu homepage. Phase 1 target switched to `http://neverssl.com` (http-only),
+which still validates the full chain: Wi-Fi association → DHCP/DNS → HTTP GET
+→ cog rendering a live remote page. Baidu (`https://www.baidu.com`) moves to
+phase 2 (glib-networking + ca-certificates rebuild). A baidu run on the
+current bundle is still useful as on-device evidence: cog follows the 302 and
+shows its TLS error page.
+
 ### Next: rerun with sequenced GPU power-on
 
 ```sh

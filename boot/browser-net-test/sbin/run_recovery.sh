@@ -26,10 +26,12 @@ mkdir -p /var/log
 
 # Networked browser gate (OP3-BROWSER-005): run.sh (on sda15) brings up Wi-Fi
 # via /newroot/opt/op3-wifi/wifi auto, then cog loads the remote URL.
-# Phase 1 target is plain HTTP (https needs a Buildroot rebuild with
-# glib-networking; see buildroot/op3-browser.defconfig).
+# Phase 1 target is http://neverssl.com — an http-only site. www.baidu.com
+# 302-redirects to https (owner-confirmed 2026-08-31) and the current bundle
+# has no GLib TLS backend yet, so baidu needs the phase-2 Buildroot rebuild
+# (glib-networking + ca-certificates, buildroot/op3-browser.defconfig).
 export OP3_BROWSER_NET=1
-export OP3_BROWSER_URL="${OP3_BROWSER_URL:-http://www.baidu.com}"
+export OP3_BROWSER_URL="${OP3_BROWSER_URL:-http://neverssl.com}"
 
 log() {
 	line="$(date '+%H:%M:%S') $*"

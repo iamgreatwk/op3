@@ -14,7 +14,13 @@ Everything else (Wi-Fi association, DHCP, DNS, clock step, the URL itself)
 lives in `boot/browser-test/opt/op3-browser/run.sh`, which is deployed on
 sda15 — iteration happens over SSH without repacking the boot image.
 
-## Phase 1 (no Buildroot rebuild): http://www.baidu.com
+## Phase 1 (no Buildroot rebuild): http://neverssl.com
+
+www.baidu.com 302-redirects to https (owner-confirmed 2026-08-31) and the
+current bundle has no TLS backend, so phase 1 uses the http-only
+neverssl.com to validate the full remote chain. The launcher defaults to it;
+override per run with `OP3_BROWSER_URL=http://www.baidu.com` to capture the
+on-device TLS error page as evidence.
 
 Requires on sda15:
 
@@ -45,10 +51,12 @@ scp boot/browser-test/opt/op3-browser/run.sh root@172.16.42.1:/newroot/opt/op3-b
 
 PASS criteria: launcher log (`/newroot/var/log/op3-browser-net.log`) shows an
 IPv4 address on `wlan0`, a working default route and `ping 223.5.5.5 OK`;
-cog loads the remote page ("Loaded successfully"); the owner sees the Baidu
-homepage (logo + search box) rendered on the panel and the page reacts.
-FAIL: FATAL-NET lines (no association / no DHCP / no route), TLS or DNS
-errors in cog.log, or a blank panel.
+GPU power-on logged AFTER the network is up; cog loads the remote page
+("Loaded successfully"); the owner sees the neverssl.com page rendered on
+the panel.
+FAIL: FATAL-NET lines (no association / no DHCP / no route), a hard reset
+around association time (GPU/wifi power interaction — see the handoff debug
+log), TLS or DNS errors in cog.log, or a blank panel.
 
 ## Phase 2 (owner Buildroot rebuild): https://www.baidu.com
 
