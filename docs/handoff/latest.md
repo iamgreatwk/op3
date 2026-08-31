@@ -194,6 +194,17 @@ out of scope for the product path.
 - Still-open project lines (unchanged): GPU regulator nodes in DTB,
   `CONFIG_U_SERIAL_CONSOLE=y` kernel rebuild for a real `console=ttyGS0`.
 
+## Browser network gate prepared (OP3-BROWSER-005, 2026-08-31)
+
+Branch `agent/implementation/op3-browser-net-001` (based on the OP3-WIFI-001
+tip) combines the two PASS chains: the sda15 `run.sh` now brings up Wi-Fi via
+`/newroot/opt/op3-wifi/wifi auto`, then cog loads a remote URL. Phase 1
+target: `http://www.baidu.com` with the existing bundle — no Buildroot
+rebuild. Phase 2 (https) is recorded in `buildroot/op3-browser.defconfig`
+(`BR2_PACKAGE_GLIB_NETWORKING=y` + `BR2_PACKAGE_CA_CERTIFICATES=y`) and needs
+an incremental owner build. Pack/boot recipe and PASS criteria:
+`boot/browser-net-test/README.md` and `docs/handoff/op3-browser-net-001.md`.
+
 ## Key artifacts
 
 - **OP3-INITRD-FW-001 PASS (OP3-BOOT-044, 2026-08-31)**: Issue #3's six
