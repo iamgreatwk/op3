@@ -10,7 +10,7 @@ Commit SHA: 2cc781600b01b18fbf0a21e394b8bb805577feee (audio integration assets)
 
 Layer: Audio integration
 Hypothesis tested: When the already-described OnePlus 3 ASoC topology has its complete ADSP, APR, SLIMbus, WCD9335, MSM8996 machine-driver and TFA9890 dependency chain built in, it registers ALSA controlC0 and the MultiMedia3 playback/capture PCMs after the provisioned ADSP starts.
-Only variable changed: The pmOS 6.12 OnePlus 3 audio integration layer: its built-in kernel configuration and device-local, runtime-validating route diagnostic helper.  The DTS topology, boot profile, ADSP firmware payload, GPU/DRM, Wi-Fi and other services remain unchanged.
+Only variable changed: The pmOS 6.12 OnePlus 3 audio integration layer: its built-in kernel configuration and a runtime-validating route diagnostic helper. The follow-on test image appends only that helper and its launcher to the already firmware-proven initramfs; it does not replace or alter sda15/rootfs. The DTS topology, boot profile, ADSP firmware payload, GPU/DRM, Wi-Fi and other services remain unchanged.
 
 Build run by project owner: Configuration preparation and `Image.gz dtbs`, 2026-08-31
 Build result: PASS — the configured kernel Image.gz and OnePlus 3 DTB exist in the requested output directory.
@@ -26,5 +26,5 @@ Evidence links / log paths: Collect /newroot/var/log/op3-audio-route.log, `cat /
 
 Conclusion: INCONCLUSIVE
 Uncertainties: No device has yet run this configuration.  The helper intentionally checks the exported mixer controls before setting routes; the exact PCM device IDs are discovered from /proc/asound/pcm rather than assumed.  Speaker output and AMIC4 capture need hardware evidence, including post-suspend/resume repetition, before any acceptance claim.
-Recommended next experiment: The owner applies the established own-DTB series, runs `scripts/prepare-op3-audio-kernel-config.sh`, enables `BR2_PACKAGE_TINYALSA=y` and `BR2_PACKAGE_TINYALSA_TOOLS=y` in the owner Buildroot configuration, stages the resulting target with `scripts/stage-op3-audio-rootfs.sh`, then builds/boots the image and records the Issue #5 PASS/FAIL criteria.  First run `route.sh diagnose`; only if it verifies the card/PCMs, run `route.sh speaker` followed by 30-second tinyplay, then `route.sh mic` and 48 kHz/16-bit/mono tinycap.
+Recommended next experiment: Build the minimal appended archive with `scripts/make-op3-audio-initrd.sh`, pack it with the committed audio Image.gz and own DTB, and boot it. It automatically runs `route.sh diagnose` from initramfs and persists the result at `/newroot/var/log/op3-audio-initramfs.log`; no sda15/rootfs change is made. Only if the card and MultiMedia3 PCMs exist, use owner-directed `route.sh speaker` plus 30-second tinyplay, then `route.sh mic` and 48 kHz/16-bit/mono tinycap.
 ```
