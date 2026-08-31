@@ -6,7 +6,7 @@ Role: Implementation
 Baseline commit: 1e8f7caf8b9e44b8e111af1d8c0ff4a17a8b427d
 Working branch: agent/implementation/op3-wifi-port-001
 Changed files: boot/wifi/{README.md,initramfs/usr/bin/wifi_auto.sh,opt/op3-wifi/wifi,opt/op3-wifi/wifi-start,usr/bin/wifi}; scripts/{make-op3-wifi-initrd.sh,stage-op3-wifi-rootfs.sh}
-Commit SHA: a5ddf5afd5816fdee1622659e2ff555225b17f3d; c557045f (BusyBox modprobe compatibility follow-up); afb65f6 (avoid shadowed dynamic wpa_passphrase); 51de654 (clean stale wpa control socket)
+Commit SHA: a5ddf5afd5816fdee1622659e2ff555225b17f3d; c557045f (BusyBox modprobe compatibility follow-up); afb65f6 (avoid shadowed dynamic wpa_passphrase); 51de654 (clean stale wpa control socket); 9c9cff6 (query the matching wpa control socket)
 
 Layer: Wi-Fi integration (ath10k modules, existing firmware, initramfs/rootfs scripts)
 Hypothesis tested: matching pmOS 6.12.1 ath10k modules installed under /newroot plus the existing QCA6174 firmware and persistent Wi-Fi CLI can associate the default local profile after boot.
@@ -14,7 +14,7 @@ Only variable changed: Wi-Fi module/firmware/userspace integration layer; no ker
 
 Build run by project owner: PASS — `modules` and `modules_install` completed for the existing own-DTB 6.12.1 output.
 Build result: PASS
-Artifacts and SHA256: `artifacts/op3-wifi-modules-root/lib/modules/6.12.1-msm8996+/` has a complete `modules.dep`; `ath10k_pci.ko` vermagic is `6.12.1-msm8996+ SMP preempt mod_unload aarch64`. Earlier bundles are superseded: v3 exposed a stale `/run/op3-wifi/wlan0` socket after a failed first connection. Deploy `artifacts/op3-wifi-bundle-v4.tar.gz`: `181cc5b37db35cd63524578d0b11736cc23ad30f4ad693e7b0698b5ddd0371d5`; it uses absolute-path insmod, lets wpa_supplicant derive the PSK from the device-local quoted passphrase, and terminates/cleans an earlier control socket before retrying. Generated `artifacts/initrd-op3-wifi.cpio.gz`: `269f251978250a7c7e45bf9fddea109071482a90dd0f31337a781bdde4bb2966`, from fixed input `38383fc04942e599d2c7e520ff1b85739bf4b76c516e00fd74c6a9243f279789`. The archive path list exactly matches the 653-entry input; /usr/bin/wifi_auto.sh was inspected as the intended overlay.
+Artifacts and SHA256: `artifacts/op3-wifi-modules-root/lib/modules/6.12.1-msm8996+/` has a complete `modules.dep`; `ath10k_pci.ko` vermagic is `6.12.1-msm8996+ SMP preempt mod_unload aarch64`. Earlier bundles are superseded: device dmesg confirms WPA authentication and association with AP status 0, but v4 polled wpa_cli's default control directory instead of `/run/op3-wifi`, so it falsely timed out and skipped DHCP. Deploy `artifacts/op3-wifi-bundle-v5.tar.gz`: `887b25f1f5bf6c8fc5aedb38570f47ea0e57c20ffded2d8dbd85a5e2cc3c135c`; it explicitly uses the static initramfs wpa programs and their matching control directory. Generated `artifacts/initrd-op3-wifi.cpio.gz`: `269f251978250a7c7e45bf9fddea109071482a90dd0f31337a781bdde4bb2966`, from fixed input `38383fc04942e599d2c7e520ff1b85739bf4b76c516e00fd74c6a9243f279789`. The archive path list exactly matches the 653-entry input; /usr/bin/wifi_auto.sh was inspected as the intended overlay.
 
 Device test run by project owner: NOT_RUN
 Device result: NOT_RUN
