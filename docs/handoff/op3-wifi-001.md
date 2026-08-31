@@ -6,7 +6,7 @@ Role: Implementation
 Baseline commit: 1e8f7caf8b9e44b8e111af1d8c0ff4a17a8b427d
 Working branch: agent/implementation/op3-wifi-port-001
 Changed files: boot/wifi/{README.md,initramfs/usr/bin/wifi_auto.sh,opt/op3-wifi/wifi,opt/op3-wifi/wifi-start,usr/bin/wifi}; scripts/{make-op3-wifi-initrd.sh,stage-op3-wifi-rootfs.sh}
-Commit SHA: a5ddf5a83f406c39ddbb1e3b1e45bc50bce462fd
+Commit SHA: a5ddf5afd5816fdee1622659e2ff555225b17f3d
 
 Layer: Wi-Fi integration (ath10k modules, existing firmware, initramfs/rootfs scripts)
 Hypothesis tested: matching pmOS 6.12.1 ath10k modules installed under /newroot plus the existing QCA6174 firmware and persistent Wi-Fi CLI can associate the default local profile after boot.
