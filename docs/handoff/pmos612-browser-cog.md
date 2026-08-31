@@ -245,8 +245,8 @@ loaded; Weston selected DSI-1 at 1080x1920@60 using EGL 1.5 / Mesa 26.0.1 /
 freedreno FD530; Cog, `WPENetworkProcess` and `WPEWebProcess` ran; Cog logged
 `Loaded successfully` for the local test page. The controlled 60-second
 window ended without DRM, GPU, SMMU or kernel fault log lines. The old
-non-fatal injected-bundle path warning remains. Owner visual confirmation of
-the panel is supplementary evidence; the runtime gate is independent of it.
+non-fatal injected-bundle path warning remains. The owner visually confirmed
+the rendered panel page after this run.
 
 ## Known pitfalls carried over from the weston gate
 
