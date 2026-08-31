@@ -226,6 +226,28 @@ weston gate for what happens without it). Verify the built initramfs by
 decompressing ALL gzip members (zcat only decompresses the first) and checking
 that the overlay member contains the browser launcher.
 
+## Current own-DTB cross validation — OP3-BROWSER-004 (2026-08-31)
+
+The already-built browser rootfs bundle was deployed to `/newroot/opt` and the
+existing browser launcher/GPU-firmware overlay was packed with the current
+pmOS 6.12 own-DTB controls, without a kernel, DTS, configuration, Buildroot or
+bundle rebuild:
+
+```text
+Image.gz:   088d472f90f90388ee90426f190806f721e3e483777c3dfdc9992a4b1321a7ad
+own DTB:    cb29ab658135cd0cfcde3b47c1e115b763f5dbd37b724554590b7a61afcbf32f
+bundle:     bec5ce8b9f3e3c470f6b8502036e3e16603f7a8b5c8b4030027bd9cf3ba3214d
+boot image: 3c4babfb25ab54ffacaecd1dbb2f623eb8c941d41a2228499b01c408e3f2ba0d
+```
+
+Runtime PASS: recovery RNDIS/SSH returned; all three GPU firmware files
+loaded; Weston selected DSI-1 at 1080x1920@60 using EGL 1.5 / Mesa 26.0.1 /
+freedreno FD530; Cog, `WPENetworkProcess` and `WPEWebProcess` ran; Cog logged
+`Loaded successfully` for the local test page. The controlled 60-second
+window ended without DRM, GPU, SMMU or kernel fault log lines. The old
+non-fatal injected-bundle path warning remains. Owner visual confirmation of
+the panel is supplementary evidence; the runtime gate is independent of it.
+
 ## Known pitfalls carried over from the weston gate
 
 All of the run.sh defence lines in `boot/browser-test/opt/op3-weston/run.sh`
