@@ -196,28 +196,43 @@ Interim mitigations: `cog --scale` / `--device-scale` (static zoom — a
 Investigation task: whether the WPE WebKit gesture controller in this build
 can deliver pinch zoom through cog's touch path.
 
-## Display switching with the recovery terminal (design note, 2026-08-31)
+## Display model, power-first (final, 2026-08-31)
 
-The browser's role is automated testing; the owner's daily driver will be the
-ported 6.3.1 recovery terminal, with more programs joining later. Verified
-facts:
+Owner constraint: this is a phone — power first, everything on demand, no
+resident background components. The owner's home environment is a **text
+console (fbcon) + AI agent CLI** (the ported 6.3.1 recovery line).
 
-- cog/WPE always needs a Wayland compositor, but NOT the desktop shell:
-  `--shell=kiosk-shell.so` (already in the bundle) was verified on-device —
-  1 s to ready, cog fullscreen, pages load. `run.sh` now defaults to it
-  (`WESTON_SHELL` env overrides). `fullscreen-shell.so` is NOT xdg_shell
-  compatible with cog; do not use. Cage (wlroots kiosk) is recorded as a
-  possible future simplification — see the deferred list.
-- Only one DRM master at a time, so switching between fullscreen-exclusive
-  programs (recovery terminal ↔ browser ↔ future programs) is a
-  serialization problem: a supervisor script stops the current display owner,
-  runs the next, then restores. The automated-testing flow maps directly:
-  WebDriver/`cogctl quit` → compositor exits → recovery program restarts and
-  re-initialises the display.
-- "Embedding the browser inside the recovery UI" is only viable if the
-  recovery UI itself becomes Wayland-native (then cog can live on an IVI
-  layer — the bundle already ships `ivi-shell.so` and the ivi HMI helper —
-  or a subsurface). Otherwise keep the serialization model.
+```text
+常态：fbcon 文字控制台 + agent CLI
+      —— 无合成器、无浏览器、GPU 应挂起（当前被 DTB regulator 缺陷阻塞）
+浏览器会话（按需，~2 s 启动）：
+      agent CLI 触发 browser-session
+      → wifi auto → GPU on → weston kiosk + cog (+ WebKitWebDriver)
+      → 自动化执行（WebDriver 或 JS 回传）
+      → driver.quit()/cogctl quit → weston 退出 → fbcon 自动接管
+```
+
+Verified/known facts backing this:
+
+- cog/WPE needs a compositor but not the desktop shell:
+  `--shell=kiosk-shell.so` verified on-device (1 s ready, pages load);
+  `fullscreen-shell.so` is NOT xdg_shell compatible with cog — do not use.
+- fbcon does not hold DRM master; when weston exits and releases master, the
+  kernel fbcon take-over should restore the text console automatically.
+  PENDING VERIFICATION on-device (one start/stop observation).
+- No VT switching, no explicit display handoff: the agent CLI just runs and
+  stops processes. Future programs follow the same on-demand pattern.
+- "Embedding the browser inside the recovery UI" is moot in this model; if a
+  Wayland-native multi-program UI is ever wanted, the bundle already ships
+  `ivi-shell.so` + hmi-controller for an IVI-layer design (deferred).
+- POWER CRITICAL: the GPU is force-disabled from runtime PM today
+  (`control=on` workaround for the resume hard-reset, docs/known-issues.md),
+  so after the first browser session the GPU stays powered until reboot.
+  The DTB GPU-regulator fix (existing open line) is now also a POWER
+  requirement, not only a stability one; after it lands, browser sessions
+  should restore `control=auto` on exit so the GPU re-suspends.
+- Cage (wlroots kiosk) stays deferred: adds an unvalidated compositor to the
+  chain for no power benefit in this on-demand model.
 
 ## Deferred feature list (2026-08-31, owner decision)
 
