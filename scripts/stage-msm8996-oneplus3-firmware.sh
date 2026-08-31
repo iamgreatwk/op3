@@ -8,6 +8,7 @@ set -euo pipefail
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 manifest="$project_root/boot/base-initramfs/msm8996-oneplus3-firmware.tsv"
 destination="${1:-$project_root/artifacts/msm8996-oneplus3-firmware}"
+destination="$(realpath -m "$destination")"
 
 non_hlos_url="https://gitlab.com/DrGitX/firmware-oneplus3/-/raw/master/oneplus3/NON-HLOS.bin"
 non_hlos_sha512="c0f3f908e237202003d9b2fe4071e2800bdcdae180e8311fbc0671478fcd63aba5a3fe5ab5d297010c12c232501f05f31141fc39a44c5b86ac2b56016f553a7f"
