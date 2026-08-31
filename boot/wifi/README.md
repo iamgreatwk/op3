@@ -14,6 +14,10 @@ The CLI writes a quoted WPA passphrase directly into the device-local profile;
 `wpa_passphrase`, because an older `/newroot` binary may be dynamically linked
 against a library absent from the initramfs runtime.
 
+Before every connection attempt, the CLI terminates any earlier instance and
+removes its own stale `/run/op3-wifi/wlan0` socket. This makes a failed first
+association retryable without manual socket cleanup.
+
 ## Persistent layout
 
 The owner stages `op3-wifi-bundle.tar.gz` into `/newroot`. It supplies:

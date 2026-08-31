@@ -63,11 +63,16 @@ wifi_on() {
 }
 
 stop_client() {
+	# Ask a live instance to exit before touching its control socket. A failed
+	# first connection can otherwise leave /run/op3-wifi/wlan0 behind and make
+	# every later wpa_supplicant invocation fail during control-interface setup.
+	wpa_cli -p "$STATE" -i "$IFACE" terminate >/dev/null 2>&1 || true
 	if [ -r "$STATE/wpa.pid" ]; then
 		pid=$(cat "$STATE/wpa.pid")
 		kill "$pid" 2>/dev/null || true
 	fi
-	rm -f "$STATE/wpa.pid" "$STATE/udhcpc.pid"
+	sleep 1
+	rm -f "$STATE/wpa.pid" "$STATE/udhcpc.pid" "$STATE/$IFACE"
 }
 
 start_profile() {
