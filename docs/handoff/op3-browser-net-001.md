@@ -270,8 +270,16 @@ image. Findings:
   not hot-rebind msm on this device.
 - Structural fix shipped: `scripts/make-op3-a530fw-initrd.sh` appends only
   the three A530 firmware files to a reference initramfs (no launcher/init
-  replacement — recovery keeps the foreground):
-  `artifacts/initrd-v100-a530fw.cpio.gz` (`b4ffbe86…`).
+  replacement — recovery keeps the foreground).
+- Owner's DAILY v100 boot image identified: `boot-oneplus3-fa5-v100-repacked.img`
+  — its ramdisk contains `usr/bin/wifi_auto.sh` (auto Wi-Fi works) and only
+  `a530_zap.mbn`, NOT the pm4/pfp/gpmu firmware (hence: Wi-Fi fine, GPU dead).
+  A first attempt appended the firmware to the PRISTINE
+  `v100-reference-initrd.img` instead, which has no Wi-Fi overlay — that
+  artifact boots without auto-Wi-Fi and is wrong for daily use. When this
+  line is resumed: run `make-op3-a530fw-initrd.sh` against the daily image's
+  ramdisk (extract with the python header-parse snippet in git history) and
+  repack. 6.3.1 verification is PAUSED by owner decision (2026-08-31).
 - Owner steps to finish the v100 verification (the reboot also recovers the
   broken console; battery state protocol applies):
 
