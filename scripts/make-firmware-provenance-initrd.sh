@@ -21,7 +21,7 @@ if [ "$#" -gt 3 ]; then
 	exit 2
 fi
 
-for command in awk cmp cpio fakeroot find gzip install realpath sha256sum sort wc xargs; do
+for command in awk cmp cp cpio fakeroot find gzip install realpath sha256sum sort touch wc xargs; do
 	command -v "$command" >/dev/null || {
 		printf 'Missing required command: %s\n' "$command" >&2
 		exit 1
@@ -65,7 +65,13 @@ while IFS=$'\t' read -r path size hash source early; do
 	test "$(sha256sum "$control" | awk '{ print $1 }')" = "$hash"
 	test "$(wc -c < "$replacement")" = "$size"
 	test "$(sha256sum "$replacement" | awk '{ print $1 }')" = "$hash"
-	install -m 0644 "$replacement" "$control"
+	# GNU cpio records file mtime even with --reproducible.  Preserve the
+	# control entry timestamp so that byte-identical firmware produces a
+	# byte-identical archive; only a future firmware-content change may vary.
+	prepared="$workdir/$(basename "$path")"
+	cp "$replacement" "$prepared"
+	touch -r "$control" "$prepared"
+	install -p -m 0644 "$prepared" "$control"
 done < "$manifest"
 
 gzip -cd "$reference" | cpio -it --quiet | LC_ALL=C sort > "$workdir/source.paths"
