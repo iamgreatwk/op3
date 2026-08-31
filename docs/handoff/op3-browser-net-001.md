@@ -167,14 +167,59 @@ implemented for now:
 
 - P0: user-data persistence (WebKit profile lives on initramfs tmpfs; point
   HOME/XDG_* at sda15 in run.sh); on-device navigation (cog has no URL bar;
-  D-Bus remote control is the interim path).
+  D-Bus remote control is the interim path — the session bus is now started
+  by run.sh).
 - P1: on-screen keyboard (weston-keyboard already bundled; needs the
   text-input/IME path), readability scaling (`cog --device-scale=2`),
   media playback (gstreamer chain unbuilt; blocked on the audio task
   bringing up the audio path).
 - P2: WebGL verification, download management, clipboard.
+- Browser stack direction (2026-08-31): automation is the primary purpose;
+  `BR2_PACKAGE_WPEWEBKIT_WEBDRIVER=y` is now enabled in the defconfig for
+  the Playwright-style owner workflow. Cage (wlroots kiosk compositor) is a
+  possible future simplification of the display stack — requires a Buildroot
+  rebuild and would replace the validated weston chain, so it stays deferred
+  until the recovery-integration work actually needs it.
 
-## Design notes
+## OP3-BROWSER-006 (2026-08-31): CJK font PASS
+
+`wqy-microhei.ttc` (5 MB, GPL+font-exception, fetched per the recipe inside
+`stage-browser-rootfs.sh`) staged into the bundle; `run.sh` exports
+`TZ=CST-8`. `fc-list` indexes 2 WenQuanYi faces; owner confirmed Chinese
+renders correctly on the baidu homepage.
+
+## OP3-BROWSER-007 (recorded): pinch zoom / viewport pan
+
+Owner feedback: no pinch zoom; viewport-fitted pages cannot be panned.
+Interim mitigations: `cog --scale` / `--device-scale` (static zoom — a
+`--device-scale` > 1 renders viewport-fitted pages larger and scrollable).
+Investigation task: whether the WPE WebKit gesture controller in this build
+can deliver pinch zoom through cog's touch path.
+
+## Display switching with the recovery terminal (design note, 2026-08-31)
+
+The browser's role is automated testing; the owner's daily driver will be the
+ported 6.3.1 recovery terminal, with more programs joining later. Verified
+facts:
+
+- cog/WPE always needs a Wayland compositor, but NOT the desktop shell:
+  `--shell=kiosk-shell.so` (already in the bundle) was verified on-device —
+  1 s to ready, cog fullscreen, pages load. `run.sh` now defaults to it
+  (`WESTON_SHELL` env overrides). `fullscreen-shell.so` is NOT xdg_shell
+  compatible with cog; do not use. Cage (wlroots kiosk) is recorded as a
+  possible future simplification — see the deferred list.
+- Only one DRM master at a time, so switching between fullscreen-exclusive
+  programs (recovery terminal ↔ browser ↔ future programs) is a
+  serialization problem: a supervisor script stops the current display owner,
+  runs the next, then restores. The automated-testing flow maps directly:
+  WebDriver/`cogctl quit` → compositor exits → recovery program restarts and
+  re-initialises the display.
+- "Embedding the browser inside the recovery UI" is only viable if the
+  recovery UI itself becomes Wayland-native (then cog can live on an IVI
+  layer — the bundle already ships `ivi-shell.so` and the ivi HMI helper —
+  or a subsurface). Otherwise keep the serialization model.
+
+## Deferred feature list (2026-08-31, owner decision)
 
 - The Wi-Fi CLI (`/newroot/opt/op3-wifi/wifi auto`) already performs module
   loading (absolute insmod order), wpa association against the saved default

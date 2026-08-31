@@ -260,6 +260,18 @@ if need_network; then
 	fi
 fi
 
+# --- session bus (cogctl remote control, WebKitWebDriver automation) ---------
+if [ -x "$BASE/usr/bin/dbus-daemon" ]; then
+	rm -f /run/op3-dbus
+	"$LOADER" --library-path "$LIBPATH" \
+		"$BASE/usr/bin/dbus-daemon" --session --fork \
+		--address="unix:path=/run/op3-dbus" 2>&1
+	export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/op3-dbus"
+	echo "dbus: session bus on /run/op3-dbus"
+else
+	echo "dbus: not present; cogctl/WebDriver automation unavailable"
+fi
+
 # --- GPU runtime PM disable (moved here from the launcher for browser-net) ---
 # Known defect: the DTB GPU regulators are placeholders, so runtime PM cycles
 # blank the panel or hard-reset the SoC (docs/known-issues.md). Force the GPU
@@ -282,9 +294,14 @@ rm -rf "$XDG_RUNTIME_DIR"
 mkdir -p "$XDG_RUNTIME_DIR" && chmod 0700 "$XDG_RUNTIME_DIR"
 
 echo "=== starting weston (DRM backend, GL renderer) ==="
+# kiosk-shell: no desktop chrome, the client is fullscreen by itself — the
+# browser session is meant to be invoked from (and return to) the recovery
+# terminal environment. Override with WESTON_SHELL=desktop-shell.so to debug.
+WESTON_SHELL=${WESTON_SHELL:-kiosk-shell.so}
 run "$BASE/usr/bin/weston" \
 	--backend=drm-backend.so \
 	--idle-time=0 \
+	--shell="$WESTON_SHELL" \
 	--log="$XDG_RUNTIME_DIR/weston.log" &
 weston_pid=$!
 

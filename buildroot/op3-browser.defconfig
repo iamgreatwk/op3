@@ -62,6 +62,10 @@ BR2_PACKAGE_WESTON_DEMO_CLIENTS=y
 BR2_PACKAGE_SHARED_MIME_INFO=y
 BR2_PACKAGE_DEJAVU=y
 BR2_PACKAGE_WPEWEBKIT=y
+# W3C WebDriver daemon (Playwright-grade automation: click/find/text/
+# execute_script/screenshot from the PC over the network). Off by default in
+# buildroot; the owner's automation is Playwright-style, so enable it.
+BR2_PACKAGE_WPEWEBKIT_WEBDRIVER=y
 BR2_PACKAGE_COG=y
 
 # TLS for remote browsing (OP3-BROWSER-005 phase 2). libsoup3 gets its GLib
