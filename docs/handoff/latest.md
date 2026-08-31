@@ -203,6 +203,12 @@ out of scope for the product path.
   the device reached recovery/RNDIS/SSH; early SLPI and ADSP loads succeeded.
   Artifact `boot-oneplus3-pmos612-own-dtb-firmware-provenance.img`
   (`38e59038…`); handoff `docs/handoff/op3-initrd-fw-001.md`.
+- **Own-DTB browser closure (OP3-BROWSER-004, 2026-08-31)**: with the same
+  OP3-BOOT-044 Image.gz and own DTB, the existing GPU-firmware/browser overlay
+  and rootfs bundle ran Weston → Cog/WPE successfully. Weston used DSI-1 at
+  1080x1920@60 with Mesa/freedreno FD530; the local page loaded and the owner
+  visually confirmed it. This completes the own-DTB boot/initramfs/browser
+  test line; no kernel source or configuration change is indicated.
 - **Firmware placement follow-ups are deferred**: modem/MBA (MSS), Venus and
   ath10k are module-driver projects, not part of the boot-image gate. Open one
   branch/task per driver when that functionality is needed; first establish the
