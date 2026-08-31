@@ -212,6 +212,16 @@ the GPU power-on sequencing fix; not reproduced since, attribution unproven
 `docs/handoff/op3-browser-net-001.md`, row `OP3-BROWSER-005` in
 `docs/test-matrix.md`.
 
+Status update (2026-08-31 evening): OP3-BROWSER-006 PASS (owner confirmed
+Chinese renders, WQY Microhei bundled + `TZ=CST-8`). A third hard reset
+during browser display was traced to a **low battery** — all device tests
+must now record battery/charging state. Architecture settled for the phone:
+power-first on-demand sessions over the fbcon + agent-CLI home (see the
+"Display model, power-first" section of the handoff); `kiosk-shell` is the
+run.sh default and the dbus session bus is started for `cogctl`/WebDriver;
+`BR2_PACKAGE_WPEWEBKIT_WEBDRIVER=y` is in the defconfig for the owner's
+Playwright-style automation (incremental rebuild in progress).
+
 ## Key artifacts
 
 - **OP3-INITRD-FW-001 PASS (OP3-BOOT-044, 2026-08-31)**: Issue #3's six
