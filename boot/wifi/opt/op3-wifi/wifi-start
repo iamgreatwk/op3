@@ -1,0 +1,28 @@
+#!/bin/sh
+# Load only modules from the running kernel's installed module tree.  The
+# historical initramfs modules are Linux 6.3.1 and are deliberately ignored.
+
+set -u
+
+release=$(uname -r)
+module_root=/newroot/lib/modules/$release
+
+if [ ! -d "$module_root" ]; then
+	echo "op3-wifi: missing modules for $release at $module_root" >&2
+	exit 1
+fi
+
+for module in cfg80211 rfkill mac80211 ath ath10k_core ath10k_pci; do
+	if ! modprobe -d /newroot "$module"; then
+		echo "op3-wifi: cannot load $module for $release" >&2
+		exit 1
+	fi
+done
+
+for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+	[ -e /sys/class/net/wlan0 ] && exit 0
+	sleep 1
+done
+
+echo 'op3-wifi: wlan0 did not appear' >&2
+exit 1

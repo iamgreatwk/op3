@@ -1,0 +1,2 @@
+#!/bin/sh
+exec /newroot/opt/op3-wifi/wifi "$@"

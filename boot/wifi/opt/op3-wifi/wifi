@@ -1,0 +1,200 @@
+#!/bin/sh
+# OnePlus 3 pmOS 6.12 Wi-Fi command interface.
+#
+# Profiles are intentionally stored only on the persistent device filesystem:
+# /newroot/etc/op3-wifi/profiles/.  Do not place credentials in this source
+# tree, an initramfs, a tarball, a log, or a shell command line.
+
+set -u
+
+ROOT=${OP3_WIFI_ROOT:-/newroot}
+STATE=${OP3_WIFI_STATE:-/run/op3-wifi}
+CONFIG="$ROOT/etc/op3-wifi"
+PROFILES="$CONFIG/profiles"
+DEFAULT="$CONFIG/default"
+IFACE=${OP3_WIFI_IFACE:-wlan0}
+SELF=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)/$(basename -- "$0")
+
+log() {
+	printf '%s\n' "op3-wifi: $*" >&2
+}
+
+die() {
+	log "$*"
+	exit 1
+}
+
+usage() {
+	cat <<'EOF'
+Usage:
+  wifi on | off | current | disconnect | portal
+  wifi connect <ssid> [passphrase] [identity]
+  wifi reconnect <ssid>
+  wifi list
+  wifi forget <ssid> | wifi forget --all
+  wifi default <ssid>
+
+`connect` saves the profile on /newroot and makes it the boot default.  Omit
+passphrase for an open network.  Supplying identity creates a PEAP profile.
+Credentials are never printed by this command.
+EOF
+}
+
+profile_name() {
+	printf '%s' "$1" | sha256sum | awk '{print $1}'
+}
+
+profile_path() {
+	printf '%s/%s.conf' "$PROFILES" "$(profile_name "$1")"
+}
+
+profile_ssid() {
+	awk -F= '$1 == "# op3-wifi-ssid" { sub(/^[^=]*=/, ""); print; exit }' "$1"
+}
+
+ensure_dirs() {
+	mkdir -p "$PROFILES" "$STATE" || die "cannot create Wi-Fi state directory"
+	chmod 700 "$CONFIG" "$PROFILES" 2>/dev/null || true
+}
+
+wifi_on() {
+	"$(dirname "$SELF")/wifi-start" || return $?
+	ip link set "$IFACE" up || return $?
+}
+
+stop_client() {
+	if [ -r "$STATE/wpa.pid" ]; then
+		pid=$(cat "$STATE/wpa.pid")
+		kill "$pid" 2>/dev/null || true
+	fi
+	rm -f "$STATE/wpa.pid" "$STATE/udhcpc.pid"
+}
+
+start_profile() {
+	profile=$1
+	test -f "$profile" || die "profile not found"
+	wifi_on || die "cannot bring up $IFACE"
+	stop_client
+	wpa_supplicant -B -P "$STATE/wpa.pid" -i "$IFACE" -D nl80211 -c "$profile" ||
+		die "wpa_supplicant failed"
+
+	i=0
+	while [ "$i" -lt 30 ]; do
+		if wpa_cli -i "$IFACE" status 2>/dev/null | grep -q '^wpa_state=COMPLETED$'; then
+			break
+		fi
+		sleep 1
+		i=$((i + 1))
+	done
+	[ "$i" -lt 30 ] || die "association timed out"
+
+	udhcpc -i "$IFACE" -n -q -p "$STATE/udhcpc.pid" || die "DHCP failed"
+	printf 'nameserver 223.5.5.5\n' > /etc/resolv.conf
+}
+
+connect() {
+	ssid=${1:?}
+	passphrase=${2-}
+	identity=${3-}
+	ensure_dirs
+	profile=$(profile_path "$ssid")
+	tmp="$profile.tmp.$$"
+	{
+		printf '# op3-wifi-ssid=%s\n' "$ssid"
+		printf 'ctrl_interface=%s\n' "$STATE"
+		printf 'ap_scan=1\n'
+		printf 'network={\n'
+		printf '    ssid="%s"\n' "$(printf '%s' "$ssid" | sed 's/[\\"]/\\&/g')"
+		printf '    scan_ssid=1\n'
+		if [ -n "$identity" ]; then
+			printf '    key_mgmt=WPA-EAP\n    eap=PEAP\n    phase2="auth=MSCHAPV2"\n'
+			printf '    identity="%s"\n' "$(printf '%s' "$identity" | sed 's/[\\"]/\\&/g')"
+			printf '    password="%s"\n' "$(printf '%s' "$passphrase" | sed 's/[\\"]/\\&/g')"
+		elif [ -n "$passphrase" ]; then
+			wpa_passphrase "$ssid" "$passphrase" | sed '1,/network=/d; $d'
+		else
+			printf '    key_mgmt=NONE\n'
+		fi
+		printf '}\n'
+	} > "$tmp" || { rm -f "$tmp"; die "cannot write profile"; }
+	mv "$tmp" "$profile"
+	chmod 600 "$profile"
+	printf '%s\n' "$ssid" > "$DEFAULT"
+	chmod 600 "$DEFAULT"
+	start_profile "$profile"
+}
+
+reconnect() {
+	ensure_dirs
+	start_profile "$(profile_path "$1")"
+}
+
+list_profiles() {
+	ensure_dirs
+	found=0
+	for profile in "$PROFILES"/*.conf; do
+		[ -f "$profile" ] || continue
+		ssid=$(profile_ssid "$profile")
+		[ -n "$ssid" ] || continue
+		if [ -f "$DEFAULT" ] && [ "$ssid" = "$(cat "$DEFAULT")" ]; then
+			printf '%s (default)\n' "$ssid"
+		else
+			printf '%s\n' "$ssid"
+		fi
+		found=1
+	done
+	[ "$found" = 1 ] || printf '%s\n' 'no saved Wi-Fi profiles'
+}
+
+forget() {
+	ensure_dirs
+	if [ "$1" = --all ]; then
+		find "$PROFILES" -type f -name '*.conf' -delete
+		: > "$DEFAULT"
+		return
+	fi
+	profile=$(profile_path "$1")
+	rm -f "$profile"
+	if [ -f "$DEFAULT" ] && [ "$(cat "$DEFAULT")" = "$1" ]; then
+		: > "$DEFAULT"
+	fi
+}
+
+current() {
+	if [ ! -e "/sys/class/net/$IFACE" ]; then
+		printf '%s\n' "$IFACE is unavailable"
+		return 1
+	fi
+	wpa_cli -i "$IFACE" status 2>/dev/null || true
+	ip -4 addr show dev "$IFACE"
+	ip -4 route show dev "$IFACE"
+}
+
+portal() {
+	# A captive portal commonly intercepts this HTTP request.  links follows the
+	# redirect and gives the user an interactive login page when it is available.
+	command -v links >/dev/null 2>&1 || die "links is not installed"
+	links "${OP3_WIFI_PORTAL_URL:-http://connectivitycheck.gstatic.com/generate_204}"
+}
+
+auto() {
+	ensure_dirs
+	[ -s "$DEFAULT" ] || exit 0
+	reconnect "$(cat "$DEFAULT")"
+}
+
+case ${1-} in
+	on) wifi_on ;;
+	off) stop_client; ip link set "$IFACE" down 2>/dev/null || true ;;
+	disconnect) stop_client ;;
+	current) current ;;
+	portal) portal ;;
+	connect) [ "$#" -ge 2 ] && [ "$#" -le 4 ] || { usage; exit 2; }; connect "$2" "${3-}" "${4-}" ;;
+	reconnect) [ "$#" = 2 ] || { usage; exit 2; }; reconnect "$2" ;;
+	list) [ "$#" = 1 ] || { usage; exit 2; }; list_profiles ;;
+	forget) [ "$#" = 2 ] || { usage; exit 2; }; forget "$2" ;;
+	default) [ "$#" = 2 ] || { usage; exit 2; }; ensure_dirs; test -f "$(profile_path "$2")" || die "profile not found"; printf '%s\n' "$2" > "$DEFAULT" ;;
+	auto) [ "$#" = 1 ] || exit 2; auto ;;
+	-help|--help|help|'') usage ;;
+	*) usage; exit 2 ;;
+esac
