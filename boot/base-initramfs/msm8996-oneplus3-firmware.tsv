@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: LicenseRef-Proprietary
+#
+# OP3-INITRD-FW-001 output manifest. The five PIL images are derived from the
+# pinned NON-HLOS.bin using mtools + pil-squasher, following the postmarketOS
+# firmware-oneplus-oneplus3 APKBUILD at pmaports commit 068fc55a2d8a22a95105485ef73dc0ff209dce1c.
+# The zap shader is the pinned a530_zap.elf input, installed with its required
+# .mbn name. All URLs are content-pinned by the SHA512 values below.
+#
+# output_path<TAB>size_bytes<TAB>sha256<TAB>source_input<TAB>required_before_newroot
+lib/firmware/qcom/msm8996/oneplus3/a530_zap.mbn	17204	17c0f33a881c9ad09a75377b185c9388458fad6d38002d4ae78b9cf12225b4ef	a530_zap.elf	no (required for GPU probe)
+lib/firmware/qcom/msm8996/oneplus3/adsp.mbn	11257177	fd3162d794fe67d8e10547a2392130037b96713155c363346d8630af1304fed9	NON-HLOS.bin	YES
+lib/firmware/qcom/msm8996/oneplus3/mba.mbn	213824	090024b29c1462fe5415cacb0991d8b2330cf0d63c32e2d71a0d2b57b9f343a7	NON-HLOS.bin	no (MSS is a module in the fixed config)
+lib/firmware/qcom/msm8996/oneplus3/modem.mbn	53610984	58ae9932f2371e3102bd38e673b39aab2568f5e8c0633522e304f2b38a522ac8	NON-HLOS.bin	no (MSS is a module in the fixed config)
+lib/firmware/qcom/msm8996/oneplus3/slpi.mbn	3736444	5398c39071c4154cce71195848a522729ac1ff1c58f1e434bf2f821d62c2d902	NON-HLOS.bin	YES
+lib/firmware/qcom/msm8996/oneplus3/venus.mbn	965916	0120a5ba4191fe0bf42623a8d7238f0f59101618a5f8ad4a87aeb5a83e718089	NON-HLOS.bin	no
