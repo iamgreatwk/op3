@@ -6,7 +6,7 @@ Role: Implementation
 Baseline commit: 1e8f7caf8b9e44b8e111af1d8c0ff4a17a8b427d
 Working branch: agent/implementation/op3-wifi-port-001
 Changed files: boot/wifi/{README.md,initramfs/usr/bin/wifi_auto.sh,opt/op3-wifi/wifi,opt/op3-wifi/wifi-start,usr/bin/wifi}; scripts/{make-op3-wifi-initrd.sh,stage-op3-wifi-rootfs.sh}
-Commit SHA: a5ddf5afd5816fdee1622659e2ff555225b17f3d
+Commit SHA: a5ddf5afd5816fdee1622659e2ff555225b17f3d; c557045f (BusyBox modprobe compatibility follow-up)
 
 Layer: Wi-Fi integration (ath10k modules, existing firmware, initramfs/rootfs scripts)
 Hypothesis tested: matching pmOS 6.12.1 ath10k modules installed under /newroot plus the existing QCA6174 firmware and persistent Wi-Fi CLI can associate the default local profile after boot.
@@ -14,7 +14,7 @@ Only variable changed: Wi-Fi module/firmware/userspace integration layer; no ker
 
 Build run by project owner: PASS — `modules` and `modules_install` completed for the existing own-DTB 6.12.1 output.
 Build result: PASS
-Artifacts and SHA256: `artifacts/op3-wifi-modules-root/lib/modules/6.12.1-msm8996+/` has a complete `modules.dep`; `ath10k_pci.ko` vermagic is `6.12.1-msm8996+ SMP preempt mod_unload aarch64`. Generated `artifacts/op3-wifi-bundle.tar.gz`: `809153ace3a1074890e6c7c8dd9a9d13e41f3f86770476364a5986cfe3fad04e`. Generated `artifacts/initrd-op3-wifi.cpio.gz`: `269f251978250a7c7e45bf9fddea109071482a90dd0f31337a781bdde4bb2966`, from fixed input `38383fc04942e599d2c7e520ff1b85739bf4b76c516e00fd74c6a9243f279789`. The archive path list exactly matches the 653-entry input; /usr/bin/wifi_auto.sh was inspected as the intended overlay.
+Artifacts and SHA256: `artifacts/op3-wifi-modules-root/lib/modules/6.12.1-msm8996+/` has a complete `modules.dep`; `ath10k_pci.ko` vermagic is `6.12.1-msm8996+ SMP preempt mod_unload aarch64`. Initial `op3-wifi-bundle.tar.gz` (`809153…`) is superseded: the device BusyBox modprobe lacks `-d`, so deploy `artifacts/op3-wifi-bundle-v2.tar.gz`: `c437604c6e817a6ed349a5c92fb1d6dab5a78c61ccf4588f2fddbf69df354cce`. It uses absolute-path insmod in `modules.dep` dependency order. Generated `artifacts/initrd-op3-wifi.cpio.gz`: `269f251978250a7c7e45bf9fddea109071482a90dd0f31337a781bdde4bb2966`, from fixed input `38383fc04942e599d2c7e520ff1b85739bf4b76c516e00fd74c6a9243f279789`. The archive path list exactly matches the 653-entry input; /usr/bin/wifi_auto.sh was inspected as the intended overlay.
 
 Device test run by project owner: NOT_RUN
 Device result: NOT_RUN
