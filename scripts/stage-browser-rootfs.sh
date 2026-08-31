@@ -62,6 +62,21 @@ cp -a "$target/." "$bundle/"
 install -m 0755 "$run_script" "$bundle/run.sh"
 install -m 0644 "$page" "$bundle/test-page.html"
 
+# CJK font (OP3-BROWSER-006): without a Chinese font every zh page renders as
+# tofu boxes; DejaVu covers Latin/Greek/Cyrillic only. The font is fetched
+# once on the host (no sudo needed) and kept under artifacts/:
+#   cd artifacts/fonts
+#   apt-get download fonts-wqy-microhei
+#   dpkg -x fonts-wqy-microhei_*.deb x
+#   find x -name 'wqy-microhei.ttc' -exec cp {} wqy-microhei.ttc \; && rm -rf x
+font="$project_root/artifacts/fonts/wqy-microhei.ttc"
+test -f "$font" || {
+	printf 'Missing CJK font: %s\nFollow the fetch recipe in this script\n' "$font" >&2
+	exit 1
+}
+mkdir -p "$bundle/usr/share/fonts/truetype/wqy-microhei"
+install -m 0644 "$font" "$bundle/usr/share/fonts/truetype/wqy-microhei/wqy-microhei.ttc"
+
 ls "$bundle"/lib/ld-linux-*.so* >/dev/null 2>&1 ||
   ls "$bundle"/usr/lib/ld-linux-*.so* >/dev/null 2>&1 || {
   printf 'Missing dynamic loader ld-linux-*.so\n' >&2

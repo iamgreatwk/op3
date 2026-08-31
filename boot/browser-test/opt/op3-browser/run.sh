@@ -107,6 +107,9 @@ for d in libinput X11 weston fontconfig wpe-webkit-2.0 fonts mime p11-kit; do
 done
 # GLib MIME sniffing (file:// → text/html) needs the mime db in XDG_DATA_DIRS.
 export XDG_DATA_DIRS="$BASE/usr/share:/usr/share"
+# China-facing pages expect UTC+8 (JS Date, page content); the initramfs has
+# no /etc/localtime, so export a POSIX TZ (sign inverted: -8 = UTC+8).
+export TZ=CST-8
 rm -rf /usr/libexec
 ln -sfn "$BASE/usr/libexec" "/usr/libexec"
 # fontconfig reads /etc/fonts/fonts.conf; the initramfs has no /etc/fonts.
