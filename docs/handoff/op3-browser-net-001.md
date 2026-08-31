@@ -53,6 +53,52 @@ Recommended next experiment: owner packs the browser-net initramfs
   rebuild.
 ```
 
+## Debug log
+
+### Run 1 (2026-08-31): network PASS, hard reset at wlan0 association
+
+Manual SSH run against the Wi-Fi-gate image (GPU firmware absent → GPU inert):
+network bring-up fully PASSED — `wifi auto` found the already-associated
+wlan0, IPv4 `192.168.1.6/24`, resolv.conf `223.5.5.5`, default route,
+`ping 223.5.5.5 OK` — but weston died with `MESA: get_param failed -6
+(ENODEV)` because that initramfs carries no A530 firmware. Expected; the
+browser-net image does carry it.
+
+The packed browser-net image run then hard-reset the device. Post-mortem from
+the synced launcher log (`/newroot/var/log/op3-browser-net.log`):
+
+```text
+[ 8.7s] launcher: GPU runtime PM disabled: control=on, cur_freq=624000000
+[11.3s] ath10k_pci probed, QCA6174 fw WLAN.RM.4.4.1-00309 loaded
+[18.78s] wlan0: associated   (DHCP not yet run)
+        < next 5 s periodic snapshot never happened: SoC hard reset >
+```
+
+This is the first configuration with the GPU forced on AND Wi-Fi active.
+The wifi gate passed with the GPU inert (no firmware); the browser gates
+passed with no Wi-Fi. Best-fit hypothesis: the ath10k TX power ramp at
+association completion stacks on the always-on GPU behind the placeholder
+DTB GPU regulators (docs/known-issues.md) → supply brownout → reset.
+
+Countermeasure (one variable): move the GPU `control=on` from launcher time
+to run.sh, after the Wi-Fi link is up and right before weston. The
+browser-net launcher no longer touches GPU PM; run.sh does it idempotently
+(the browser-test launcher duplicate is harmless).
+
+### Next: rerun with sequenced GPU power-on
+
+```sh
+# repack (launcher change), then redeploy run.sh and fastboot boot
+OVERLAY_SOURCE="$PWD/boot/browser-net-test" scripts/make-drm-test-initrd.sh \
+  artifacts/initrd-op3-firmware-provenance-v2.cpio.gz artifacts/op3-drm-dumb \
+  artifacts/initrd-op3-browser-net.cpio.gz
+scp -O boot/browser-test/opt/op3-browser/run.sh root@172.16.42.1:/newroot/opt/op3-browser/run.sh
+```
+
+If the reset still lands at association time, the next isolation step is
+associating Wi-Fi from init_mainline (wifi_auto overlay) BEFORE any GPU
+activity, i.e. the exact wifi-gate power state plus a later GPU power-on.
+
 ## Design notes
 
 - The Wi-Fi CLI (`/newroot/opt/op3-wifi/wifi auto`) already performs module

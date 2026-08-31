@@ -228,6 +228,22 @@ if need_network; then
 	fi
 fi
 
+# --- GPU runtime PM disable (moved here from the launcher for browser-net) ---
+# Known defect: the DTB GPU regulators are placeholders, so runtime PM cycles
+# blank the panel or hard-reset the SoC (docs/known-issues.md). Force the GPU
+# permanently on right before weston. Ordering matters: with the browser-net
+# flow, powering the GPU at launcher time caused a reproducible hard reset the
+# instant wlan0 finished associating (2026-08-31) — sequence GPU-on AFTER the
+# Wi-Fi link is up. Idempotent for the browser-test launcher, which already
+# did the same thing earlier.
+GPU_POWER=/sys/bus/platform/devices/b00000.gpu/power/control
+if [ -f "$GPU_POWER" ]; then
+	echo on > "$GPU_POWER" 2>/dev/null
+	echo "GPU runtime PM disabled: control=$(cat "$GPU_POWER" 2>/dev/null), cur_freq=$(cat /sys/class/devfreq/b00000.gpu/cur_freq 2>/dev/null)"
+else
+	echo "GPU runtime PM: $GPU_POWER not found"
+fi
+
 # --- weston ------------------------------------------------------------------
 export XDG_RUNTIME_DIR=/run/op3-weston
 rm -rf "$XDG_RUNTIME_DIR"
