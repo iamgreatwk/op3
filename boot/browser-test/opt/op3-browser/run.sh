@@ -31,6 +31,16 @@ unset DISPLAY WAYLAND_DISPLAY XDG_RUNTIME_DIR LD_LIBRARY_PATH
 
 BROWSER_SECONDS=${BROWSER_SECONDS:-60}
 
+# --- target URL --------------------------------------------------------------
+# Selection order: environment (set by the boot/browser-net-test launcher) >
+# sda15 file $BASE/op3-url (editable over SSH without repacking) > the built-in
+# local test page. The default keeps the layer-07 local-page gate unchanged.
+PAGE_URI=${OP3_BROWSER_URL:-}
+if [ -z "$PAGE_URI" ] && [ -f "$BASE/op3-url" ]; then
+	PAGE_URI=$(head -n 1 "$BASE/op3-url")
+fi
+[ -n "$PAGE_URI" ] || PAGE_URI="file://$BASE/test-page.html"
+
 # Pure-shell glob so that no external command runs before the loader is known.
 set -- "$BASE"/lib/ld-linux-*.so*
 LOADER=$1
@@ -50,6 +60,7 @@ run() { # run <bundle-binary> [args...] — through the bundled loader
 echo "browser bundle:     $BASE"
 echo "browser:            cog (WPE WebKit)"
 echo "hold seconds:       $BROWSER_SECONDS"
+echo "target URL:         $PAGE_URI"
 echo "loader:             ${LOADER:-MISSING}"
 
 if [ -z "$LOADER" ]; then
@@ -142,6 +153,81 @@ else
 	echo "WARN: no bundled udevd"
 fi
 
+# --- network bring-up (only when the target is remote) -----------------------
+# The OP3-WIFI-001 CLI lives on sda15 (/newroot/opt/op3-wifi) and drives the
+# static initramfs wpa_supplicant/udhcpc, so calling `wifi auto` from here
+# needs no initramfs wifi overlay and no repack — see docs/handoff/op3-wifi-001.md.
+# `wifi auto` uses the saved default profile; association, DHCP and
+# /etc/resolv.conf are all handled by the CLI.
+NET_WAIT_SECONDS=${NET_WAIT_SECONDS:-45}
+
+need_network() {
+	case "$PAGE_URI" in
+		http://*|https://*) return 0 ;;
+	esac
+	[ "$OP3_BROWSER_NET" = "1" ]
+}
+
+have_wlan_ip() {
+	ip -4 addr show dev wlan0 2>/dev/null | grep -q "inet "
+}
+
+bring_up_network() {
+	echo "=== network: remote target $PAGE_URI ==="
+	if have_wlan_ip; then
+		echo "network: wlan0 already has an IPv4 address (wifi_auto already ran)"
+	else
+		if [ ! -x /newroot/opt/op3-wifi/wifi ]; then
+			echo "FATAL-NET: /newroot/opt/op3-wifi/wifi missing — deploy the OP3-WIFI-001 bundle to sda15 first (stage-op3-wifi-rootfs.sh)"
+			return 1
+		fi
+		echo "network: running /newroot/opt/op3-wifi/wifi auto"
+		/newroot/opt/op3-wifi/wifi auto 2>&1 || {
+			echo "FATAL-NET: wifi auto failed"
+			return 1
+		}
+	fi
+	i=0
+	while [ "$i" -lt "$NET_WAIT_SECONDS" ]; do
+		have_wlan_ip && break
+		sleep 1
+		i=$((i + 1))
+	done
+	if ! have_wlan_ip; then
+		echo "FATAL-NET: no IPv4 address on wlan0 after ${NET_WAIT_SECONDS}s"
+		/newroot/opt/op3-wifi/wifi current 2>&1 || true
+		return 1
+	fi
+	echo "network: $(ip -4 addr show dev wlan0 | grep 'inet ')"
+	sed 's/^/network: resolv: /' /etc/resolv.conf 2>/dev/null
+	echo "network: default route: $(ip -4 route show default 2>/dev/null)"
+	if ping -c 1 -W 3 223.5.5.5 >/dev/null 2>&1; then
+		echo "network: ping 223.5.5.5 OK"
+	else
+		echo "network: WARN ping 223.5.5.5 failed (continuing anyway)"
+	fi
+	# TLS certificate validation needs a sane clock; busybox ntpd steps it once.
+	# Plain-HTTP targets skip this.
+	case "$PAGE_URI" in
+		https://*)
+			if [ "$(date +%s)" -lt 1000000000 ]; then
+				echo "network: clock is pre-2001; stepping with busybox ntpd"
+				ntpd -n -q -p ntp.aliyun.com 2>&1 | head -n 3
+				echo "network: clock now $(date)"
+			fi
+			;;
+	esac
+	return 0
+}
+
+if need_network; then
+	if ! bring_up_network; then
+		echo "FATAL: network bring-up failed; not starting the browser"
+		kill_stale
+		exit 1
+	fi
+fi
+
 # --- weston ------------------------------------------------------------------
 export XDG_RUNTIME_DIR=/run/op3-weston
 rm -rf "$XDG_RUNTIME_DIR"
@@ -183,7 +269,6 @@ fi
 #
 # The cog platform name changed across versions (wl / fdo / wayland); try the
 # candidates in order and keep the first that stays alive for 4 s.
-PAGE_URI="file://$BASE/test-page.html"
 cog_pid=""
 for plat in wl fdo wayland; do
 	echo "=== starting cog (platform $plat) for ${BROWSER_SECONDS}s: $PAGE_URI ==="
