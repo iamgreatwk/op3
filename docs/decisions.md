@@ -31,6 +31,13 @@ Rules that follow:
 - A test that needs a large userspace stack must not be packaged into the boot
   image; stage it on sda15 first and change only the launcher.
 
+For MSM8996 firmware specifically, keep only firmware requested before
+`/newroot` is usable in the initramfs: ADSP, SLPI, and the small Adreno zap
+and GPU microcode files.  Keep deferred module firmware on sda15/rootfs:
+modem plus MBA, Venus, and ath10k Wi-Fi firmware.  A placement change must
+also prove that the relevant module is first loaded after the root filesystem
+and its firmware path are available; moving files alone is not a valid test.
+
 ## 2026-08-30 — Adopt pmOS MSM8996 Linux 6.12.1 LTS product baseline
 
 The project owner selected pmOS MSM8996 Linux v6.12.1 LTS, commit

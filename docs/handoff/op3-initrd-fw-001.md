@@ -7,7 +7,7 @@ Baseline commit: pmOS MSM8996 6.12.1, 67b0bbc3cbf46bae712a2606a43361756fcbd829
 Working branch: agent/implementation/op3-initrd-fw-001
 Changed files: boot/base-initramfs/msm8996-oneplus3-firmware.tsv;
 scripts/stage-msm8996-oneplus3-firmware.sh
-Commit SHA: c05d56a0a60c600eccff01ce3980c6df76ba9f4c
+Commit SHA: a864e252452bce5834d1ee0d10d36cea5a846de4
 
 Layer: initramfs firmware provenance
 Hypothesis tested: Replacing only the declared MSM8996 firmware group with
@@ -23,22 +23,30 @@ Known-good control: OP3-BOOT-043
   boot image: 0b2e85ee019e7e3434f6d1fbe0245b09024a0dfefddb4d027c7777a4910b2801
 
 Build run by project owner: NOT_RUN
-Build result: NOT_RUN. The staging recipe requires owner-approved installation
-of host tools `mtools` and `pil-squasher`; neither is presently available.
-Artifacts and SHA256: manifest records six expected output files; NOT_RUN.
+Build result: NOT_RUN. This task has not produced an initramfs or boot image.
+Host-side staging result: PASS. `mtools 4.0.49` was unpacked outside the
+system directories and `pil-squasher` was built from the pmaports-pinned
+upstream commit `170b62d29faa7c1f54fc2a7718e4d0c912384ec1`. Both SHA512-pinned
+inputs downloaded successfully, and all six staged outputs match the checked-in
+size and SHA256 manifest exactly.
+Artifacts and SHA256: ignored host artifact
+`artifacts/msm8996-oneplus3-firmware-verified/`; the six file hashes equal
+`boot/base-initramfs/msm8996-oneplus3-firmware.tsv`.
 
 Device test run by project owner: NOT_RUN
 Device result: NOT_RUN
 Evidence links / log paths: NOT_RUN
 
-Conclusion: INCONCLUSIVE
+Conclusion: SUPPORTED for deterministic host-side firmware staging; device
+boot result remains INCONCLUSIVE.
 Uncertainties: The OnePlus 3 firmware is proprietary and must not be copied
-into Git. Source URLs are guarded by SHA512 and output hashes must equal the
-historical control before an initramfs A/B. The ath10k files remain fixed and
-out of scope for this task. `mtools` and `pil-squasher` are absent on the host;
-the latter is pinned by the postmarketOS recipe to upstream commit
-170b62d29faa7c1f54fc2a7718e4d0c912384ec1.
-Recommended next experiment: Owner approves/install the two host tools, runs
-the staging script, and verifies every generated output SHA256. Only then add
-the one-group initramfs replacement/entry comparison and prepare a device test.
+into Git. Source URLs are guarded by SHA512 and the reconstructed firmware has
+not yet replaced the six fixed entries in a booted initramfs. ath10k and GPU
+microcode are outside this provenance group.
+Recommended next experiment: make one firmware-provenance initramfs A/B by
+replacing only the six fixed files with these verified outputs, then have the
+owner pack and boot it. After that result, open `OP3-INITRD-SPLIT-001` for the
+separate location variable: retain ADSP, SLPI and small GPU firmware in the
+initramfs; stage modem/MBA, Venus and ath10k on rootfs and defer the module
+loads until after `/newroot` is available.
 ```
