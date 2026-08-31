@@ -24,33 +24,44 @@ Only variable changed per test:
   2. Phase 2 (separate owner build): BR2_PACKAGE_GLIB_NETWORKING=y +
      BR2_PACKAGE_CA_CERTIFICATES=y enable https. One build, one variable.
 
-Build run by project owner: Phase 1 NOT needed (existing bundle). Phase 2:
-  incremental Buildroot build (glib-networking, gnutls, ca-certificates).
-Build result: NOT_RUN
-Artifacts and SHA256: filled in after the owner's pack/test
+Build run by project owner: PASS — incremental Buildroot 2026.02.3 on
+  out/buildroot-op3-egl: ca-certificates, p11-kit, libtasn1, gmp, nettle,
+  gnutls (unused: buildroot's glib-networking defaults to the OpenSSL
+  backend), openssl, glib-networking. Mesa/weston/wpewebkit reused.
+Build result: PASS
+Artifacts and SHA256:
+  op3-browser-bundle-tls.tar.gz
+    40346b442ea0e1ef56f1f06378476161c8a34f6cbafcc14d0bf3e9f46c423fa3
+  initrd-op3-browser-net.cpio.gz
+    ca7b10a00aecb4920bda4bacca98392ade49729b9994b626dbb3efbfa4880699
+  boot-oneplus3-pmos612-own-dtb-browser-net.img
+    d27dac50cc7218f76c14dbf1c996443a1385087f0914ecf80b4611d028e55f4f
+  Image.gz 088d472f… and own DTB cb29ab65… identical to OP3-BOOT-044
+  (out/pmos-msm8996-6.12-rpm-glink-own-dtb)
 
-Device test run by project owner: pending
-Device result: NOT_RUN
+Device test run by project owner: PASS (owner-confirmed panel rendering,
+  2026-08-31; final automated fastboot-boot flow plus a manual rerun)
+Device result: PASS for the network gate with one recorded caveat: CJK
+  text renders as tofu (bundle ships DejaVu only) — follow-up
+  OP3-BROWSER-006, not a network-layer failure.
 Evidence links / log paths: /newroot/var/log/op3-browser-net.log,
-  /run/op3-weston/cog.log, ACM console relay, owner panel confirmation
+  /run/op3-weston/cog.log (`<https://www.baidu.com/> Load started /
+  Loading… / Loaded successfully`, no TLS error), ACM console relay,
+  owner panel confirmation
 
-Conclusion: pending
+Conclusion: SUPPORTED for the network-gate scope (Wi-Fi association, DHCP,
+  DNS, clock, HTTPS page load and rendering). Not an Integration acceptance.
 Uncertainties:
-  - TLS: the current bundle was built without glib-networking, so https://
-    is expected to fail with "TLS support not available" until the phase-2
-    rebuild. Phase 1 deliberately targets plain HTTP.
-  - DNS: the Wi-Fi CLI writes /etc/resolv.conf (nameserver 223.5.5.5) in the
-    initramfs root; WebKitNetworkProcess runs in that root and reads it.
-  - TLS certificate validation also needs a sane clock; run.sh steps the
-    clock with busybox ntpd (ntp.aliyun.com) before https attempts.
-  - www.baidu.com must be reachable over plain HTTP without a forced
-    redirect to https; if it 302-redirects, phase 2 becomes mandatory.
-  - If the initramfs wifi_auto.sh already associated (OP3-WIFI-001 image),
-    run.sh detects the existing IPv4 address and skips re-association.
-Recommended next experiment: owner packs the browser-net initramfs
-  (commands in boot/browser-net-test/README.md), fastboot boots, and reports
-  the launcher log + panel observation. Then decide on the phase-2 https
-  rebuild.
+  - CJK text renders as tofu (no CJK font in the bundle) — follow-up
+    OP3-BROWSER-006.
+  - Hard-reset attribution open: two early runs reset at association time;
+    not reproduced after the GPU power-on sequencing change, but one stale
+    run also survived. Placeholder DTB GPU regulators suspected.
+  - The injected-bundle WARNING in WPEWebProcess is pre-existing and
+    non-fatal (present since the layer-07 local-page gate).
+Recommended next experiment: OP3-BROWSER-006 — stage a CJK font (WQY
+  Microhei) into the bundle and confirm Chinese text renders; then decide
+  whether a DTB GPU-regulator task is opened for the brownout question.
 ```
 
 ## Debug log
@@ -109,6 +120,44 @@ scp -O boot/browser-test/opt/op3-browser/run.sh root@172.16.42.1:/newroot/opt/op
 If the reset still lands at association time, the next isolation step is
 associating Wi-Fi from init_mainline (wifi_auto overlay) BEFORE any GPU
 activity, i.e. the exact wifi-gate power state plus a later GPU power-on.
+
+## Result (2026-08-31): PASS for the network gate
+
+Final flow, all launcher-automated (fastboot boot, no manual env):
+
+```text
+launcher start (no GPU touch)
+network: wifi auto → wlan0 associated (SSID 1106, 192.168.1.6/24)
+network: resolv 223.5.5.5, default route via 192.168.1.1, ping 223.5.5.5 OK
+network: clock pre-2001 → set from baidu HTTP Date header
+         ('Mon, 31 Aug 2026 12:18:56 GMT' → UTC clock)
+GPU runtime PM disabled AFTER network (cur_freq=133000000 → resumed)
+weston ready after 1 s (wayland-1), cog platform wl
+cog: <https://www.baidu.com/> Load started → Loading… → Loaded successfully
+     (no redirect needed — direct https; no TLS error with the OpenSSL
+     GIO backend + bridged /usr/lib/gio and /etc/ssl)
+owner: page rendered on the panel
+```
+
+### Caveat recorded: CJK tofu — follow-up OP3-BROWSER-006
+
+The rendered page shows Chinese text as boxes: the bundle ships DejaVu only
+(Latin/Greek/Cyrillic). Fix direction: stage a CJK font (e.g. WQY Microhei,
+~5 MB, GPL+font-exception) into the bundle's `/usr/share/fonts/` — fontconfig
+bridging already exists in run.sh; no Buildroot rebuild required if the font
+file is added at stage time. One task, one variable: font presence.
+
+### Hard-reset history (open question)
+
+- Run 1 (stale launcher, GPU on at launcher time): hard reset at wlan0
+  association completion.
+- Run 2 (same stale artifacts): survived, reached the TLS error page —
+  reset NOT deterministic even in the old configuration.
+- Runs 3+ (sequenced GPU power-on): no reset in three runs.
+Attribution of the fix to the sequencing is therefore unproven; a
+marginal-supply brownout hypothesis (GPU + ath10k TX behind placeholder DTB
+regulators) remains the best fit. Keep watching for resets under network
+load; the DTB GPU-regulator fix (existing project line) is the real cure.
 
 ## Design notes
 

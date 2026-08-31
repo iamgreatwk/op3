@@ -194,16 +194,23 @@ out of scope for the product path.
 - Still-open project lines (unchanged): GPU regulator nodes in DTB,
   `CONFIG_U_SERIAL_CONSOLE=y` kernel rebuild for a real `console=ttyGS0`.
 
-## Browser network gate prepared (OP3-BROWSER-005, 2026-08-31)
+## Browser network gate PASS (OP3-BROWSER-005, 2026-08-31) — CJK font caveat
 
 Branch `agent/implementation/op3-browser-net-001` (based on the OP3-WIFI-001
-tip) combines the two PASS chains: the sda15 `run.sh` now brings up Wi-Fi via
-`/newroot/opt/op3-wifi/wifi auto`, then cog loads a remote URL. Phase 1
-target: `http://www.baidu.com` with the existing bundle — no Buildroot
-rebuild. Phase 2 (https) is recorded in `buildroot/op3-browser.defconfig`
-(`BR2_PACKAGE_GLIB_NETWORKING=y` + `BR2_PACKAGE_CA_CERTIFICATES=y`) and needs
-an incremental owner build. Pack/boot recipe and PASS criteria:
-`boot/browser-net-test/README.md` and `docs/handoff/op3-browser-net-001.md`.
+tip) combines the two PASS chains: the sda15 `run.sh` brings up Wi-Fi via
+`/newroot/opt/op3-wifi/wifi auto`, steps the clock from the baidu HTTP Date
+header (initramfs busybox has no ntpd), powers the GPU on after association,
+and cog loads `https://www.baidu.com` with the TLS-enabled bundle
+(glib-networking → OpenSSL GIO backend + ca-certificates; run.sh bridges
+`/usr/lib/gio` and `/etc/ssl`). Device result: **PASS** — owner-confirmed
+page rendering, `Loaded successfully` with no TLS error
+(`d27dac50…` boot image). Two recorded caveats: (1) Chinese glyphs render as
+tofu — bundle has DejaVu only; follow-up OP3-BROWSER-006 (stage a CJK font,
+no rebuild needed). (2) Two early runs hard-reset at association time before
+the GPU power-on sequencing fix; not reproduced since, attribution unproven
+(placeholder DTB GPU regulators remain the suspected root cause). Details:
+`docs/handoff/op3-browser-net-001.md`, row `OP3-BROWSER-005` in
+`docs/test-matrix.md`.
 
 ## Key artifacts
 
