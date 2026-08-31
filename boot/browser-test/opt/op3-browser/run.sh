@@ -216,13 +216,32 @@ bring_up_network() {
 	else
 		echo "network: WARN ping 223.5.5.5 failed (continuing anyway)"
 	fi
-	# TLS certificate validation needs a sane clock; busybox ntpd steps it once.
-	# Plain-HTTP targets skip this.
+	# TLS certificate validation needs a sane clock. The initramfs busybox has
+	# no ntpd applet, so step the clock from the HTTP Date header of the baidu
+	# redirect response (always reachable once the network is up). busybox
+	# date cannot parse RFC1123, so convert to "YYYY-MM-DD HH:MM:SS".
 	case "$PAGE_URI" in
 		https://*)
 			if [ "$(date +%s)" -lt 1000000000 ]; then
-				echo "network: clock is pre-2001; stepping with busybox ntpd"
-				ntpd -n -q -p ntp.aliyun.com 2>&1 | head -n 3
+				echo "network: clock is pre-2001; setting from HTTP Date header"
+				hdr=$(wget -S -T 8 -O /dev/null http://www.baidu.com 2>&1 |
+					sed -n 's/^[[:space:]]*[Dd]ate:[[:space:]]*//p' | head -n 1)
+				if [ -n "$hdr" ]; then
+					set -- $hdr # "Mon, 31 Aug 2026 12:17:32 GMT"
+					case "$3" in
+						Jan) mm=01;; Feb) mm=02;; Mar) mm=03;; Apr) mm=04;;
+						May) mm=05;; Jun) mm=06;; Jul) mm=07;; Aug) mm=08;;
+						Sep) mm=09;; Oct) mm=10;; Nov) mm=11;; Dec) mm=12;;
+						*) mm="";;
+					esac
+					if [ -n "$mm" ] && date -u -s "$4-$mm-$2 $5"; then
+						echo "network: clock set from '$hdr'"
+					else
+						echo "network: WARN could not apply HTTP Date: '$hdr'"
+					fi
+				else
+					echo "network: WARN no HTTP Date header received"
+				fi
 				echo "network: clock now $(date)"
 			fi
 			;;
