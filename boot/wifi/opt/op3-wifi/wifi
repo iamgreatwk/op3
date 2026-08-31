@@ -14,6 +14,9 @@ PROFILES="$CONFIG/profiles"
 DEFAULT="$CONFIG/default"
 IFACE=${OP3_WIFI_IFACE:-wlan0}
 SELF=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)/$(basename -- "$0")
+WPA_SUPPLICANT=/usr/sbin/wpa_supplicant
+WPA_CLI=/usr/sbin/wpa_cli
+UDHCPC=/sbin/udhcpc
 
 log() {
 	printf '%s\n' "op3-wifi: $*" >&2
@@ -66,7 +69,7 @@ stop_client() {
 	# Ask a live instance to exit before touching its control socket. A failed
 	# first connection can otherwise leave /run/op3-wifi/wlan0 behind and make
 	# every later wpa_supplicant invocation fail during control-interface setup.
-	wpa_cli -p "$STATE" -i "$IFACE" terminate >/dev/null 2>&1 || true
+	"$WPA_CLI" -p "$STATE" -i "$IFACE" terminate >/dev/null 2>&1 || true
 	if [ -r "$STATE/wpa.pid" ]; then
 		pid=$(cat "$STATE/wpa.pid")
 		kill "$pid" 2>/dev/null || true
@@ -80,12 +83,12 @@ start_profile() {
 	test -f "$profile" || die "profile not found"
 	wifi_on || die "cannot bring up $IFACE"
 	stop_client
-	wpa_supplicant -B -P "$STATE/wpa.pid" -i "$IFACE" -D nl80211 -c "$profile" ||
+	"$WPA_SUPPLICANT" -B -P "$STATE/wpa.pid" -i "$IFACE" -D nl80211 -c "$profile" ||
 		die "wpa_supplicant failed"
 
 	i=0
 	while [ "$i" -lt 30 ]; do
-		if wpa_cli -i "$IFACE" status 2>/dev/null | grep -q '^wpa_state=COMPLETED$'; then
+		if "$WPA_CLI" -p "$STATE" -i "$IFACE" status 2>/dev/null | grep -q '^wpa_state=COMPLETED$'; then
 			break
 		fi
 		sleep 1
@@ -93,7 +96,7 @@ start_profile() {
 	done
 	[ "$i" -lt 30 ] || die "association timed out"
 
-	udhcpc -i "$IFACE" -n -q -p "$STATE/udhcpc.pid" || die "DHCP failed"
+	"$UDHCPC" -i "$IFACE" -n -q -p "$STATE/udhcpc.pid" || die "DHCP failed"
 	printf 'nameserver 223.5.5.5\n' > /etc/resolv.conf
 }
 
@@ -173,7 +176,7 @@ current() {
 		printf '%s\n' "$IFACE is unavailable"
 		return 1
 	fi
-	wpa_cli -i "$IFACE" status 2>/dev/null || true
+	"$WPA_CLI" -p "$STATE" -i "$IFACE" status 2>/dev/null || true
 	ip -4 addr show dev "$IFACE"
 	ip -4 route show dev "$IFACE"
 }

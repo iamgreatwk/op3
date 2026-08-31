@@ -18,6 +18,11 @@ Before every connection attempt, the CLI terminates any earlier instance and
 removes its own stale `/run/op3-wifi/wlan0` socket. This makes a failed first
 association retryable without manual socket cleanup.
 
+The CLI invokes the static initramfs `/usr/sbin/wpa_supplicant` and
+`/usr/sbin/wpa_cli` explicitly. `wpa_cli` is also given the matching custom
+control socket directory `/run/op3-wifi`; otherwise it looks in its default
+directory and cannot observe an already-completed association.
+
 ## Persistent layout
 
 The owner stages `op3-wifi-bundle.tar.gz` into `/newroot`. It supplies:
