@@ -196,12 +196,18 @@ out of scope for the product path.
 
 ## Key artifacts
 
-- **Next agent task — OP3-INITRD-FW-001**: Issue #3, handoff
-  `docs/handoff/op3-initrd-fw-001.md`. Scope is solely explicit provenance and
-  deterministic staging for the MSM8996 firmware group. Hold fixed the
-  OP3-BOOT-043 Image.gz, own DTB, boot profile, cmdline, all non-firmware
-  initramfs entries, and sda15; do not mix GPU DTS, console config, or
-  userspace work into this experiment.
+- **OP3-INITRD-FW-001 PASS (OP3-BOOT-044, 2026-08-31)**: Issue #3's six
+  MSM8996 firmware files were reconstructed from SHA512-pinned inputs and
+  verified against the historical SHA256 output manifest. With Image.gz, own
+  DTB, boot profile, cmdline, non-firmware initramfs entries and sda15 fixed,
+  the device reached recovery/RNDIS/SSH; early SLPI and ADSP loads succeeded.
+  Artifact `boot-oneplus3-pmos612-own-dtb-firmware-provenance.img`
+  (`38e59038…`); handoff `docs/handoff/op3-initrd-fw-001.md`.
+- **Next firmware task — OP3-INITRD-SPLIT-001**: test firmware placement as
+  one variable. Keep ADSP, SLPI and small GPU firmware in initramfs; move
+  modem/MBA, Venus and ath10k firmware to rootfs and prove their module loads
+  occur only after `/newroot` is available. Do not mix DTS, console, or other
+  userspace changes into that test.
 - pmOS 6.12 own-DTB + reproducible-initramfs boot PASS (OP3-BOOT-042/043):
   `artifacts/boot-oneplus3-pmos612-own-dtb-repro-initrd.img`
   (`0b2e85ee…`); source `91df7ccd…`, tree-built DTB `cb29ab65…`, generated

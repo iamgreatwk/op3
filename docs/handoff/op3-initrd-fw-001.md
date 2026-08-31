@@ -22,8 +22,10 @@ Known-good control: OP3-BOOT-043
   initramfs: 61cf63388fbd1ef13dd6984e3eace85c9cdd8d7359d128c4c0cef29ce3358f79
   boot image: 0b2e85ee019e7e3434f6d1fbe0245b09024a0dfefddb4d027c7777a4910b2801
 
-Build run by project owner: NOT_RUN
-Build result: NOT_RUN. This task has not produced an initramfs or boot image.
+Build run by project owner: 2026-08-31, boot-image packaging only; no kernel or
+Buildroot build.
+Build result: The owner packed the supplied initramfs; no kernel or Buildroot
+build was performed.
 Host-side staging result: PASS. `mtools 4.0.49` was unpacked outside the
 system directories and `pil-squasher` was built from the pmaports-pinned
 upstream commit `170b62d29faa7c1f54fc2a7718e4d0c912384ec1`. Both SHA512-pinned
@@ -41,20 +43,26 @@ archive because GNU cpio preserves newly-created temporary directory mtimes;
 the six replaced entries retain the control timestamps and no longer introduce
 additional metadata differences.
 
-Device test run by project owner: NOT_RUN
-Device result: NOT_RUN
-Evidence links / log paths: NOT_RUN
+Device test run by project owner: 2026-08-31, `fastboot boot`, followed by
+read-only SSH inspection over recovery RNDIS.
+Device result: PASS for the firmware-provenance gate. Recovery started and SSH
+was available. The device runs `6.12.1-msm8996+`; all six on-device firmware
+SHA256 values equal the checked-in manifest. dmesg records SLPI loading at
+2.788 s and ADSP loading at 2.801 s. `/dev/sda15` is mounted rw at `/newroot`.
+Evidence links / log paths: owner report plus read-only SSH output captured in
+the Codex task, 2026-08-31. Boot image
+`artifacts/boot-oneplus3-pmos612-own-dtb-firmware-provenance.img`, SHA256
+`38e59038daaed7a2726554c5cc56cf19438cf0aa3f72d1874b3a8ec0fa96651f`.
 
-Conclusion: SUPPORTED for deterministic host-side firmware staging; device
-boot result remains INCONCLUSIVE.
+Conclusion: SUPPORTED for firmware provenance on the OP3-BOOT-043 recovery
+gate; this is not an Integration acceptance or a placement/split result.
 Uncertainties: The OnePlus 3 firmware is proprietary and must not be copied
-into Git. Source URLs are guarded by SHA512 and the reconstructed firmware has
-not yet replaced the six fixed entries in a booted initramfs. ath10k and GPU
-microcode are outside this provenance group.
-Recommended next experiment: pack and boot the generated firmware-provenance
-initramfs with the fixed OP3-BOOT-043 Image.gz, DTB, cmdline and boot profile.
-After that result, open `OP3-INITRD-SPLIT-001` for the separate location
-variable: retain ADSP, SLPI and small GPU firmware in the initramfs; stage
-modem/MBA, Venus and ath10k on rootfs and defer the module loads until after
+into Git. ath10k and GPU microcode are outside this provenance group. The
+provenance archive has normalized content/metadata equality with the control,
+but not byte equality because directory mtimes are not normalized by this GNU
+cpio environment.
+Recommended next experiment: `OP3-INITRD-SPLIT-001`, a separate placement
+variable: retain ADSP, SLPI and small GPU firmware in initramfs; stage
+modem/MBA, Venus and ath10k on rootfs and defer their module loads until after
 `/newroot` is available.
 ```
