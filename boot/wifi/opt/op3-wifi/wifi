@@ -111,7 +111,10 @@ connect() {
 			printf '    identity="%s"\n' "$(printf '%s' "$identity" | sed 's/[\\"]/\\&/g')"
 			printf '    password="%s"\n' "$(printf '%s' "$passphrase" | sed 's/[\\"]/\\&/g')"
 		elif [ -n "$passphrase" ]; then
-			wpa_passphrase "$ssid" "$passphrase" | sed '1,/network=/d; $d'
+			# wpa_supplicant accepts a quoted WPA passphrase and derives its PSK.
+			# Do not call wpa_passphrase: /newroot can shadow it with an older
+			# dynamic binary whose libcrypto is absent from the initramfs runtime.
+			printf '    psk="%s"\n' "$(printf '%s' "$passphrase" | sed 's/[\\"]/\\&/g')"
 		else
 			printf '    key_mgmt=NONE\n'
 		fi

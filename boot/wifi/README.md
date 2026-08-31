@@ -9,6 +9,11 @@ The initramfs BusyBox `modprobe` has no `-d` option, so `wifi-start` uses
 absolute `insmod` paths in the dependency order recorded by this bundle. This
 does not rely on the stale `/lib/modules/6.18.7` tree in the initramfs.
 
+The CLI writes a quoted WPA passphrase directly into the device-local profile;
+`wpa_supplicant` derives the PSK. It deliberately does not invoke
+`wpa_passphrase`, because an older `/newroot` binary may be dynamically linked
+against a library absent from the initramfs runtime.
+
 ## Persistent layout
 
 The owner stages `op3-wifi-bundle.tar.gz` into `/newroot`. It supplies:
