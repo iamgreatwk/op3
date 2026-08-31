@@ -65,9 +65,9 @@ while IFS=$'\t' read -r path size hash source early; do
 	test "$(sha256sum "$control" | awk '{ print $1 }')" = "$hash"
 	test "$(wc -c < "$replacement")" = "$size"
 	test "$(sha256sum "$replacement" | awk '{ print $1 }')" = "$hash"
-	# GNU cpio records file mtime even with --reproducible.  Preserve the
-	# control entry timestamp so that byte-identical firmware produces a
-	# byte-identical archive; only a future firmware-content change may vary.
+	# GNU cpio records file mtime even with --reproducible. Preserve the control
+	# entry timestamp so this replacement introduces no metadata change for the
+	# declared firmware files.
 	prepared="$workdir/$(basename "$path")"
 	cp "$replacement" "$prepared"
 	touch -r "$control" "$prepared"

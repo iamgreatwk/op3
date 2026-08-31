@@ -7,7 +7,7 @@ Baseline commit: pmOS MSM8996 6.12.1, 67b0bbc3cbf46bae712a2606a43361756fcbd829
 Working branch: agent/implementation/op3-initrd-fw-001
 Changed files: boot/base-initramfs/msm8996-oneplus3-firmware.tsv;
 scripts/stage-msm8996-oneplus3-firmware.sh
-Commit SHA: a864e252452bce5834d1ee0d10d36cea5a846de4
+Commit SHA: 5795815
 
 Layer: initramfs firmware provenance
 Hypothesis tested: Replacing only the declared MSM8996 firmware group with
@@ -29,9 +29,17 @@ system directories and `pil-squasher` was built from the pmaports-pinned
 upstream commit `170b62d29faa7c1f54fc2a7718e4d0c912384ec1`. Both SHA512-pinned
 inputs downloaded successfully, and all six staged outputs match the checked-in
 size and SHA256 manifest exactly.
-Artifacts and SHA256: ignored host artifact
+Artifacts and SHA256: ignored host artifacts
 `artifacts/msm8996-oneplus3-firmware-verified/`; the six file hashes equal
-`boot/base-initramfs/msm8996-oneplus3-firmware.tsv`.
+`boot/base-initramfs/msm8996-oneplus3-firmware.tsv`. The generated firmware
+provenance initramfs is
+`artifacts/initrd-op3-firmware-provenance-v2.cpio.gz`, SHA256
+`38383fc04942e599d2c7e520ff1b85739bf4b76c516e00fd74c6a9243f279789`,
+with the same 653 pathname list and the same normalized metadata/content
+manifest as OP3-BOOT-043. Its archive bytes are not equal to the older control
+archive because GNU cpio preserves newly-created temporary directory mtimes;
+the six replaced entries retain the control timestamps and no longer introduce
+additional metadata differences.
 
 Device test run by project owner: NOT_RUN
 Device result: NOT_RUN
@@ -43,10 +51,10 @@ Uncertainties: The OnePlus 3 firmware is proprietary and must not be copied
 into Git. Source URLs are guarded by SHA512 and the reconstructed firmware has
 not yet replaced the six fixed entries in a booted initramfs. ath10k and GPU
 microcode are outside this provenance group.
-Recommended next experiment: make one firmware-provenance initramfs A/B by
-replacing only the six fixed files with these verified outputs, then have the
-owner pack and boot it. After that result, open `OP3-INITRD-SPLIT-001` for the
-separate location variable: retain ADSP, SLPI and small GPU firmware in the
-initramfs; stage modem/MBA, Venus and ath10k on rootfs and defer the module
-loads until after `/newroot` is available.
+Recommended next experiment: pack and boot the generated firmware-provenance
+initramfs with the fixed OP3-BOOT-043 Image.gz, DTB, cmdline and boot profile.
+After that result, open `OP3-INITRD-SPLIT-001` for the separate location
+variable: retain ADSP, SLPI and small GPU firmware in the initramfs; stage
+modem/MBA, Venus and ath10k on rootfs and defer the module loads until after
+`/newroot` is available.
 ```
