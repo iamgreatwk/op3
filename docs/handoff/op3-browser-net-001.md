@@ -159,6 +159,21 @@ marginal-supply brownout hypothesis (GPU + ath10k TX behind placeholder DTB
 regulators) remains the best fit. Keep watching for resets under network
 load; the DTB GPU-regulator fix (existing project line) is the real cure.
 
+## Deferred feature list (2026-08-31, owner decision)
+
+The browser's role in this project is automated testing, so the following
+gaps against a "modern browser" are recorded but intentionally NOT
+implemented for now:
+
+- P0: user-data persistence (WebKit profile lives on initramfs tmpfs; point
+  HOME/XDG_* at sda15 in run.sh); on-device navigation (cog has no URL bar;
+  D-Bus remote control is the interim path).
+- P1: on-screen keyboard (weston-keyboard already bundled; needs the
+  text-input/IME path), readability scaling (`cog --device-scale=2`),
+  media playback (gstreamer chain unbuilt; blocked on the audio task
+  bringing up the audio path).
+- P2: WebGL verification, download management, clipboard.
+
 ## Design notes
 
 - The Wi-Fi CLI (`/newroot/opt/op3-wifi/wifi auto`) already performs module
