@@ -12,9 +12,9 @@ Layer: Audio integration
 Hypothesis tested: When the already-described OnePlus 3 ASoC topology has its complete ADSP, APR, SLIMbus, WCD9335, MSM8996 machine-driver and TFA9890 dependency chain built in, it registers ALSA controlC0 and the MultiMedia3 playback/capture PCMs after the provisioned ADSP starts.
 Only variable changed: The pmOS 6.12 OnePlus 3 audio integration layer: its built-in kernel configuration and device-local, runtime-validating route diagnostic helper.  The DTS topology, boot profile, ADSP firmware payload, GPU/DRM, Wi-Fi and other services remain unchanged.
 
-Build run by project owner: Configuration preparation only, 2026-08-31
-Build result: NOT_RUN
-Artifacts and SHA256: The prepared configuration is `out/linux-pmos-msm8996-6.12-defconfig-audio/.config`, SHA256 `56d2f1307bbd9cc502ab4b6f33e5b2b80387a0198f6137f6870c5de996a9ee52`. Static verification confirms `QCOM_Q6V5_ADSP`, `QCOM_APR`, `SLIMBUS`, `SLIM_QCOM_NGD_CTRL`, `SND_SOC_MSM8996`, `SND_SOC_WCD9335`, `SND_SOC_TFA989X`, and their QDSP6/REGMAP/RPROC closure resolve to `=y`.
+Build run by project owner: Configuration preparation and `Image.gz dtbs`, 2026-08-31
+Build result: PASS — the configured kernel Image.gz and OnePlus 3 DTB exist in the requested output directory.
+Artifacts and SHA256: The prepared configuration is `out/linux-pmos-msm8996-6.12-defconfig-audio/.config`, SHA256 `56d2f1307bbd9cc502ab4b6f33e5b2b80387a0198f6137f6870c5de996a9ee52`. The build produced `Image.gz` SHA256 `cefc36a899aef73b3af50b53fd7a2d5dcfcc8f10b702b150f35c0eeffc1ed0a1` and `msm8996-oneplus3.dtb` SHA256 `cb29ab658135cd0cfcde3b47c1e115b763f5dbd37b724554590b7a61afcbf32f`. Static verification confirms `QCOM_Q6V5_ADSP`, `QCOM_APR`, `SLIMBUS`, `SLIM_QCOM_NGD_CTRL`, `SND_SOC_MSM8996`, `SND_SOC_WCD9335`, `SND_SOC_TFA989X`, and their QDSP6/REGMAP/RPROC closure resolve to `=y`; the compiled DTB retains `qcom,apq8096-sndcard` and its AMIC4 route.
 
 Device test run by project owner: NOT_RUN
 Device result: NOT_RUN
