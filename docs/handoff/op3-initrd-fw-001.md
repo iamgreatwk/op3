@@ -54,15 +54,17 @@ the Codex task, 2026-08-31. Boot image
 `artifacts/boot-oneplus3-pmos612-own-dtb-firmware-provenance.img`, SHA256
 `38e59038daaed7a2726554c5cc56cf19438cf0aa3f72d1874b3a8ec0fa96651f`.
 
-Conclusion: SUPPORTED for firmware provenance on the OP3-BOOT-043 recovery
-gate; this is not an Integration acceptance or a placement/split result.
+Conclusion: SUPPORTED for firmware provenance and for a boot image independent
+of the historic v74 DTB/initramfs inputs on the OP3-BOOT-043 recovery gate;
+this is not an Integration acceptance or a driver-module result.
 Uncertainties: The OnePlus 3 firmware is proprietary and must not be copied
 into Git. ath10k and GPU microcode are outside this provenance group. The
 provenance archive has normalized content/metadata equality with the control,
 but not byte equality because directory mtimes are not normalized by this GNU
 cpio environment.
-Recommended next experiment: `OP3-INITRD-SPLIT-001`, a separate placement
-variable: retain ADSP, SLPI and small GPU firmware in initramfs; stage
-modem/MBA, Venus and ath10k on rootfs and defer their module loads until after
-`/newroot` is available.
+Recommended next experiment: no further initramfs-provenance work is required.
+If modem, Venus, or Wi-Fi functionality is needed later, create three separate
+branches/tasks: one each for MSS, Venus and ath10k module availability,
+dependencies, firmware placement and runtime evidence. Do not use their
+currently untested module state to reopen this boot-image result.
 ```

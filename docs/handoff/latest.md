@@ -203,19 +203,20 @@ out of scope for the product path.
   the device reached recovery/RNDIS/SSH; early SLPI and ADSP loads succeeded.
   Artifact `boot-oneplus3-pmos612-own-dtb-firmware-provenance.img`
   (`38e59038…`); handoff `docs/handoff/op3-initrd-fw-001.md`.
-- **Next firmware task — OP3-INITRD-SPLIT-001**: test firmware placement as
-  one variable. Keep ADSP, SLPI and small GPU firmware in initramfs; move
-  modem/MBA, Venus and ath10k firmware to rootfs and prove their module loads
-  occur only after `/newroot` is available. Do not mix DTS, console, or other
-  userspace changes into that test.
+- **Firmware placement follow-ups are deferred**: modem/MBA (MSS), Venus and
+  ath10k are module-driver projects, not part of the boot-image gate. Open one
+  branch/task per driver when that functionality is needed; first establish the
+  exact modules and dependencies for `6.12.1-msm8996+`, then test firmware
+  placement and loading after `/newroot`. Do not reopen OP3-BOOT-044 merely
+  because these optional module paths remain untested.
 - pmOS 6.12 own-DTB + reproducible-initramfs boot PASS (OP3-BOOT-042/043):
   `artifacts/boot-oneplus3-pmos612-own-dtb-repro-initrd.img`
   (`0b2e85ee…`); source `91df7ccd…`, tree-built DTB `cb29ab65…`, generated
   initramfs `61cf6338…`. The source uses the direct `rpm-glink` topology; it
   replaces the v74 DTB only for the pmOS 6.12 product path. The generated
   initramfs is a reproducible/auditable reserialization of the still-pinned
-  historical archive; independent firmware/base-userland provenance remains a
-  separate next task. Details: `docs/handoff/op3-dts-rpm-001.md` and
+  historical archive; MSM8996 firmware provenance is now separately validated
+  by OP3-BOOT-044. Details: `docs/handoff/op3-dts-rpm-001.md` and
   `docs/handoff/op3-initrd-001.md`.
 - Project-owned pmOS source patch archive (GitLab upstream remains read-only):
   `patches/pmos612-op3-own-dtb/` contains the ordered S6E3FA5 and direct
