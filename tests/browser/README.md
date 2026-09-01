@@ -2,6 +2,10 @@
 
 PC-side Playwright-style automation against the OnePlus 3 WPE browser.
 
+**Before writing or running ANY command/script on the device, read
+`docs/device-shell-compat.md`** — the BusyBox/kernel/Buildroot trap list.
+Every rule there was learned from a real incident.
+
 ## Components
 
 - `op3-automation-session.sh` — device-side script (push to the device, run
