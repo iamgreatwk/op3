@@ -90,8 +90,26 @@ if [ "$(date +%s)" -lt 1000000000 ]; then
 fi
 
 # compositor
+# Output rotation: the DSI-1 panel is a 1080x1920 portrait panel; rotate the
+# compositor output so everything (all pages/clients) is LANDSCAPE.
+#   rotate-90 / rotate-270 = landscape (pick by how you hold the phone)
+#   rotate-180             = upside-down portrait
+# Override with WESTON_TRANSFORM if the orientation is flipped.
+TRANSFORM=${WESTON_TRANSFORM:-rotate-90}
+mkdir -p /tmp/weston-conf
+cat > /tmp/weston-conf/weston.ini <<EOF
+[output]
+name=DSI-1
+transform=$TRANSFORM
+EOF
+export WESTON_CONFIG_FILE=/tmp/weston-conf/weston.ini
+echo "transform: $TRANSFORM" >> "$LOG"
+
+# weston only reads weston.ini via -c/--config (the env var alone is not
+# consulted by main's config discovery, see frontend/main.c load_configuration).
 $L --library-path $P $B/usr/bin/weston \
 	--backend=drm-backend.so --idle-time=0 --shell=kiosk-shell.so \
+	--config=/tmp/weston-conf/weston.ini \
 	--log=$XDG_RUNTIME_DIR/weston.log >> "$LOG" 2>&1 &
 i=0; sock=""
 while [ $i -lt 15 ]; do

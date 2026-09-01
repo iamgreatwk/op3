@@ -298,10 +298,24 @@ echo "=== starting weston (DRM backend, GL renderer) ==="
 # browser session is meant to be invoked from (and return to) the recovery
 # terminal environment. Override with WESTON_SHELL=desktop-shell.so to debug.
 WESTON_SHELL=${WESTON_SHELL:-kiosk-shell.so}
+# Output rotation: the DSI-1 panel is 1080x1920 portrait; rotate the
+# compositor output so all pages are LANDSCAPE (1920x1080).
+#   rotate-90 / rotate-270 = landscape (pick by how you hold the phone)
+#   rotate-180             = upside-down portrait
+# Must be passed via -c/--config: weston main() does not consult the
+# WESTON_CONFIG_FILE env var during config discovery (frontend/main.c).
+TRANSFORM=${WESTON_TRANSFORM:-rotate-90}
+mkdir -p "$XDG_RUNTIME_DIR/weston-conf"
+cat > "$XDG_RUNTIME_DIR/weston-conf/weston.ini" <<EOF
+[output]
+name=DSI-1
+transform=$TRANSFORM
+EOF
 run "$BASE/usr/bin/weston" \
 	--backend=drm-backend.so \
 	--idle-time=0 \
 	--shell="$WESTON_SHELL" \
+	--config="$XDG_RUNTIME_DIR/weston-conf/weston.ini" \
 	--log="$XDG_RUNTIME_DIR/weston.log" &
 weston_pid=$!
 

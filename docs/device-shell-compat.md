@@ -71,3 +71,8 @@ list before running them. The PC and the device are DIFFERENT worlds.
 16. scp needs -O (no sftp-server on the device).
 17. Multi-line heredocs/inline python over the agent tool channel have been
     mangled before - prefer script files transferred with scp.
+18. weston: custom weston.ini must be passed with -c/--config on the command
+    line; main() ignores the WESTON_CONFIG_FILE env var during discovery
+    (frontend/main.c load_configuration). Output rotation for the portrait
+    DSI-1 panel: [output] name=DSI-1 transform=rotate-90/270 = landscape
+    (1920x1080); rotate-180 = upside-down portrait.
