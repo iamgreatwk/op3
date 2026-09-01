@@ -43,7 +43,8 @@ else
 fi
 
 echo "== 5. switch symlink =="
-ssh "$device" "ln -sfn '$remote_root/opt/op3-browser' /newroot/opt/op3-browser \
+ssh "$device" "rm -rf /newroot/opt/op3-browser \
+  && ln -sfn '$remote_root/opt/op3-browser' /newroot/opt/op3-browser \
   && ls -l /newroot/opt/op3-browser/run.sh"
 
 echo "deployed: $remote_root (tag $tag)"
