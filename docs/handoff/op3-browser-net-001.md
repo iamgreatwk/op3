@@ -296,6 +296,31 @@ sudo fastboot boot artifacts/boot-oneplus3-v100-recovery-a530fw.img
 - Note: the v100 a5xx path emits ~450 GPU SMMU context faults per minute
   under browser load (OP3-BROWSER-002 caveat, non-fatal).
 
+## WebProcess crash after the WebDriver rebuild (2026-09-01): incremental-build trap
+
+After the owner's `wpewebkit-reconfigure`-based rebuild (method 1, build dir
+kept), the browser rendered www.baidu.com for a few seconds and then showed
+the "renderer process crashed" error page. Diagnostics:
+
+- Device RAM 5.8 GB, no OOM, no SMMU faults, battery 80 % on USB — not the
+  power/battery line.
+- The sda15 bundle was verified byte-identical to the host target (full
+  953-file sha256 manifest diff — only the three intentional extras differ),
+  so no corruption.
+- A/B test on the same boot: the pre-WebDriver TLS bundle
+  (`op3-browser-bundle-tls.tar.gz`, `40346b44…`) renders baidu cleanly
+  (`Loaded successfully`, no crash, 25 s window) while the new bundle's
+  renderer crashes within seconds.
+
+Conclusion: the `wpewebkit-reconfigure` path produced an inconsistent
+library (objects from the old configuration mixed with new ones) — the same
+family of incremental-build traps as the Mesa wayland-platform and dbus
+session.conf cases, but with the worst symptom so far. Remedy issued to the
+owner: `make wpewebkit-dirclean` + full rebuild (ccache-backed).
+
+Testing protocol addition: after ANY package-level rebuild in an existing
+output directory, run one heavy-page sanity load before trusting the stack.
+
 ## Design notes
 
 - The Wi-Fi CLI (`/newroot/opt/op3-wifi/wifi auto`) already performs module
