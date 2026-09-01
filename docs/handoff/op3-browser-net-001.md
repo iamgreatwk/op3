@@ -321,6 +321,31 @@ owner: `make wpewebkit-dirclean` + full rebuild (ccache-backed).
 Testing protocol addition: after ANY package-level rebuild in an existing
 output directory, run one heavy-page sanity load before trusting the stack.
 
+## Automation bring-up progress (2026-09-01, mid-state)
+
+Test assets committed under `tests/browser/` (device session script + PC
+client). Verified so far, against the 6.12 browser-net boot over USB RNDIS:
+
+- `WPEWebDriver` (WPE naming; not "WebKitWebDriver") built and installed;
+  listens `0.0.0.0:7000` with `--host=all`; PC reaches it directly.
+- Automation channel = WebKit remote inspector: `cog --automation` +
+  `WEBKIT_INSPECTOR_SERVER=127.0.0.1:9222` + WPEWebDriver `-t 127.0.0.1:9222`.
+- Session creation from the PC SUCCEEDED (`POST /session`), navigation to
+  baidu executed on the browser (`Loaded successfully` in cog.log).
+- Transport prerequisites discovered (all in `tests/browser/README.md`):
+  `ip link set lo up` (initramfs has no loopback — inspector bind fails with
+  EADDRNOTAVAIL), dbus-daemon `--config-file=<bundle>/usr/share/dbus-1/session.conf`
+  without `--session` (they conflict), helper-wrapper recreation after bundle
+  re-extract, `--replace-on-new-session`.
+- cog fix `0002` (automation allowed BEFORE view creation; commit `8a32772`)
+  removed the "automation is not allowed in the context" critical.
+- BLOCKER: renderer crash traced to the reconfigure-based wpewebkit rebuild
+  (mixed objects — see the crash section above). Owner is running the
+  `wpewebkit-dirclean` full rebuild. After it lands: restage bundle, deploy
+  with full-manifest verification, rerun `tests/browser/op3-automation-session.sh`
+  + `tests/browser/wd-baidu-test.py`, then record the OP3-BROWSER-005
+  WebDriver extension result.
+
 ## Design notes
 
 - The Wi-Fi CLI (`/newroot/opt/op3-wifi/wifi auto`) already performs module
