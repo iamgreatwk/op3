@@ -1,0 +1,29 @@
+From: OP3 bring-up <249905534@qq.com>
+Subject: [PATCH] core: enable automation before view creation (WPE >= 2.50)
+
+--- a/core/cog-shell.c	2025-05-30 05:05:15.000000000 +0800
++++ b/core/cog-shell.c	2026-09-01 09:06:34.087994473 +0800
+@@ -168,6 +168,15 @@
+                               priv->web_context);
+     }
+ 
++    /*
++     * OP3 fix: with WPE >= 2.50 (ENABLE(2022_GLIB_API)) the WebKitWebView
++     * constructor checks that automation is allowed on the context when
++     * "is-controlled-by-automation" is set, so automation must be enabled
++     * BEFORE the view is created. cog 0.18.5 set it afterwards, which made
++     * every automation session fall back to a default (non-automated) one.
++     */
++    webkit_web_context_set_automation_allowed(priv->web_context, priv->automated);
++
+     g_signal_emit (shell, s_signals[CREATE_VIEW], 0, &priv->web_view);
+     g_object_notify_by_pspec (G_OBJECT (shell), s_properties[PROP_WEB_VIEW]);
+ 
+@@ -178,7 +187,6 @@
+     g_assert (webkit_web_view_get_settings (priv->web_view) == priv->web_settings);
+     g_assert (webkit_web_view_get_context (priv->web_view) == priv->web_context);
+ 
+-    webkit_web_context_set_automation_allowed(priv->web_context, priv->automated);
+     g_signal_connect(priv->web_context, "automation-started", G_CALLBACK(cog_shell_automation_started_callback), shell);
+     g_signal_connect(priv->web_view, "close", G_CALLBACK(cog_shell_web_view_close), shell);
+ }
