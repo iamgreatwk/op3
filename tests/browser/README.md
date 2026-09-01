@@ -39,3 +39,24 @@ Blocked on the clean `wpewebkit-dirclean` rebuild: the reconfigure-based
 rebuild produced a renderer that crashes on heavy pages (see
 `docs/handoff/op3-browser-net-001.md`). Session/navigate steps verified
 working; element/click/data steps pending the rebuild.
+
+## Deployment discipline (mandatory after the 2026-08-31/09-01 mess)
+
+Use `deploy-bundle.sh` for every bundle deploy — never a hand-rolled
+`tar -x` over the live directory:
+
+```sh
+tests/browser/deploy-bundle.sh artifacts/op3-browser-bundle-webdriver.tar.gz \
+  [root@<device>] [tag]
+```
+
+It extracts into a versioned directory (`/newroot/opt/op3-browser.<tag>`),
+re-applies every runtime asset that an extraction destroys (run.sh,
+test-page, CJK font; the udev rule/helper wrappers/locale/dbus are applied
+by `op3-automation-session.sh`), verifies a full sha256 manifest against
+the host target, then atomically switches the `op3-browser` symlink.
+Rollback = point the symlink at the previous version directory.
+
+Known-asset checklist per deploy (all automated now): loopback up,
+input_id udev rule, helper wrappers via bundled loader, dbus session.conf
+from the bundle, CJK font, `TZ=CST-8`, GPU `control=on`.
