@@ -312,14 +312,22 @@ the "renderer process crashed" error page. Diagnostics:
   (`Loaded successfully`, no crash, 25 s window) while the new bundle's
   renderer crashes within seconds.
 
-Conclusion: the `wpewebkit-reconfigure` path produced an inconsistent
-library (objects from the old configuration mixed with new ones) — the same
-family of incremental-build traps as the Mesa wayland-platform and dbus
-session.conf cases, but with the worst symptom so far. Remedy issued to the
-owner: `make wpewebkit-dirclean` + full rebuild (ccache-backed).
+Conclusion: **REJECTED (2026-09-01/02)**. The `wpewebkit-dirclean` full
+rebuild produced a BYTE-IDENTICAL library (sha `9a434c42…` == the
+reconfigure-based build), so the "mixed objects" theory is dead. Updated
+evidence: the new WEBDRIVER-enabled build ran the full flow successfully
+once (15:41) and crashed the renderer at 16:37 — intermittent, with the
+battery readout showing 80 % and status "Discharging" while the USB
+data link was online (charging possibly not effective through the RNDIS
+connection). The WEBDRIVER-enabled WebKit uses more memory (automation
+machinery), pushing closer to the power/OOM edge. Power/battery remains
+the primary suspect; the old no-WebDriver build (sha `76ff1afd…`) was
+stable in the A/B test.
 
-Testing protocol addition: after ANY package-level rebuild in an existing
-output directory, run one heavy-page sanity load before trusting the stack.
+Testing protocol addition (unchanged + stricter): after ANY package-level
+rebuild, run one heavy-page sanity load; ALWAYS verify the battery is
+actually CHARGING (capacity rising, status=Charging) before stability
+tests.
 
 ## Automation bring-up progress (2026-09-01, mid-state)
 
