@@ -9,3 +9,6 @@
 *.swp
 *.tmp
 *~
+
+# Privacy: local-only content (credentials, scraping), never push.
+/local/

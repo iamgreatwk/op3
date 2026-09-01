@@ -76,6 +76,11 @@ BR2_PACKAGE_COG=y
 BR2_PACKAGE_GLIB_NETWORKING=y
 BR2_PACKAGE_CA_CERTIFICATES=y
 
+# Device-side collection runtime (local/jnu, private - not in this repo):
+# python3 orchestrates the WebDriver session, parses the table and pushes to
+# feishu. Pure-python wheels are unpacked onto sda15 (no pip on device).
+BR2_PACKAGE_PYTHON3=y
+
 # Small helpers that make on-device debugging easier.
 BR2_PACKAGE_DROPBEAR=y
 BR2_PACKAGE_STRACE=y
