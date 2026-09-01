@@ -2,7 +2,7 @@
 set -euo pipefail
 # Versioned bundle deploy: extract to op3-browser.<tag>, re-apply runtime
 # assets, verify full manifest, switch symlink. See tests/browser/README.md.
-project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 tarball="$1"
 device="${2:-root@172.16.42.1}"
 sha="$(sha256sum "$tarball" | cut -c1-8)"
