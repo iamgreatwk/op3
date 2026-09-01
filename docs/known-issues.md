@@ -22,3 +22,48 @@
 - 6.19.5 之前卡 fastboot 的原因是 `CONFIG_SCSI_UFS_QCOM=m`（模块），v74 全内置配置修正为 `=y` 后解决（OP3-BOOT-037 PASS）。
 - Legacy 6.3.1 findings are evidence only and require a new v6.12.1-baseline
   A/B before product use.
+- **浏览器/自动化线踩坑合集（2026-08-31/09-01，OP3-BROWSER-005 全程实录，逐条查 `docs/device-shell-compat.md`）**：
+  1. **cog 0.18.5 + WPE 2.50 automation 必挂**：cog 在创建 WebView 之后才调
+     `set_automation_allowed`，而 2.50（2022_GLIB_API）把检查提前到 WebView
+     构造期 → `--automation` 一律 "falling back to default session"。已修：
+     `buildroot/package-patches/cog/0002-op3-enable-automation-before-view-creation.patch`。
+  2. **wpewebkit 改子选项后用 reconfigure 重编 = 混合对象坏库**：renderer
+     加载重页面几秒后必崩（"renderer process crashed"），A/B 用旧 bundle
+     同内核同页面正常。必须 `make wpewebkit-dirclean` 全量重编（ccache 兜底
+     1–2 h）。同族陷阱：Mesa wayland platform、host-gcc-final。
+  3. **设备无 RTC、busybox 无 ntpd**：新开机时钟停在 1970 → 一切 https 证书
+     校验失败（"TLS Error" 页）。修法：run.sh / 自动化脚本用 wget 抓
+     `http://www.baidu.com` 的 HTTP Date 头 + busybox `date -u -s` 手工解析
+     （busybox 不认 RFC1123 格式）。
+  4. **loopback 默认 down**：不 `ip link set lo up` 一切绑 127.0.0.1 的服务
+     （inspector、WebDriver target）报 EADDRNOTAVAIL。
+  5. **dbus-daemon 两个坑**：initramfs 根没有 dbus-1 配置，必须
+     `--config-file=<bundle>/usr/share/dbus-1/session.conf`；且该选项不能与
+     `--session` 同用（"already requested"）。
+  6. **设备无物理键盘**：WebDriver 按键注入（`/element/{id}/value`）报
+     "Element is not focusable"——按键事件没有聚焦路径。数据类自动化改用
+     `execute/sync` JS 注入（等价且更稳）。
+  7. **busybox tar 管道解包曾产出 0 字节文件**（cog/udevadm 全 0 字节，
+     browser "crashed" 页）。解包后必须全量 manifest 校验
+     （`find . -type f | sort | xargs sha256sum | sha256sum`）。
+  8. **`ln -sfn` 真实目录陷阱再次出现**：目标位是真实目录时 symlink 会被
+     建到目录内部。部署脚本（`tests/browser/deploy-bundle.sh`）在切换前
+     `rm -rf` 旧目录。**部署 bundle 一律用该脚本**（版本化目录 + 全量
+     manifest 校验 + 自动重应用 run.sh/字体），禁止手工覆盖解压。
+  9. **低电量触发整机硬重置**：GPU 负载尖峰 + 电池电压跌落（80% 电量复测
+     未复现）。测试记录必须带电池/充电状态；稳定性结论需满电复测。
+  10. **msm/MDP5 不可热 rebind**：unbind 泄漏 CTL/SMP（rebind `-ENOSPC`，
+      `mdp5_ctl.c:710`/`mdp5_smp.c:84`）且会毁掉 fbdev。GPU 固件必须在
+      initramfs 里、probe 时（~2 s）就位；`/newroot` 挂载在 probe 之后，
+      事后补固件 + rebind 此路不通。
+  11. **WPE 命名/参数**：二进制叫 `WPEWebDriver`（WebKitWebDriver 是 GTK
+      名）；`--host=all` 才能从 PC 访问；`--replace-on-new-session` 防旧会话
+      占坑（"Maximum number of active sessions"）；自动化通道 =
+      `cog --automation` + `WEBKIT_INSPECTOR_SERVER=127.0.0.1:9222` +
+      WPEWebDriver `-t 127.0.0.1:9222`。
+  12. **每次换镜像 host key 必轮换**：先 `ssh-keygen -R <ip>` 再
+      `accept-new` 连接；scp 必须 `-O`（设备无 sftp-server）。
+  13. **6.3.1 日常镜像（boot-oneplus3-fa5-v100-repacked.img）浏览器必死**：
+      ramdisk 只有 `a530_zap.mbn`，缺 a530_pm4/pfp/gpmu；wifi overlay 在但
+      GPU 固件不在。恢复路径已记录（`make-op3-a530fw-initrd.sh` 对该
+      ramdisk 追加固件），线暂缓中。
