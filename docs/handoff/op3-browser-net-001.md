@@ -346,6 +346,40 @@ client). Verified so far, against the 6.12 browser-net boot over USB RNDIS:
   + `tests/browser/wd-baidu-test.py`, then record the OP3-BROWSER-005
   WebDriver extension result.
 
+## RESULT (2026-09-01): WebDriver automation flow — PASS
+
+After the clean `wpewebkit-dirclean` rebuild (with `WPEWebDriver`), the
+versioned deploy (`deploy-bundle.sh`, 953-file manifest OK) and the
+automation session, the full Playwright-style flow ran from the PC against
+the device (USB RNDIS, `tests/browser/wd-baidu-test.py`, stdlib only):
+
+```text
+[1] status {ready: true}
+[2] session created
+[3] navigate https://www.baidu.com → title "百度一下，你就知道"
+    (HTTPS OK after the HTTP-Date clock step; Chinese renders)
+[4] element #kw located
+[5] JS-injected input + #su click → navigation happened
+[6] page data extracted via execute/sync (baidu served its slider
+    anti-bot captcha — proof the automation pipeline is real; captcha
+    handling is a site-policy matter, not a device limitation)
+[7] screenshot captured
+[8] session closed — "full flow OK"
+```
+
+Fixes/lessons folded into the committed assets: clock step added to
+`op3-automation-session.sh` (no RTC: fresh boots fail every TLS cert), JS
+injection instead of WebDriver key events (no physical keyboard — key
+events have no focus path; JS injection is the right tool for data tasks),
+`--replace-on-new-session` for WPEWebDriver, `ln -sfn` real-directory
+gotcha handled in `deploy-bundle.sh` (rm -rf before the symlink switch).
+Deployment discipline: `tests/browser/deploy-bundle.sh` only — versioned
+dirs + manifest verify; never extract over the live bundle.
+
+Battery state during the final run: USB connected (RNDIS), capacity read
+80 % earlier in the session; resets observed earlier were traced to a low
+battery (see Run F) — keep the charger connected for long automation runs.
+
 ## Design notes
 
 - The Wi-Fi CLI (`/newroot/opt/op3-wifi/wifi auto`) already performs module

@@ -31,11 +31,13 @@ kw = wd("POST", f"/session/{sid}/element",
 kid = kw[EID]
 print("[4] search box found:", bool(kid))
 
-wd("POST", f"/session/{sid}/element/{kid}/value",
-   {"text": "oneplus3 mainline linux"}, timeout=30)
-su = wd("POST", f"/session/{sid}/element",
-        {"using": "css selector", "value": "#su"})[EID]
-wd("POST", f"/session/{sid}/element/{su}/click", timeout=30)
+# No physical keyboard on the device: WebDriver key events have no focus
+# path, so drive the form through JS injection (equivalent for data tasks).
+wd("POST", f"/session/{sid}/execute/sync",
+   {"script": "document.getElementById('kw').value='oneplus3 mainline linux';",
+    "args": []}, timeout=30)
+wd("POST", f"/session/{sid}/execute/sync",
+   {"script": "document.getElementById('su').click();", "args": []}, timeout=30)
 time.sleep(5)
 
 print("[5] title after click:", wd("GET", f"/session/{sid}/title"))

@@ -65,6 +65,30 @@ $L --library-path $P $B/usr/bin/dbus-daemon --fork \
 	--address="$DBUS_SESSION_BUS_ADDRESS" >> "$LOG" 2>&1
 echo "dbus: $?" >> "$LOG"
 
+# Clock step (no RTC on this device, no ntpd applet in busybox): read the
+# HTTP Date header over plain HTTP and set the clock, otherwise every https
+# certificate fails validation ("TLS Error" page).
+if [ "$(date +%s)" -lt 1000000000 ]; then
+	hdr=$(wget -S -T 8 -O /dev/null http://www.baidu.com 2>&1 |
+		sed -n 's/^[[:space:]]*[Dd]ate:[[:space:]]*//p' | head -n 1)
+	if [ -n "$hdr" ]; then
+		set -- $hdr # "Mon, 31 Aug 2026 12:17:32 GMT"
+		case "$3" in
+			Jan) mm=01;; Feb) mm=02;; Mar) mm=03;; Apr) mm=04;;
+			May) mm=05;; Jun) mm=06;; Jul) mm=07;; Aug) mm=08;;
+			Sep) mm=09;; Oct) mm=10;; Nov) mm=11;; Dec) mm=12;;
+			*) mm="";;
+		esac
+		if [ -n "$mm" ] && date -u -s "$4-$mm-$2 $5" >> "$LOG" 2>&1; then
+			echo "clock set from '$hdr'" >> "$LOG"
+		else
+			echo "WARN: could not apply HTTP Date: '$hdr'" >> "$LOG"
+		fi
+	else
+		echo "WARN: no HTTP Date header received" >> "$LOG"
+	fi
+fi
+
 # compositor
 $L --library-path $P $B/usr/bin/weston \
 	--backend=drm-backend.so --idle-time=0 --shell=kiosk-shell.so \
