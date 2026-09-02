@@ -2,9 +2,10 @@
 set -euo pipefail
 
 # Prepare, but do not compile, the kernel configuration for OP3-AUDIO-MIC-001.
-# Kernel compilation remains an owner-run action.  Run this after applying the
-# existing own-DTB series, then use the printed make command to build Image.gz
-# and DTBs from the prepared output directory.
+# Kernel compilation remains an owner-run action.  The starting configuration
+# is the tracked, boot-proven 6.12 v74strict configuration, not defconfig:
+# OP3-BOOT-042 through OP3-BOOT-044 use its resulting own-DTB configuration.
+# This keeps audio integration as the only changed kernel variable.
 
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=/dev/null
@@ -13,9 +14,11 @@ source "$project_root/BASELINE.env"
 kernel_source="${KERNEL_SOURCE:-$project_root/$TARGET_KERNEL_SOURCE_DIR}"
 output_dir="${KERNEL_OUTPUT:-$project_root/$TARGET_KERNEL_OUTPUT_DIR-audio}"
 fragment="$project_root/kernel/configs/oneplus3-audio.fragment"
+base_config="$project_root/kernel/configs/pmos631/v612-v74strict-full.config"
 
 test -f "$kernel_source/Makefile"
 test -f "$fragment"
+test -f "$base_config"
 
 source_commit="$(git -C "$kernel_source" rev-parse HEAD)"
 case "$source_commit" in
@@ -30,10 +33,8 @@ case "$source_commit" in
 esac
 
 mkdir -p "$output_dir"
-make -C "$kernel_source" O="$output_dir" ARCH=arm64 \
-  CROSS_COMPILE="$CROSS_COMPILE" CC="$CROSS_GCC" defconfig
 "$kernel_source/scripts/kconfig/merge_config.sh" -m -O "$output_dir" \
-  "$output_dir/.config" "$fragment"
+  "$base_config" "$fragment"
 make -C "$kernel_source" O="$output_dir" ARCH=arm64 \
   CROSS_COMPILE="$CROSS_COMPILE" CC="$CROSS_GCC" olddefconfig
 

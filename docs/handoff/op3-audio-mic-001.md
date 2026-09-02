@@ -1,11 +1,11 @@
-# OP3-AUDIO-MIC-001 — first build checkpoint
+# OP3-AUDIO-MIC-001 — boot-failure correction checkpoint
 
 ```text
 Task / GitHub Issue: https://github.com/iamgreatwk/op3/issues/5
 Role: Implementation
 Baseline commit: 67b0bbc3cbf46bae712a2606a43361756fcbd829
 Working branch: agent/implementation/op3-audio-mic-001
-Changed files: kernel/configs/oneplus3-audio.fragment; scripts/prepare-op3-audio-kernel-config.sh; scripts/stage-op3-audio-rootfs.sh; boot/audio-test/opt/op3-audio/route.sh; this handoff
+Changed files: kernel/configs/oneplus3-audio.fragment; kernel/configs/pmos631/v612-v74strict-full.config (existing boot-proven base); scripts/prepare-op3-audio-kernel-config.sh; scripts/stage-op3-audio-rootfs.sh; boot/audio-test/opt/op3-audio/route.sh; this handoff
 Commit SHA: 2cc781600b01b18fbf0a21e394b8bb805577feee (audio integration assets)
 
 Layer: Audio integration
@@ -22,13 +22,13 @@ Rootfs staging: PASS (owner-run, 2026-08-31). `BR2_PACKAGE_TINYALSA=y` and `BR2_
 
 Initramfs generator self-test: PASS (agent-run, temporary path only). The first generator revision falsely rejected existing TinyALSA entries because `grep -q` closed a pipe under `pipefail`, causing `cpio` to report SIGPIPE. The corrected generator first materializes the archive listing, then checks it. It successfully appended `opt/op3-audio/route.sh` and `sbin/run_recovery.sh` to the firmware-provenance reference archive; no project artifact was created or overwritten during this self-test.
 
-Minimal diagnostic packaging: PASS (owner-run, 2026-09-02). The corrected generator produced `artifacts/initrd-op3-audio-diagnostic.cpio.gz`, SHA256 `7cb3c3442317d89dba7727e5b82a3565146d7f330b2502e5081858c5bff0e206`. Packing that archive with the documented audio `Image.gz` and own DTB produced `artifacts/boot-oneplus3-pmos612-own-dtb-audio-diagnostic.img`, SHA256 `de2fbaf6ac491784b248eb0d8dce15da74e78596667be1066db1a78d5643c87c`. This establishes artifact assembly only; it is not a device boot, ALSA, playback, or capture result.
+Minimal diagnostic packaging: PASS (owner-run, 2026-09-02). The corrected generator produced `artifacts/initrd-op3-audio-diagnostic.cpio.gz`, SHA256 `7cb3c3442317d89dba7727e5b82a3565146d7f330b2502e5081858c5bff0e206`. Packing that archive with the first, defconfig-based audio `Image.gz` and own DTB produced `artifacts/boot-oneplus3-pmos612-own-dtb-audio-diagnostic.img`, SHA256 `de2fbaf6ac491784b248eb0d8dce15da74e78596667be1066db1a78d5643c87c`. This establishes artifact assembly only; it is not a device boot, ALSA, playback, or capture result.
 
-Device test run by project owner: NOT_RUN
-Device result: NOT_RUN
-Evidence links / log paths: Collect /newroot/var/log/op3-audio-route.log, `cat /proc/asound/cards`, `cat /proc/asound/pcm`, and the matching `dmesg` ADSP/APR/SLIM/WCD9335 lines.
+Device test run by project owner: 2026-09-02, transient `fastboot boot` of `boot-oneplus3-pmos612-own-dtb-audio-diagnostic.img`
+Device result: FAIL — the device returned/remained in fastboot, with no Linux, RNDIS, ACM, or initramfs diagnostic evidence.
+Evidence links / log paths: Owner report only; no runtime log can exist because the initramfs launcher was not reached.
 
-Conclusion: INCONCLUSIVE
-Uncertainties: No device has yet run this configuration.  The helper intentionally checks the exported mixer controls before setting routes; the exact PCM device IDs are discovered from /proc/asound/pcm rather than assumed.  Speaker output and AMIC4 capture need hardware evidence, including post-suspend/resume repetition, before any acceptance claim.
-Recommended next experiment: Build the minimal appended archive with `scripts/make-op3-audio-initrd.sh`, pack it with the committed audio Image.gz and own DTB, and boot it. It automatically runs `route.sh diagnose` from initramfs and persists the result at `/newroot/var/log/op3-audio-initramfs.log`; no sda15/rootfs change is made. Only if the card and MultiMedia3 PCMs exist, use owner-directed `route.sh speaker` plus 30-second tinyplay, then `route.sh mic` and 48 kHz/16-bit/mono tinycap.
+Conclusion: The defconfig-based preparation method is rejected for this task; it changed 6071 normalized configuration lines relative to the boot-proven own-DTB configuration, including the known-required S6E3FA5 panel setting. This failure does not test the audio hypothesis.
+Uncertainties: The helper has not run on hardware. It intentionally checks exported mixer controls before setting routes; the exact PCM device IDs are discovered from /proc/asound/pcm rather than assumed. Speaker output and AMIC4 capture need hardware evidence, including post-suspend/resume repetition, before any acceptance claim.
+Recommended next experiment: The corrected preparation script now starts from the tracked `v612-v74strict-full.config`, whose only normalized difference from the OP3-BOOT-042 own-DTB configuration is `CONFIG_DRM_MSM_VALIDATE_XML`. Rebuild Image.gz and DTB, regenerate the unchanged minimal appended archive, pack, and transient-boot. The launcher automatically runs `route.sh diagnose` and persists the result at `/newroot/var/log/op3-audio-initramfs.log`; no sda15/rootfs change is made. Only if the card and MultiMedia3 PCMs exist, use owner-directed `route.sh speaker` plus 30-second tinyplay, then `route.sh mic` and 48 kHz/16-bit/mono tinycap.
 ```
