@@ -22,6 +22,8 @@ Rootfs staging: PASS (owner-run, 2026-08-31). `BR2_PACKAGE_TINYALSA=y` and `BR2_
 
 Initramfs generator self-test: PASS (agent-run, temporary path only). The first generator revision falsely rejected existing TinyALSA entries because `grep -q` closed a pipe under `pipefail`, causing `cpio` to report SIGPIPE. The corrected generator first materializes the archive listing, then checks it. It successfully appended `opt/op3-audio/route.sh` and `sbin/run_recovery.sh` to the firmware-provenance reference archive; no project artifact was created or overwritten during this self-test.
 
+Minimal diagnostic packaging: PASS (owner-run, 2026-09-02). The corrected generator produced `artifacts/initrd-op3-audio-diagnostic.cpio.gz`, SHA256 `7cb3c3442317d89dba7727e5b82a3565146d7f330b2502e5081858c5bff0e206`. Packing that archive with the documented audio `Image.gz` and own DTB produced `artifacts/boot-oneplus3-pmos612-own-dtb-audio-diagnostic.img`, SHA256 `de2fbaf6ac491784b248eb0d8dce15da74e78596667be1066db1a78d5643c87c`. This establishes artifact assembly only; it is not a device boot, ALSA, playback, or capture result.
+
 Device test run by project owner: NOT_RUN
 Device result: NOT_RUN
 Evidence links / log paths: Collect /newroot/var/log/op3-audio-route.log, `cat /proc/asound/cards`, `cat /proc/asound/pcm`, and the matching `dmesg` ADSP/APR/SLIM/WCD9335 lines.
