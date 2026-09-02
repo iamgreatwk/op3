@@ -427,6 +427,31 @@ tests/browser/README.md (deploy-bundle.sh ONLY, manifest-verified).
 Known-good reference bundle: artifacts/op3-browser-bundle-tls.tar.gz
 (sha 40346b44..., pre-WebDriver webkit lib sha 76ff1afd...).
 
+## Page-display verification PASS (2026-09-02, owner request)
+
+Owner-requested check (no automation): boot the 6.12 browser-net image,
+switch the session URL to the JNU system (TARGET_URL from private
+local/jnu/config.json, written to the bundle's op3-url file) and verify the
+page displays.
+
+```text
+battery: 77%, status Discharging (RNDIS data cable does not charge)
+jw.jnu.edu.cn → CAS redirect → icas.jnu.edu.cn/cas/login
+Loaded successfully in ~4.5 s
+owner: landscape display normal, page (Chinese login form) renders correctly
+```
+
+Notes:
+- This time the same CAS page loaded in 4.5 s — the earlier >10 min hang of
+  the identical webkit build happened with the battery in a worse state,
+  consistent with the power attribution (the dirclean-rebuild
+  byte-identical library rules out the build).
+- The RNDIS data connection does NOT charge the phone (bq27541 status
+  Discharging with USB online) — long test sessions need a real charger.
+- Next pending task: full collection flow (slider login → iframe scrape →
+  parse → feishu) with the battery verified charging; collector
+  `local/jnu/jnu_collect.py` is ready with tolerant polling.
+
 ## Design notes
 
 - The Wi-Fi CLI (`/newroot/opt/op3-wifi/wifi auto`) already performs module
