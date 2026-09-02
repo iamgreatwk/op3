@@ -15,7 +15,7 @@
 #
 #   cp buildroot/op3-browser-x86-pc.defconfig source/buildroot/configs/op3_browser_x86_pc_defconfig
 #   make -C source/buildroot O=$PWD/out/buildroot-x86-pc op3_browser_x86_pc_defconfig
-#   make -C source/buildroot O=$PWD/out/buildroot-x86-pc BR2_JLEVEL=8
+#   make -C source/buildroot O=$PWD/out/buildroot-x86-pc
 #
 # Run (after the build):
 #   weston (from apt) or the desktop's own Wayland session provides the display
@@ -28,7 +28,10 @@ BR2_TOOLCHAIN_BUILDROOT_GLIBC=y
 
 BR2_TARGET_ROOTFS_TAR=y
 
-BR2_JLEVEL=8
+# JLEVEL=3 on purpose: this 15GB-RAM host froze to a desktop logout when WPE
+# was built with high parallelism (owner observed). 3 matches the proven
+# device defconfig. Build takes longer but does not OOM.
+BR2_JLEVEL=3
 BR2_CCACHE=y
 
 # Software GL: llvmpipe pulls LLVM (X86 target arch only, see llvm.mk), which
