@@ -71,7 +71,7 @@ diagnose() {
 	cat /proc/asound/cards >>"$LOG" 2>&1 || true
 	cat /proc/asound/pcm >>"$LOG" 2>&1 || true
 	log "relevant mixer controls:"
-	tinymix -D 0 controls | grep -E 'MultiMedia3|QUAT_MI2S|SLIMBUS_0_TX|SLIM TX4|ADC MUX4|ADC4' \
+	tinymix -D 0 controls | grep -E 'MultiMedia3|QUAT_MI2S|SLIMBUS_0_TX|SLIM TX4|AIF1_CAP|ADC MUX4|ADC4' \
 		>>"$LOG" 2>&1 || true
 	if [ ! -e /dev/snd/controlC0 ]; then
 		log "missing /dev/snd/controlC0"
@@ -89,11 +89,12 @@ speaker() {
 
 mic() {
 	need tinymix
-	# AMIC4 -> ADC4/DEC4 -> SLIM TX4 -> SLIMBUS_0_TX -> MultiMedia3 capture.
-	set_control_any AMIC4 "ADC MUX4" "ADC MUX4 Mux"
-	set_control_any DEC4 "SLIM TX4 MUX" "SLIM TX4 MUX Mux"
-	set_control "SLIM TX4" 1
-	set_control "SLIMBUS_0_TX Audio Mixer MultiMedia3" 1
+	# AMIC4 -> ADC4/DEC4 -> SLIM TX4 -> AIF1_CAP -> MultiMedia3 capture.
+	# These names and enum values are read from the OP3-AUDIO-004 device.
+	set_control "ADC MUX4" AMIC
+	set_control "SLIM TX4 MUX" DEC4
+	set_control "AIF1_CAP Mixer SLIM TX4" 1
+	set_control "MultiMedia3 Mixer SLIMBUS_0_TX" 1
 }
 
 case "${1:-diagnose}" in
