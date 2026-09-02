@@ -12,3 +12,5 @@
 
 # Privacy: local-only content (credentials, scraping), never push.
 /local/
+
+__pycache__/

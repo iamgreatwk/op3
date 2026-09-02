@@ -124,13 +124,18 @@ echo "weston ready: $WAYLAND_DISPLAY" >> "$LOG"
 # browser in automation mode; the automation channel is the WebKit remote
 # inspector server that WPEWebDriver connects to via --target.
 export WEBKIT_INSPECTOR_SERVER=127.0.0.1:9222
+# Render the page at a reduced resolution for speed: cog --device-scale < 1
+# makes WebKit paint a smaller buffer that the compositor upscales.
+# 0.6667 on the rotated 1920x1080 output = 1280x720 page buffer.
+COG_DSF=${COG_DSF:-1}
 $L --library-path $P $B/usr/bin/cog --platform=wl --automation \
+	--device-scale=$COG_DSF \
 	https://www.baidu.com > "$XDG_RUNTIME_DIR/cog.log" 2>&1 &
 sleep 6
 grep -E "automation|Automation|Loaded|error" "$XDG_RUNTIME_DIR/cog.log" | tail -4 >> "$LOG"
 
 # WebDriver daemon, reachable from the PC (host=all)
-$L --library-path $P $B/usr/bin/WPEWebDriver --port=7000 --host=all \
+$L --library-path $P $B/usr/bin/WPEWebDriver --port=7000 --host=all --replace-on-new-session \
 	-t 127.0.0.1:9222 > /tmp/webdriver.log 2>&1 &
 sleep 2
 echo "webdriver started" >> "$LOG"
