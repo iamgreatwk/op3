@@ -282,6 +282,31 @@ repo `https://github.com/iamgreatwk/cogwebauto` (branch `main`): collector
 nested git repo at `local/jnu/.git` is their version control. Excluded from
 the private repo: `site-packages/`, `wheels/`, `__pycache__/`, `out/`.
 
+## Device test result + PC comparison rig (2026-09-02, second session)
+
+Full-flow device test (charged, fastboot boot browser-net img, rotate-270
+confirmed in weston log): yidun slider drag PASSED (owner saw the green
+verify-success mark), script filled un/pd and clicked login; during the
+post-login redirect the browser showed an error page (owner description:
+a "no path / route"-style load error). After that the CAS form was back
+empty. All device processes were then stopped (collector + browser stack,
+0 residual, GPU control=auto).
+
+Owner directive: STOP debugging on the phone. Build a PC comparison rig
+with the SAME engine versions and validate the whole flow there first:
+
+- `buildroot/op3-browser-x86-pc.defconfig` (committed): x86_64 buildroot
+  with the SAME pins as the device (WPE WebKit 2.50.5, cog 0.18.5,
+  WPEWebDriver), llvmpipe software GL for a self-contained stack. Output:
+  `out/buildroot-x86-pc`. Build running (nohup, /tmp/buildroot-x86-pc.log).
+- `local/jnu/op3-pc-rig.sh` (private): up/down/collect/log. Prefers the
+  desktop's native GNOME Wayland session for cog (no weston install
+  needed); falls back to nested distro weston. System python3 already has
+  requests+bs4 for the collector.
+- PC-rig rule: the JNU flow (slider login incl. the redirect-failure step)
+  must PASS on the rig before any device attempt; one device session per
+  validated change only, then `op3-deploy.sh stop`.
+
 ## Device heat protocol (owner directive, 2026-09-02)
 
 The browser stack (weston + cog + forced-on GPU) was left running during

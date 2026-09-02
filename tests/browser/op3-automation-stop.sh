@@ -8,7 +8,7 @@
 # (device heat + battery drain, see docs/handoff heat protocol).
 for p in /proc/[0-9]*; do
 	[ "$p" = "/proc/$$" ] && continue
-	c=$(tr '\0' ' ' < "$p/cmdline" 2>/dev/null)
+	c=$(tr '\0' ' ' < "$p/cmdline" 2>/dev/null) || continue
 	case "$c" in
 		*"/usr/bin/weston "*|*"/usr/bin/cog "*|*"/usr/bin/WPEWebDriver"*|*"/usr/libexec/wpe-webkit-2.0/"*|*"/usr/libexec/weston-"*|*"/usr/bin/dbus-daemon "*|*"/sbin/udevd "*)
 			kill -9 "${p#/proc/}" 2>/dev/null ;;
