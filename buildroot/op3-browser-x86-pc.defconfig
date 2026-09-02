@@ -43,6 +43,15 @@ BR2_CCACHE=y
 BR2_PACKAGE_MESA3D=y
 BR2_PACKAGE_MESA3D_LLVM=y
 BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_LLVMPIPE=y
+# Host GPU is AMD: radeonsi provides the dri2-wayland path that
+# EGL_WL_bind_wayland_display needs (WPEBackend-fdo hard requirement; llvmpipe
+# surfaceless lacks it and cog aborts with "Could not instantiate any WPE
+# backend", observed 2026-09-03).
+BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_RADEONSI=y
+# radeonsi needs LLVM with the AMDGPU backend (llvm.mk adds AMDGPU to
+# LLVM_TARGETS_TO_BUILD only when this is set); without it mesa configure
+# fails at "Subproject llvm is buildable: NO".
+BR2_PACKAGE_LLVM_AMDGPU=y
 BR2_PACKAGE_MESA3D_OPENGL_EGL=y
 BR2_PACKAGE_MESA3D_OPENGL_ES=y
 
