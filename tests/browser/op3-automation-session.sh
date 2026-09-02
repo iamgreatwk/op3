@@ -128,9 +128,12 @@ export WEBKIT_INSPECTOR_SERVER=127.0.0.1:9222
 # makes WebKit paint a smaller buffer that the compositor upscales.
 # 0.6667 on the rotated 1920x1080 output = 1280x720 page buffer.
 COG_DSF=${COG_DSF:-1}
+# Target URL: first script argument overrides the default.
+PAGE_URL=${1:-https://www.baidu.com}
+echo "page url: $PAGE_URL" >> "$LOG"
 $L --library-path $P $B/usr/bin/cog --platform=wl --automation \
 	--device-scale=$COG_DSF \
-	https://www.baidu.com > "$XDG_RUNTIME_DIR/cog.log" 2>&1 &
+	"$PAGE_URL" > "$XDG_RUNTIME_DIR/cog.log" 2>&1 &
 sleep 6
 grep -E "automation|Automation|Loaded|error" "$XDG_RUNTIME_DIR/cog.log" | tail -4 >> "$LOG"
 
