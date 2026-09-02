@@ -271,6 +271,17 @@ steps + charging-check protocol: "Handover state (2026-09-02)" section of
 - 6.16.12 worktree: `source/linux-pmos-msm8996-6.16` (tag `v6.16.12-msm8996`)
 - v74 DTB: `out/pmos-msm8996-6.3.1-v74full/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dtb` (73383 bytes, `463b2c72...`)
 - Panel driver source: `source/linux-mainline-6.4/drivers/gpu/drm/panel/panel-samsung-s6e3fa5.c`
+## Privacy-scraping content lives in a PRIVATE repo (2026-09-02)
+
+All JNU/credential-bearing web-scraping assets are versioned in the private
+repo `https://github.com/iamgreatwk/cogwebauto` (branch `main`): collector
+(`jnu_collect.py` incl. yidun-aware humanized login flow), parser
+(`parse_table_to_json_v2.py`), credentials (`config.json`), deploy tooling
+(`op3-deploy.sh`) and the xlsx templates. In THIS repo they stay under
+`local/` which is gitignored - NEVER commit them to any public branch; the
+nested git repo at `local/jnu/.git` is their version control. Excluded from
+the private repo: `site-packages/`, `wheels/`, `__pycache__/`, `out/`.
+
 ## Device heat protocol (owner directive, 2026-09-02)
 
 The browser stack (weston + cog + forced-on GPU) was left running during
