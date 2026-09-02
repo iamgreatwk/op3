@@ -1,0 +1,36 @@
+From 955ea0e962134ad27b0fd6fc9b6945c6ffce4817 Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Wed, 2 Sep 2026 17:50:10 +0800
+Subject: [PATCH] arm64: dts: qcom: oneplus3: disable unavailable q6asm links
+
+
+diff --git a/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts b/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts
+index 80f7b705b48d..abcc43f77bde 100644
+--- a/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts
++++ b/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts
+@@ -54,3 +54,25 @@ &panel {
+        /* Root cause fix: OnePlus 3 is S6E3FA5. */
+        compatible = "samsung,s6e3fa5";
+ };
++
++/*
++ * The q6asm provider declares only MultiMedia1 through MultiMedia3.  The
++ * generic MSM8996 OnePlus card also declares MultiMedia4 through MultiMedia16;
++ * qcom/common.c tries every available link, so its first missing provider DAI
++ * aborts card registration before the valid MultiMedia3 path can exist.
++ */
++&sound {
++	mm4-dai-link { status = "disabled"; };
++	mm5-dai-link { status = "disabled"; };
++	mm6-dai-link { status = "disabled"; };
++	mm7-dai-link { status = "disabled"; };
++	mm8-dai-link { status = "disabled"; };
++	mm9-dai-link { status = "disabled"; };
++	mm10-dai-link { status = "disabled"; };
++	mm11-dai-link { status = "disabled"; };
++	mm12-dai-link { status = "disabled"; };
++	mm13-dai-link { status = "disabled"; };
++	mm14-dai-link { status = "disabled"; };
++	mm15-dai-link { status = "disabled"; };
++	mm16-dai-link { status = "disabled"; };
++};

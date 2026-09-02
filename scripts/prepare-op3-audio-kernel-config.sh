@@ -22,11 +22,11 @@ test -f "$base_config"
 
 source_commit="$(git -C "$kernel_source" rev-parse HEAD)"
 case "$source_commit" in
-  "$TARGET_KERNEL_COMMIT"|91df7ccd284e5c62c5aed13c2738192b96c1f8dd)
+  "$TARGET_KERNEL_COMMIT"|91df7ccd284e5c62c5aed13c2738192b96c1f8dd|955ea0e962134ad27b0fd6fc9b6945c6ffce4817)
     ;;
   *)
     printf 'Refusing unexpected kernel source commit: %s\n' "$source_commit" >&2
-    printf 'Expected baseline %s or the documented own-DTB commit 91df7ccd.\n' \
+    printf 'Expected baseline %s, own-DTB 91df7ccd, or audio-DTS 955ea0e.\n' \
       "$TARGET_KERNEL_COMMIT" >&2
     exit 1
     ;;

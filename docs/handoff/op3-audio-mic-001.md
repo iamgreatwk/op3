@@ -5,7 +5,7 @@ Task / GitHub Issue: https://github.com/iamgreatwk/op3/issues/5
 Role: Implementation
 Baseline commit: 67b0bbc3cbf46bae712a2606a43361756fcbd829
 Working branch: agent/implementation/op3-audio-mic-001
-Changed files: kernel/configs/oneplus3-audio.fragment; kernel/configs/pmos631/v612-v74strict-full.config (existing boot-proven base); scripts/prepare-op3-audio-kernel-config.sh; scripts/stage-op3-audio-rootfs.sh; boot/audio-test/opt/op3-audio/route.sh; this handoff
+Changed files: kernel/configs/oneplus3-audio.fragment; kernel/configs/pmos631/v612-v74strict-full.config (existing boot-proven base); scripts/prepare-op3-audio-kernel-config.sh; scripts/stage-op3-audio-rootfs.sh; boot/audio-test/opt/op3-audio/route.sh; patches/pmos612-op3-audio/; this handoff
 Commit SHA: 2cc781600b01b18fbf0a21e394b8bb805577feee (audio integration assets)
 
 Layer: Audio integration
@@ -33,6 +33,7 @@ Device result: The first defconfig image failed the boot gate. The corrected ima
 Evidence links / log paths: Owner terminal output: `/newroot/var/log/op3-audio-initramfs.log`, `/proc/asound/cards`, `/proc/asound/pcm`, and filtered dmesg. The missing `/newroot/var/log/op3-audio-route.log` is expected because `route.sh diagnose` aborted before it could open a mixer.
 
 Conclusion: The defconfig-based preparation method is rejected for this task; it changed 6071 normalized configuration lines relative to the boot-proven own-DTB configuration, including the known-required S6E3FA5 panel setting. With that corrected, the audio hypothesis reaches a DTS-topology blocker: the compiled DTB's `q6asmdai` provider exports only DAI IDs 0–2 (MultiMedia1–3), while the available machine-card children include MultiMedia4–16. `qcom/common.c` iterates every available child and aborts at the first unavailable DAI, MultiMedia4. This is why all otherwise-ready audio components load but no card registers.
-Uncertainties: A DTS change is outside the Issue's originally declared `DTS unchanged` variable. The minimal candidate is to disable the unused `mm4-dai-link` through `mm16-dai-link`, preserving MultiMedia1–3 and the requested MultiMedia3 playback/capture path. Speaker output and AMIC4 capture remain untested.
-Recommended next experiment: Obtain explicit scope approval for an audio-DTS topology correction, then disable only MultiMedia4–16 links, rebuild the DTB and pack it with the presently boot-proven Image.gz and diagnostic initramfs. This is a new one-variable DTS test; no route, rootfs, or kernel configuration change should accompany it.
+Authorized DTS correction: The owner authorized the audio-DTS topology correction on 2026-09-02. Kernel-source commit `955ea0e962134ad27b0fd6fc9b6945c6ffce4817` disables only `mm4-dai-link` through `mm16-dai-link` in the OnePlus 3 board DTS. MultiMedia1–3, including the requested MultiMedia3 route, and all back-end links remain enabled. The source commit is also archived as `patches/pmos612-op3-audio/0001-arm64-dts-qcom-oneplus3-disable-unavailable-q6asm-links.patch`.
+Uncertainties: This DTS correction has static source review only; device result remains NOT_RUN. Speaker output and AMIC4 capture remain untested.
+Recommended next experiment: From source commit `955ea0e`, build only `dtbs`, pack its DTB with the presently boot-proven Image.gz and unchanged diagnostic initramfs, and transient-boot. This is a new one-variable DTS test; no route, rootfs, or kernel configuration change should accompany it.
 ```
