@@ -9,8 +9,11 @@ parser aborts at the first available link whose CPU DAI cannot be resolved.
 MultiMedia1–3, including the requested MultiMedia3 route, and all back-end
 links remain enabled. `0002` replaces only the board's audio-routing property,
 dropping three generic external-microphone endpoints that have no widget
-declarations; it preserves AMIC2/4/5 to MIC BIAS2/1/3 codec routes.
+declarations; it preserves AMIC2/4/5 to MIC BIAS2/1/3 codec routes. `0003`
+moves only the `div1_mclk` GPIO-gated codec-MCLK provider from root to `&soc`,
+so the `gpio-clk` platform driver instantiates it. Its RPM parent clock,
+GPIO15 gate, pinctrl state, other clocks and all audio routes are unchanged.
 
 The corresponding committed source state is
-`401a5673192be4239aecfddb5594f254d3d3e2a2` on branch
+`0591945aa3ddcc43e3fc2423e52e912462f65346` on branch
 `agent/implementation/op3-audio-mic-001` in the dedicated kernel worktree.

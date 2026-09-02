@@ -1,0 +1,54 @@
+From 0591945aa3ddcc43e3fc2423e52e912462f65346 Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Wed, 2 Sep 2026 18:32:48 +0800
+Subject: [PATCH] arm64: dts: qcom: oneplus3: instantiate codec MCLK gate
+
+---
+ .../boot/dts/qcom/msm8996-oneplus-common.dtsi | 24 ++++++++++++-------
+ 1 file changed, 15 insertions(+), 9 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi b/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi
+index b1917510da58..ebbac854c900 100644
+--- a/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi
++++ b/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi
+@@ -29,15 +29,6 @@ chosen {
+ 		stdout-path = "serial1:115200n8";
+ 	};
+ 
+-	div1_mclk: div1-clk {
+-		compatible = "gpio-gate-clock";
+-		pinctrl-names = "default";
+-		pinctrl-0 = <&audio_mclk>;
+-		#clock-cells = <0>;
+-		clocks = <&rpmcc RPM_SMD_DIV_CLK1>;
+-		enable-gpios = <&pm8994_gpios 15 GPIO_ACTIVE_HIGH>;
+-	};
+-
+ 	divclk4: div4-clk {
+ 		compatible = "fixed-clock";
+ 		pinctrl-names = "default";
+@@ -82,6 +73,21 @@ wlan_en: wlan-en-regulator {
+ 	};
+ };
+ 
++/*
++ * GPIO-gated codec MCLK must be a platform device so the gpio-clk driver
++ * instantiates it and can gate PM8994 GPIO15 for the WCD9335.
++ */
++&soc {
++	div1_mclk: div1-clk {
++		compatible = "gpio-gate-clock";
++		pinctrl-names = "default";
++		pinctrl-0 = <&audio_mclk>;
++		#clock-cells = <0>;
++		clocks = <&rpmcc RPM_SMD_DIV_CLK1>;
++		enable-gpios = <&pm8994_gpios 15 GPIO_ACTIVE_HIGH>;
++	};
++};
++
+ &blsp1_i2c3 {
+ 	status = "okay";
+ 
+-- 
+2.53.0
+
