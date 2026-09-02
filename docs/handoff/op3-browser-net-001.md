@@ -452,6 +452,34 @@ Notes:
   parse → feishu) with the battery verified charging; collector
   `local/jnu/jnu_collect.py` is ready with tolerant polling.
 
+## JNU CAS login PASS (2026-09-02): the slider gate was the only blocker
+
+On the live automation session the owner completed the yidun slider on the
+touchscreen, then the script filled #un/#pd via per-char KeyboardEvent
+injection and programmatically clicked the visible input[type=button]
+(1404,425). Result: CAS redirected back to jw.jnu.edu.cn and the page
+marker "排课管理" appeared — **login PASS**.
+
+Findings:
+- The earlier silent button refusal was the yidun captcha gate, not the
+  event model: before the slider verification the page ignores the login
+  button entirely (no error, no navigation).
+- Touch input on the device is fully functional for this page: slider drag
+  trajectory reached the widget, taps produce correct
+  touchstart/touchend/mousedown/mouseup/click chains (documented via a
+  capture-phase event probe).
+- The hidden rsa/ul/pl fields stay empty even after key-event injection —
+  the server accepts the plain form values, so client-side encryption is
+  not required for this flow.
+- Tolerant polling (try/except per execute/sync) is REQUIRED: during
+  user interaction the page navigates and sync calls fail with
+  "no such frame / unload event" 404s.
+
+Next: the collection flow (全校教室总课表 tab → semester/building dropdowns
+→ query → iframe table.x-table → parse_table_to_json_v2 → feishu) can run
+against the live logged-in session (d8d8ae42…, the browser holds the
+authenticated cookies).
+
 ## Design notes
 
 - The Wi-Fi CLI (`/newroot/opt/op3-wifi/wifi auto`) already performs module
