@@ -13,7 +13,10 @@ declarations; it preserves AMIC2/4/5 to MIC BIAS2/1/3 codec routes. `0003`
 moves only the `div1_mclk` GPIO-gated codec-MCLK provider from root to `&soc`,
 so the `gpio-clk` platform driver instantiates it. Its RPM parent clock,
 GPIO15 gate, pinctrl state, other clocks and all audio routes are unchanged.
+`0004` adds only the `MIC BIAS1` to `MCLK` route needed by the AMIC4 capture
+path. This lets the already-instantiated `div1_mclk` provider be requested by
+the active MIC BIAS1 DAPM path; AMIC2/5 and every other route remain unchanged.
 
 The corresponding committed source state is
-`0591945aa3ddcc43e3fc2423e52e912462f65346` on branch
+`0ba6a5392f169d9f5cb0dd860b9bcc076516d5d3` on branch
 `agent/implementation/op3-audio-mic-001` in the dedicated kernel worktree.
