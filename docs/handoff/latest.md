@@ -271,6 +271,45 @@ steps + charging-check protocol: "Handover state (2026-09-02)" section of
 - 6.16.12 worktree: `source/linux-pmos-msm8996-6.16` (tag `v6.16.12-msm8996`)
 - v74 DTB: `out/pmos-msm8996-6.3.1-v74full/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dtb` (73383 bytes, `463b2c72...`)
 - Panel driver source: `source/linux-mainline-6.4/drivers/gpu/drm/panel/panel-samsung-s6e3fa5.c`
+## PC rig: JNU login PASS; collection dropdown findings (2026-09-03)
+
+PC comparison rig (buildroot x86_64, same WPE 2.50.5/cog 0.18.5 pins) is
+OPERATIONAL after fixing a chain of rig-only issues, and the JNU login
+flow PASSED end-to-end on it:
+
+- slider (human) -> yidun-gone detection -> human pause -> key-event fill ->
+  pause -> programmatic login click -> CAS redirect -> 排课管理 marker:
+  **PASS on PC**. The redirect-load-error seen on the device did NOT
+  reproduce on the PC -> that failure is device/network-specific, not a
+  flow bug. Device attempt can proceed once the collection step is fixed.
+- Rig fixes landed in `local/jnu/op3-pc-rig.sh` (pushed to cogwebauto):
+  `COG_MODULEDIR` (cog looks for platform modules at compiled-in
+  /usr/lib/cog/modules), `GIO_MODULE_DIR` (glib TLS module; without it
+  every https page shows the device-era "TLS not supported" error),
+  XDG_RUNTIME_DIR must be the DESKTOP SESSION's /run/user/<uid> (cog's
+  check_supported() does wl_display_connect(NULL); a rig-private
+  XDG_RUNTIME_DIR makes that fail -> wl platform reports "not supported"),
+  libWPEBackend-default.so symlink to the fdo backend.
+- Rebuild chain this session (all committed): MESA3D_LLVM explicit
+  (kconfig silently dropped llvmpipe->EGL/GLES->wpewebkit otherwise),
+  CAIRO for cog's wayland platform, libdrm re-dirclean (same incremental
+  trap), LLVM AMDGPU backend needed for radeonsi, host-llvm dirclean
+  (llvm-dirclean does NOT rebuild the host variant; mesa consults the
+  STALE host llvm-config via sysroot). Verified: probe shows
+  `bind-wayland-display: YES` (WPEBackend-fdo requirement).
+- Collection step findings (page DOM, live session): the 学期 select is
+  jqxDropDownList (already correct value, can be skipped); 教室分类
+  (JSFLDM) is emap multi-select2 wrapping jqxDropDownList. Position-based
+  xpaths from the old Playwright flow do NOT match this DOM. JS-synthetic
+  el.click() and jqxDropDownList('selectItem') do NOT register item
+  selection; emap harvests the selection on the jqx 'close' event
+  (handlers on wrapper: close x2, open, keydown/focus/blur). Next step:
+  open via jqxDropDownList('open') (works), select items by their native
+  mousedown path (WebDriver native click on .jqx-item needs position
+  verification), then trigger 'close' and verify the hidden input value,
+  then fill 教室名称 (番禺教学大楼2) and click 查询 -> iframe table ->
+  parse -> feishu.
+
 ## Privacy-scraping content lives in a PRIVATE repo (2026-09-02)
 
 All JNU/credential-bearing web-scraping assets are versioned in the private
