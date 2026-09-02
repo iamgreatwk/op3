@@ -1,0 +1,27 @@
+From 401a5673192be4239aecfddb5594f254d3d3e2a2 Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Wed, 2 Sep 2026 17:55:00 +0800
+Subject: [PATCH] arm64: dts: qcom: oneplus3: keep valid audio routes
+
+
+diff --git a/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts b/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts
+index abcc43f77bde..4fee37f41728 100644
+--- a/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts
++++ b/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts
+@@ -62,6 +62,16 @@ &panel {
+  * aborts card registration before the valid MultiMedia3 path can exist.
+  */
+ &sound {
++	/*
++	 * The generic include names external microphone widgets that this card does
++	 * not declare.  Keep the valid codec-side AMIC-to-bias routes only: ASoC
++	 * otherwise rejects the whole card while parsing any unresolved endpoint.
++	 */
++	audio-routing = "RX_BIAS", "MCLK",
++			"AMIC2", "MIC BIAS2",
++			"AMIC4", "MIC BIAS1",
++			"AMIC5", "MIC BIAS3";
++
+ 	mm4-dai-link { status = "disabled"; };
+ 	mm5-dai-link { status = "disabled"; };
+ 	mm6-dai-link { status = "disabled"; };
