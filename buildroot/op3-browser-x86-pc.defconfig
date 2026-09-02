@@ -1,0 +1,57 @@
+# Buildroot defconfig for the PC comparison rig (x86_64 host).
+#
+# Purpose: run the EXACT SAME browser stack as the OP3 device bundle
+# (WPE WebKit 2.50.5 + cog 0.18.5 + WPEWebDriver, same buildroot pins) on
+# the development PC, so the JNU scraping flow is validated on the PC
+# before every device test (owner directive 2026-09-02: stop debugging on
+# the phone, use a PC comparison rig).
+#
+# Differences vs buildroot/op3-browser.defconfig:
+#   - x86_64 target, glibc toolchain (same as device otherwise)
+#   - Mesa with llvmpipe (software GL, self-contained - no host lib mixing,
+#     which risks split libwayland-client ABI issues with WPEBackend-fdo)
+#   - no weston (the PC runs the distro weston from apt), no udev/seatd,
+#     no device helpers (dropbear/strace)
+#
+#   cp buildroot/op3-browser-x86-pc.defconfig source/buildroot/configs/op3_browser_x86_pc_defconfig
+#   make -C source/buildroot O=$PWD/out/buildroot-x86-pc op3_browser_x86_pc_defconfig
+#   make -C source/buildroot O=$PWD/out/buildroot-x86-pc BR2_JLEVEL=8
+#
+# Run (after the build):
+#   weston (from apt) or the desktop's own Wayland session provides the display
+#   LD_LIBRARY_PATH=out/buildroot-x86-pc/target/usr/lib cog --platform=wl ...
+
+BR2_x86_64=y
+BR2_TOOLCHAIN_BUILDROOT_CXX=y
+BR2_INSTALL_LIBSTDCPP=y
+BR2_TOOLCHAIN_BUILDROOT_GLIBC=y
+
+BR2_TARGET_ROOTFS_TAR=y
+
+BR2_JLEVEL=8
+BR2_CCACHE=y
+
+# Software GL: llvmpipe pulls LLVM (X86 target arch only, see llvm.mk), which
+# is the long pole of this build; keep it enabled for a self-contained stack.
+BR2_PACKAGE_MESA3D=y
+BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_LLVMPIPE=y
+BR2_PACKAGE_MESA3D_OPENGL_EGL=y
+BR2_PACKAGE_MESA3D_OPENGL_ES=y
+
+BR2_PACKAGE_LIBDRM=y
+BR2_PACKAGE_SHARED_MIME_INFO=y
+BR2_PACKAGE_DEJAVU=y
+
+# The browser stack (same pins as the device defconfig).
+BR2_PACKAGE_WPEWEBKIT=y
+BR2_PACKAGE_WPEWEBKIT_WEBDRIVER=y
+BR2_PACKAGE_COG=y
+
+BR2_PACKAGE_GLIB_NETWORKING=y
+BR2_PACKAGE_CA_CERTIFICATES=y
+
+# Collection runtime for the PC rig (same collector script as the device).
+BR2_PACKAGE_PYTHON3=y
+BR2_PACKAGE_PYTHON3_SSL=y
+BR2_PACKAGE_PYTHON3_ZLIB=y
+BR2_PACKAGE_PYTHON3_CODECSCJK=y
