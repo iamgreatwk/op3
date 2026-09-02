@@ -388,6 +388,45 @@ Battery state during the final run: USB connected (RNDIS), capacity read
 80 % earlier in the session; resets observed earlier were traced to a low
 battery (see Run F) — keep the charger connected for long automation runs.
 
+## Handover state (2026-09-02, to the next agent)
+
+Everything on the device and host is deployed and ready. The ONLY pending
+verification is stability of the page display on the current (byte-clean,
+dirclean-rebuilt) webkit build, with the battery actually charging.
+
+Immediate next steps (in order):
+
+1. CHARGING CHECK (mandatory, power is the primary crash suspect):
+   `cat /sys/class/power_supply/bq27541-0/capacity` twice, 60 s apart -
+   capacity must RISE and status must be "Charging". The RNDIS data cable
+   alone may not charge; use a powered connection. Do not test until this
+   passes.
+2. Boot: `fastboot boot artifacts/boot-oneplus3-pmos612-own-dtb-browser-net.img`
+   (bundle tag `webdriver-final` already on sda15 via the symlink
+   /newroot/opt/op3-browser -> op3-browser.webdriver-final/opt/op3-browser;
+   includes python3+SSL+ZLIB+CJK, WPEWebDriver, CJK font, landscape
+   transform, TLS, clock step).
+3. Start the automation session (device-side):
+   `sh /tmp/automation.sh` - or re-push tests/browser/op3-automation-session.sh
+   first (device /tmp is volatile).
+4. Owner task (NO automation, per owner request): open the owner's target
+   page and check it displays normally. The URL is in the PRIVATE
+   `local/jnu/config.json` on the host (field target_url; credentials too -
+   local/jnu/ is gitignored, NEVER commit or push it). Navigate via the
+   WebDriver session (POST /session/{id}/url) or edit the URL in the
+   session script. Watch: does the page render, or does the renderer
+   hang/crash again (black screen)?
+5. Report: page rendered / renderer hang / crash, plus the battery readings
+   from step 1. If it hangs with charging verified, the next isolation
+   step is testing the old no-WebDriver webkit build (sha 76ff1afd, TLS
+   bundle) with plain navigation to isolate the WebDriver-enabled build.
+
+Context for the new agent: read this whole file; the pitfall list is
+docs/device-shell-compat.md; the deployment discipline is
+tests/browser/README.md (deploy-bundle.sh ONLY, manifest-verified).
+Known-good reference bundle: artifacts/op3-browser-bundle-tls.tar.gz
+(sha 40346b44..., pre-WebDriver webkit lib sha 76ff1afd...).
+
 ## Design notes
 
 - The Wi-Fi CLI (`/newroot/opt/op3-wifi/wifi auto`) already performs module

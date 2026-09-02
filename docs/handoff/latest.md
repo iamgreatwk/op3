@@ -222,6 +222,16 @@ run.sh default and the dbus session bus is started for `cogctl`/WebDriver;
 `BR2_PACKAGE_WPEWEBKIT_WEBDRIVER=y` is in the defconfig for the owner's
 Playwright-style automation (incremental rebuild in progress).
 
+Handover (2026-09-02): WebDriver transport verified end-to-end from the PC
+(session/navigate/element/JS-inject/data/screenshot — see
+`tests/browser/`); renderer intermittently crashes or hangs on heavy pages
+→ the "mixed objects" theory was REJECTED (dirclean rebuild is
+byte-identical to the reconfigure build) and POWER is the primary suspect;
+the landscape output default (rotate-90, 1920x1080) is live. Full handover
+steps + charging-check protocol: "Handover state (2026-09-02)" section of
+`docs/handoff/op3-browser-net-001.md`. Private collection assets
+(credentials) live in gitignored `local/jnu/` — never commit/push.
+
 ## Key artifacts
 
 - **OP3-INITRD-FW-001 PASS (OP3-BOOT-044, 2026-08-31)**: Issue #3's six
