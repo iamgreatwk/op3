@@ -304,7 +304,7 @@ WESTON_SHELL=${WESTON_SHELL:-kiosk-shell.so}
 #   rotate-180             = upside-down portrait
 # Must be passed via -c/--config: weston main() does not consult the
 # WESTON_CONFIG_FILE env var during config discovery (frontend/main.c).
-TRANSFORM=${WESTON_TRANSFORM:-rotate-90}
+TRANSFORM=${WESTON_TRANSFORM:-rotate-270}
 mkdir -p "$XDG_RUNTIME_DIR/weston-conf"
 cat > "$XDG_RUNTIME_DIR/weston-conf/weston.ini" <<EOF
 [output]

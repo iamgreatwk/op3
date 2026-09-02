@@ -95,7 +95,7 @@ fi
 #   rotate-90 / rotate-270 = landscape (pick by how you hold the phone)
 #   rotate-180             = upside-down portrait
 # Override with WESTON_TRANSFORM if the orientation is flipped.
-TRANSFORM=${WESTON_TRANSFORM:-rotate-90}
+TRANSFORM=${WESTON_TRANSFORM:-rotate-270}
 mkdir -p /tmp/weston-conf
 cat > /tmp/weston-conf/weston.ini <<EOF
 [output]

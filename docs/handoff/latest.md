@@ -271,4 +271,36 @@ steps + charging-check protocol: "Handover state (2026-09-02)" section of
 - 6.16.12 worktree: `source/linux-pmos-msm8996-6.16` (tag `v6.16.12-msm8996`)
 - v74 DTB: `out/pmos-msm8996-6.3.1-v74full/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dtb` (73383 bytes, `463b2c72...`)
 - Panel driver source: `source/linux-mainline-6.4/drivers/gpu/drm/panel/panel-samsung-s6e3fa5.c`
-- 6.19.5 kernel: `source/linux-pmos-msm8996-v6.19.5`, build `out/pmos-msm8996-6.19.5-v74strict`
+## Device heat protocol (owner directive, 2026-09-02)
+
+The browser stack (weston + cog + forced-on GPU) was left running during
+host-side code/debug cycles and cooked the phone. RULES:
+
+- After EVERY debug/test session on the device, kill the browser stack:
+  `tests/browser/op3-automation-stop.sh` (on device; kills weston/cog/
+  WPEWebDriver/webkit helpers/dbus/udevd, restores GPU runtime PM to auto,
+  fbcon takes the display back). Host shortcut: `local/jnu/op3-deploy.sh stop`.
+- Never leave the device-side session up "just in case" between host-side
+  code edits; restart it on demand (`op3-deploy.sh restart-session`).
+- Overheated / low-battery device: stop all device operations until it has
+  cooled down / recharged (reset-class failures must record battery state).
+
+## Screen orientation fix + JNU flow prepared (2026-09-02)
+
+- Owner confirmed the landscape rotation is 180 deg off: default
+  `WESTON_TRANSFORM` changed `rotate-90` -> `rotate-270` in BOTH
+  `boot/browser-test/opt/op3-browser/run.sh` and
+  `tests/browser/op3-automation-session.sh` (not yet deployed - device
+  cooling/recharging; deploy with `local/jnu/op3-deploy.sh deploy`).
+- JNU CAS login PASS recorded (slider gate was the only blocker; see
+  op3-browser-net-001.md). Anti-detection pacing added to
+  `local/jnu/jnu_collect.py`: yidun-disappear detection -> human pause ->
+  key-event fill -> pause -> programmatic login click -> human-paced
+  collection steps (random-jitter pauses via human_pause()); fixed
+  undefined `res`/`BUILDING_NAME` in main()/collect_rest().
+- New tooling: `tests/browser/op3-automation-stop.sh` (device stop script)
+  and `local/jnu/op3-deploy.sh` (host: deploy / restart-session / collect /
+  log / stop). Full-flow retest pending device cool-down + charge: deploy ->
+  restart-session -> collect -> owner slides slider on the (now correctly
+  oriented) touchscreen -> script fills/clicks -> collection -> feishu.
+
