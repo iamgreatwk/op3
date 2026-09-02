@@ -24,7 +24,7 @@ need() {
 }
 
 control_exists() {
-	tinymix "$1" >/dev/null 2>&1
+	tinymix -D 0 get "$1" >/dev/null 2>&1
 }
 
 set_control() {
@@ -34,8 +34,8 @@ set_control() {
 		log "required mixer control missing: $name"
 		exit 1
 	fi
-	log "tinymix $name $*"
-	tinymix "$name" "$@" >>"$LOG" 2>&1
+	log "tinymix -D 0 set $name $*"
+	tinymix -D 0 set "$name" "$@" >>"$LOG" 2>&1
 }
 
 # DAPM enum labels have changed formatting in past tinyalsa releases.  Try the
@@ -71,7 +71,7 @@ diagnose() {
 	cat /proc/asound/cards >>"$LOG" 2>&1 || true
 	cat /proc/asound/pcm >>"$LOG" 2>&1 || true
 	log "relevant mixer controls:"
-	tinymix | grep -E 'MultiMedia3|QUAT_MI2S|SLIMBUS_0_TX|SLIM TX4|ADC MUX4|ADC4' \
+	tinymix -D 0 controls | grep -E 'MultiMedia3|QUAT_MI2S|SLIMBUS_0_TX|SLIM TX4|ADC MUX4|ADC4' \
 		>>"$LOG" 2>&1 || true
 	if [ ! -e /dev/snd/controlC0 ]; then
 		log "missing /dev/snd/controlC0"
