@@ -36,7 +36,12 @@ BR2_CCACHE=y
 
 # Software GL: llvmpipe pulls LLVM (X86 target arch only, see llvm.mk), which
 # is the long pole of this build; keep it enabled for a self-contained stack.
+# NOTE: MESA3D_LLVM must be explicit - LLVMPIPE only *depends* on it, and
+# without it kconfig silently drops llvmpipe + OpenGL_ES/EGL, which in turn
+# drops wpewebkit/cog (HAS_LIBGLES/HAS_LIBEGL unmet) leaving a browser-less
+# rootfs that still "builds successfully" (observed 2026-09-02).
 BR2_PACKAGE_MESA3D=y
+BR2_PACKAGE_MESA3D_LLVM=y
 BR2_PACKAGE_MESA3D_GALLIUM_DRIVER_LLVMPIPE=y
 BR2_PACKAGE_MESA3D_OPENGL_EGL=y
 BR2_PACKAGE_MESA3D_OPENGL_ES=y
@@ -44,6 +49,9 @@ BR2_PACKAGE_MESA3D_OPENGL_ES=y
 BR2_PACKAGE_LIBDRM=y
 BR2_PACKAGE_SHARED_MIME_INFO=y
 BR2_PACKAGE_DEJAVU=y
+# cog's wayland platform needs cairo at build time; on the device defconfig
+# cairo is pulled in by weston demo clients, which this defconfig omits.
+BR2_PACKAGE_CAIRO=y
 
 # The browser stack (same pins as the device defconfig).
 BR2_PACKAGE_WPEWEBKIT=y
