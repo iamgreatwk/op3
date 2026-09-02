@@ -26,16 +26,22 @@ test ! -e "$output" || { printf 'Refusing to overwrite output: %s\n' "$output" >
 command -v cpio >/dev/null
 command -v gzip >/dev/null
 
+# Do not feed cpio directly into `grep -q`: with pipefail, grep's intentional
+# early exit closes the pipe and makes cpio report SIGPIPE as a false failure.
+runtime_entries="$(mktemp "${TMPDIR:-/tmp}/op3-audio-initrd-entries.XXXXXX")"
+trap 'rm -f "$runtime_entries"' EXIT
+gzip -dc "$reference" | cpio -it --quiet > "$runtime_entries"
+
 for required in usr/bin/tinycap usr/bin/tinymix usr/bin/tinyplay \
 	lib/ld-linux-aarch64.so.1 lib/libc.so.6 usr/lib/libtinyalsa.so.2; do
-	if ! gzip -dc "$reference" | cpio -it --quiet | grep -Fxq "$required"; then
+	if ! grep -Fxq "$required" "$runtime_entries"; then
 		printf 'Reference initramfs lacks required runtime entry: %s\n' "$required" >&2
 		exit 1
 	fi
 done
 
 workdir="$(mktemp -d "${TMPDIR:-/tmp}/op3-audio-initrd.XXXXXX")"
-trap 'rm -rf "$workdir"' EXIT
+trap 'rm -f "$runtime_entries"; rm -rf "$workdir"' EXIT
 stage="$workdir/stage"
 mkdir -p "$stage/sbin" "$stage/opt/op3-audio"
 install -m 0755 "$overlay_source/sbin/run_recovery.sh" "$stage/sbin/run_recovery.sh"
