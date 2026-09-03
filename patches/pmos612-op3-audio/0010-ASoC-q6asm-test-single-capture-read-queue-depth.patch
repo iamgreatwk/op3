@@ -1,0 +1,40 @@
+From 5d6b7c49c6839c38cff8235cef4983242298cd8a Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Thu, 3 Sep 2026 17:18:13 +0800
+Subject: [PATCH] ASoC: q6asm: test single capture read queue depth
+
+---
+ sound/soc/qcom/qdsp6/q6asm-dai.c | 10 ++++++----
+ 1 file changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/sound/soc/qcom/qdsp6/q6asm-dai.c b/sound/soc/qcom/qdsp6/q6asm-dai.c
+index e9bdf8da45a3..0466ab2e318c 100644
+--- a/sound/soc/qcom/qdsp6/q6asm-dai.c
++++ b/sound/soc/qcom/qdsp6/q6asm-dai.c
+@@ -219,7 +219,7 @@ static int q6asm_dai_prepare(struct snd_soc_component *component,
+ 	struct q6asm_dai_rtd *prtd = runtime->private_data;
+ 	struct q6asm_dai_data *pdata;
+ 	struct device *dev = component->dev;
+-	int ret, i;
++	int ret;
+ 
+ 	pdata = snd_soc_component_get_drvdata(component);
+ 	if (!pdata)
+@@ -289,9 +289,11 @@ static int q6asm_dai_prepare(struct snd_soc_component *component,
+ 							   runtime->channels,
+ 							   prtd->bits_per_sample);
+ 
+-		/* Queue the buffers */
+-		for (i = 0; i < runtime->periods; i++)
+-			q6asm_read(prtd->audio_client, prtd->stream_id);
++		/*
++		 * Diagnostic queue-depth A/B: keep one READ outstanding.  The
++		 * READ_DONE callback retains the normal one-for-one requeue.
++		 */
++		q6asm_read(prtd->audio_client, prtd->stream_id);
+ 
+ 	}
+ 	if (ret < 0)
+-- 
+2.53.0
+

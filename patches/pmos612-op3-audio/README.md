@@ -34,7 +34,11 @@ does not modify playback or the Q6ASM/DTS/mixer/firmware/userspace code.
 submission, immediately before the APR send. Together with `0007`, it exposes
 the ordering of initial queueing, requeueing and DSP READ_DONE packets without
 altering their buffer selection, cadence or handling.
+`0010` changes only the prepare-time capture queue depth from all negotiated
+periods to one. The existing READ_DONE callback still requeues one buffer, so
+this tests whether the premature-completion fault requires a full DSP ring.
+It is a diagnostic A/B only, not an accepted capture configuration.
 
 The corresponding committed source state is
-`f1c19271bba43adb609d5eaaf8613f884a7ff3a1` on branch
+`5d6b7c49c6839c38cff8235cef4983242298cd8a` on branch
 `agent/implementation/op3-audio-mic-001` in the dedicated kernel worktree.
