@@ -38,7 +38,13 @@ altering their buffer selection, cadence or handling.
 periods to one. The existing READ_DONE callback still requeues one buffer, so
 this tests whether the premature-completion fault requires a full DSP ring.
 It is a diagnostic A/B only, not an accepted capture configuration.
+`0011` retains that one-outstanding-read diagnostic and adds bounded pointer
+accounting logs only: the first 16 capture READ_DONE callbacks log their
+`pcm_irq_pos` increment, and the first 16 `.pointer` calls log their raw
+position, wrap decision, reset position and returned frame position. It does
+not change the queue, completion, PCM capability, DTS, mixer, firmware,
+initramfs or userspace behavior.
 
 The corresponding committed source state is
-`5d6b7c49c6839c38cff8235cef4983242298cd8a` on branch
+`9de073b8b144565db524c885eb7252335aaa933a` on branch
 `agent/implementation/op3-audio-mic-001` in the dedicated kernel worktree.
