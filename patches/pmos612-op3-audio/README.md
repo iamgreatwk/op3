@@ -36,5 +36,5 @@ the ordering of initial queueing, requeueing and DSP READ_DONE packets without
 altering their buffer selection, cadence or handling.
 
 The corresponding committed source state is
-`f1c19271bba49bf13b52b5bc0d1488a5f19cc825` on branch
+`f1c19271bba43adb609d5eaaf8613f884a7ff3a1` on branch
 `agent/implementation/op3-audio-mic-001` in the dedicated kernel worktree.
