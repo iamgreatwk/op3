@@ -16,7 +16,12 @@ GPIO15 gate, pinctrl state, other clocks and all audio routes are unchanged.
 `0004` adds only the `MIC BIAS1` to `MCLK` route needed by the AMIC4 capture
 path. This lets the already-instantiated `div1_mclk` provider be requested by
 the active MIC BIAS1 DAPM path; AMIC2/5 and every other route remain unchanged.
+`0005` changes only the WCD9335 decimator `POST_PMU` path: after the selected
+TX path is configured, unmuted and its gain latched, it releases that path's
+AMIC TX hold. It does not change MCLK routing, DAPM topology, Q6ASM, mixer
+controls, firmware, or userspace. This is a legacy-6.3.1 evidence-backed
+functional test, not an accepted microphone fix.
 
 The corresponding committed source state is
-`0ba6a5392f169d9f5cb0dd860b9bcc076516d5d3` on branch
+`2a97f48e6eb948fd05482c42a305c4da5e58d4c7` on branch
 `agent/implementation/op3-audio-mic-001` in the dedicated kernel worktree.
