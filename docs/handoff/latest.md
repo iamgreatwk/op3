@@ -293,6 +293,23 @@ Device-specific findings vs PC rig:
 - Same engine-version parity as the PC rig held: no flow changes needed
   for the device other than timing tolerance.
 
+## Chrome line: HEADLESS FULL FLOW PASS on PC (2026-09-03 night)
+
+chrome_test.py collect mode: headless Chromium + session.json storage_state
+-> 免登录排课管理 -> tab -> 学期/教室分类 via the ORIGINAL paste_text
+interaction (Control+a -> press_sequentially 20ms -> **Backspace** re-filter
+-> click the item's SPAN) -> 教室名称 -> visible-查询 click -> report
+iframe table (1.05MB) -> parse (29 classrooms, 703/189/19) -> JSON ->
+feishu DELIVERED. exit=0, zero human input (login session reused).
+
+Key interaction details learned from the owner's original auto_schedule.py
+(paste_text): per-key typing at 120ms delay breaks the jqx filter ("选项
+消失") - the original flow pastes/inputs the FULL filter text in one
+event, then presses **Backspace** to re-trigger the filter, then clicks
+the first item's SPAN (not the item container). The 查询 button locator
+must pick the VISIBLE a:has-text("查询") (an invisible 校级-教室查询 menu
+item matches first).
+
 ## Chrome/Playwright migration line - day 1 results + WAF wall (2026-09-03 evening)
 
 Decision: the automation product line moves to Chromium/Playwright (the
