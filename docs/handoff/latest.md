@@ -271,6 +271,21 @@ steps + charging-check protocol: "Handover state (2026-09-02)" section of
 - 6.16.12 worktree: `source/linux-pmos-msm8996-6.16` (tag `v6.16.12-msm8996`)
 - v74 DTB: `out/pmos-msm8996-6.3.1-v74full/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dtb` (73383 bytes, `463b2c72...`)
 - Panel driver source: `source/linux-mainline-6.4/drivers/gpu/drm/panel/panel-samsung-s6e3fa5.c`
+## PC rig: FULL JNU flow PASS + feishu delivered (2026-09-03)
+
+End-to-end on the PC comparison rig (same WPE/cog pins as device):
+login (slider+fill+click) -> jqx mouse-mode override -> tab -> semester via
+filter+first-item-click -> both category selections (same interaction,
+values 6+7 verified in hidden input) -> building name fill -> query ->
+iframe table extraction -> parse (29 classrooms, 本科703/研究生189/借用19)
+-> JSON saved -> feishu text+file DELIVERED.
+
+Fixed en route (all pushed to cogwebauto): collector helper ordering
+(UnboundLocalError), iframe selector must iterate ALL iframes (first one is
+an empty placeholder; the report lives in the frReport2/show.do iframe).
+jqx touch-mode root cause and the mouse-mode override are documented above;
+the override is applied by the collector right after login.
+
 ## PC rig: JNU login PASS; collection dropdown findings (2026-09-03)
 
 PC comparison rig (buildroot x86_64, same WPE 2.50.5/cog 0.18.5 pins) is
