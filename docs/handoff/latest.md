@@ -293,6 +293,45 @@ Device-specific findings vs PC rig:
 - Same engine-version parity as the PC rig held: no flow changes needed
   for the device other than timing tolerance.
 
+## Chrome/Playwright migration line - day 1 results + WAF wall (2026-09-03 evening)
+
+Decision: the automation product line moves to Chromium/Playwright (the
+owner's original, proven stack); the WPE line stays as the lightweight
+browser bring-up achievement. Rationale: every WPE automation blocker
+(jqx touch-mode mismatch, cookie-jar losing login tickets, WebDriver
+injection dropping cross-domain cookies, no native headless) does not
+exist in Chromium, and the owner's original Playwright code ports as-is.
+
+PC validation day 1 (chrome_test.py, in cogwebauto private repo):
+- Env: playwright already present (owner's original automation),
+  chromium-1234 browsers installed; user-level install on python3.14.
+- VISIBLE login PASS: persistent context + auto-filled credentials +
+  human slider + login click. CRITICAL detection lesson: after login the
+  SPA renders 排课管理 AT the CAS URL (URL stays icas.jnu.edu.cn/cas/...)
+  - success detection MUST use the page TITLE, never the URL.
+- Login cookies are SESSION cookies (no expiry) -> Chromium by design
+  never writes them to the profile disk -> restarting a persistent
+  context cannot restore the login. This is browser security design,
+  not a bug.
+- Correct restore mechanism = Playwright storage_state export/import
+  (session.json, includes session cookies): implemented in chrome_test.py
+  (login exports after success; verify imports + headless). UNTESTED:
+  blocked by the auth4 WAF (see below).
+- Headless wall: auth4.jnu.edu.cn 云防护 WAF returns 网关错误 for
+  HeadlessChrome UA; with a normal-Chrome UA override the icas step
+  passed but the auth4 login navigation got blocked again (fingerprint
+  inconsistency and/or rate limiting after ~dozens of automation hits
+  today). The WAF likely flagged this IP/fingerprint for the day.
+- gid_ URL finding: the jw app URL embeds an auth ticket (gid_=MkpJ...)
+  but the owner confirmed it only works combined with the session
+  cookies; an old recorded URL (t_s=2022) was rejected.
+
+Tomorrow: resume storage_state import validation (fresh login ->
+export -> immediate headless restore), then headless full flow, then the
+device rootfs decision (pmOS vs Ubuntu debootstrap vs deb-extraction
+into the buildroot rootfs). Avoid UA inconsistency between visible and
+headless runs; consider warming up slowly to avoid the WAF.
+
 ## PC rig: FULL JNU flow PASS + feishu delivered (2026-09-03)
 
 End-to-end on the PC comparison rig (same WPE/cog pins as device):

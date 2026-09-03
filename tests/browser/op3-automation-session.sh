@@ -132,6 +132,7 @@ COG_DSF=${COG_DSF:-1}
 PAGE_URL=${1:-https://www.baidu.com}
 echo "page url: $PAGE_URL" >> "$LOG"
 $L --library-path $P $B/usr/bin/cog --platform=wl --automation \
+	--cookie-jar=text:/newroot/opt/jnu/cookies.txt \
 	--device-scale=$COG_DSF \
 	"$PAGE_URL" > "$XDG_RUNTIME_DIR/cog.log" 2>&1 &
 sleep 6
