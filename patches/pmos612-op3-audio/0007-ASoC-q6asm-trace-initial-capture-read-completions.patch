@@ -1,0 +1,54 @@
+From 71f994fb84ab16d3fc3745604b09e7a0a8fb64a2 Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Thu, 3 Sep 2026 16:44:40 +0800
+Subject: [PATCH 7/7] ASoC: q6asm: trace initial capture read completions
+
+Trace only the first 16 synchronous capture READ_DONE responses per
+audio client. Record the DSP status, returned token and address alongside
+the expected mapped address without changing completion, requeue or PCM
+behavior.
+
+Signed-off-by: kai <249905534@qq.com>
+
+diff --git a/sound/soc/qcom/qdsp6/q6asm.c b/sound/soc/qcom/qdsp6/q6asm.c
+index 06a802f9dba5..fc2c461161ce 100644
+--- a/sound/soc/qcom/qdsp6/q6asm.c
++++ b/sound/soc/qcom/qdsp6/q6asm.c
+@@ -264,6 +264,7 @@ struct audio_client {
+ 	q6asm_cb cb;
+ 	void *priv;
+ 	uint32_t io_mode;
++	u32 capture_read_done_log_count;
+ 	struct apr_device *adev;
+ 	struct mutex cmd_lock;
+ 	spinlock_t lock;
+@@ -706,6 +707,8 @@ static int32_t q6asm_stream_callback(struct apr_device *adev,
+ 			struct asm_data_cmd_read_v2_done *done = data->payload;
+ 			unsigned long flags;
+ 			phys_addr_t phys;
++			u32 log_count = 0;
++			bool log_read_done = false;
+ 
+ 			spin_lock_irqsave(&ac->lock, flags);
+ 			port =  &ac->port[SNDRV_PCM_STREAM_CAPTURE];
+@@ -727,7 +730,17 @@ static int32_t q6asm_stream_callback(struct apr_device *adev,
+ 				ret = -EINVAL;
+ 				goto done;
+ 			}
++			if (ac->capture_read_done_log_count < 16) {
++				log_count = ac->capture_read_done_log_count++;
++				log_read_done = true;
++			}
+ 			spin_unlock_irqrestore(&ac->lock, flags);
++
++			if (log_read_done)
++				dev_info(ac->dev,
++					 "capture READ_DONE[%u] token=%u status=%#x addr=%08x:%08x expected=%pa\n",
++					 log_count, hdr->token, done->status,
++					 done->buf_addr_msw, done->buf_addr_lsw, &phys);
+ 		}
+ 
+ 		break;
+-- 
+2.53.0
+

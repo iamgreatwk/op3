@@ -20,8 +20,13 @@ the active MIC BIAS1 DAPM path; AMIC2/5 and every other route remain unchanged.
 TX path is configured, unmuted and its gain latched, it releases that path's
 AMIC TX hold. It does not change MCLK routing, DAPM topology, Q6ASM, mixer
 controls, firmware, or userspace. This is a legacy-6.3.1 evidence-backed
-functional test, not an accepted microphone fix.
+functional test, not an accepted microphone fix; OP3-AUDIO-010 rejects it.
+`0006` restores the preceding WCD9335 behavior and is required only when
+applying this sequence on top of `0005`. `0007` then adds a bounded Q6ASM
+capture diagnostic: the first 16 `READ_DONE` events per audio client log DSP
+status, token, returned address and expected mapped address. It does not
+modify the completion, requeue, PCM, DTS, mixer, firmware or userspace path.
 
 The corresponding committed source state is
-`2a97f48e6eb948fd05482c42a305c4da5e58d4c7` on branch
+`71f994fb84ab16d3fc3745604b09e7a0a8fb64a2` on branch
 `agent/implementation/op3-audio-mic-001` in the dedicated kernel worktree.
