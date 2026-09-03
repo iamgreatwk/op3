@@ -1,0 +1,132 @@
+From 28917bacd3f944d19c8ec504ae97db98616313e5 Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Thu, 3 Sep 2026 17:51:13 +0800
+Subject: [PATCH] ALSA: pcm: trace OP3 capture core accounting
+
+
+diff --git a/sound/core/pcm_lib.c b/sound/core/pcm_lib.c
+index 6eaa950504cf..896816530457 100644
+--- a/sound/core/pcm_lib.c
++++ b/sound/core/pcm_lib.c
+@@ -6,6 +6,7 @@
+  */
+ 
+ #include <linux/slab.h>
++#include <linux/atomic.h>
+ #include <linux/sched/signal.h>
+ #include <linux/time.h>
+ #include <linux/math64.h>
+@@ -33,6 +34,76 @@
+ static int fill_silence_frames(struct snd_pcm_substream *substream,
+ 			       snd_pcm_uframes_t off, snd_pcm_uframes_t frames);
+ 
++/*
++ * Temporary, bounded accounting trace for OP3 capture diagnostics.  The
++ * q6asm driver reports a period-paced hardware position, while TinyALSA
++ * still completes a 5-second capture in a fraction of a second.  Restrict
++ * the trace to card 0/device 0 capture, the known OP3 MultiMedia1 test path.
++ */
++#define OP3_CAPTURE_TRACE_MAX	32
++
++static atomic_t op3_capture_hwptr_trace_count = ATOMIC_INIT(0);
++static atomic_t op3_capture_xfer_trace_count = ATOMIC_INIT(0);
++
++static bool op3_capture_trace_target(struct snd_pcm_substream *substream)
++{
++	return substream->stream == SNDRV_PCM_STREAM_CAPTURE &&
++	       substream->pcm->card->number == 0 &&
++	       substream->pcm->device == 0;
++}
++
++static void op3_capture_trace_hwptr(struct snd_pcm_substream *substream,
++				    unsigned int in_interrupt,
++				    snd_pcm_uframes_t pos,
++				    snd_pcm_uframes_t old_hw_ptr,
++				    snd_pcm_uframes_t new_hw_ptr,
++				    snd_pcm_uframes_t hw_base,
++				    snd_pcm_sframes_t delta)
++{
++	struct snd_pcm_runtime *runtime = substream->runtime;
++	int count;
++
++	if (!op3_capture_trace_target(substream))
++		return;
++
++	count = atomic_inc_return(&op3_capture_hwptr_trace_count) - 1;
++	if (count >= OP3_CAPTURE_TRACE_MAX)
++		return;
++
++	pcm_warn(substream->pcm,
++		 "OP3 capture core HWPtr[%d] irq=%u pos=%lu old=%lu new=%lu base=%lu status=%lu appl=%lu avail=%lu delta=%ld\\n",
++		 count, in_interrupt, (unsigned long)pos,
++		 (unsigned long)old_hw_ptr, (unsigned long)new_hw_ptr,
++		 (unsigned long)hw_base, (unsigned long)runtime->status->hw_ptr,
++		 (unsigned long)runtime->control->appl_ptr,
++		 (unsigned long)snd_pcm_capture_avail(runtime), (long)delta);
++}
++
++static void op3_capture_trace_xfer(struct snd_pcm_substream *substream,
++				  const char *stage,
++				  snd_pcm_uframes_t requested,
++				  snd_pcm_uframes_t xfer,
++				  snd_pcm_uframes_t avail)
++{
++	struct snd_pcm_runtime *runtime = substream->runtime;
++	int count;
++
++	if (!op3_capture_trace_target(substream))
++		return;
++
++	count = atomic_inc_return(&op3_capture_xfer_trace_count) - 1;
++	if (count >= OP3_CAPTURE_TRACE_MAX)
++		return;
++
++	pcm_warn(substream->pcm,
++		 "OP3 capture core XFER[%d] %s request=%lu xfer=%lu hw=%lu base=%lu appl=%lu avail=%lu state=%d\\n",
++		 count, stage, (unsigned long)requested, (unsigned long)xfer,
++		 (unsigned long)runtime->status->hw_ptr,
++		 (unsigned long)runtime->hw_ptr_base,
++		 (unsigned long)runtime->control->appl_ptr, (unsigned long)avail,
++		 runtime->state);
++}
++
+ 
+ static inline void update_silence_vars(struct snd_pcm_runtime *runtime,
+ 				       snd_pcm_uframes_t ptr,
+@@ -464,6 +535,8 @@ static int snd_pcm_update_hw_ptr0(struct snd_pcm_substream *substream,
+ 	if (runtime->status->hw_ptr == new_hw_ptr) {
+ 		runtime->hw_ptr_jiffies = curr_jiffies;
+ 		update_audio_tstamp(substream, &curr_tstamp, &audio_tstamp);
++		op3_capture_trace_hwptr(substream, in_interrupt, pos, old_hw_ptr,
++					new_hw_ptr, hw_base, delta);
+ 		return 0;
+ 	}
+ 
+@@ -489,6 +562,8 @@ static int snd_pcm_update_hw_ptr0(struct snd_pcm_substream *substream,
+ 	}
+ 
+ 	update_audio_tstamp(substream, &curr_tstamp, &audio_tstamp);
++	op3_capture_trace_hwptr(substream, in_interrupt, pos, old_hw_ptr,
++				new_hw_ptr, hw_base, delta);
+ 
+ 	return snd_pcm_update_state(substream, runtime);
+ }
+@@ -2338,6 +2413,7 @@ snd_pcm_sframes_t __snd_pcm_lib_xfer(struct snd_pcm_substream *substream,
+ 	}
+ 
+ 	avail = snd_pcm_avail(substream);
++	op3_capture_trace_xfer(substream, "entry", size, xfer, avail);
+ 
+ 	while (size > 0) {
+ 		snd_pcm_uframes_t frames, appl_ptr, appl_ofs;
+@@ -2399,6 +2475,7 @@ snd_pcm_sframes_t __snd_pcm_lib_xfer(struct snd_pcm_substream *substream,
+ 		size -= frames;
+ 		xfer += frames;
+ 		avail -= frames;
++		op3_capture_trace_xfer(substream, "copy", size, xfer, avail);
+ 		if (is_playback &&
+ 		    runtime->state == SNDRV_PCM_STATE_PREPARED &&
+ 		    snd_pcm_playback_hw_avail(runtime) >= (snd_pcm_sframes_t)runtime->start_threshold) {
+-- 
+2.53.0
+
