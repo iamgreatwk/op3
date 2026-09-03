@@ -271,6 +271,28 @@ steps + charging-check protocol: "Handover state (2026-09-02)" section of
 - 6.16.12 worktree: `source/linux-pmos-msm8996-6.16` (tag `v6.16.12-msm8996`)
 - v74 DTB: `out/pmos-msm8996-6.3.1-v74full/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dtb` (73383 bytes, `463b2c72...`)
 - Panel driver source: `source/linux-mainline-6.4/drivers/gpu/drm/panel/panel-samsung-s6e3fa5.c`
+## DEVICE full flow PASS: feishu delivered from the phone (2026-09-03)
+
+The complete JNU flow ran on the OnePlus 3 (browser-net image, rotate-270,
+same collector): slider (human) -> fill -> login -> mouse-mode override ->
+tab -> semester + both categories via filter+first-item-click -> building
+name -> query (report iframe took ~40 s on-device; execute/sync BLOCKS
+while the report renders - tolerate long timeouts) -> table extraction
+(1.05 MB) -> parse (29 classrooms, 本科703/研究生189/借用19) -> JSON
+-> feishu DELIVERED.
+
+Device-specific findings vs PC rig:
+- After slider verification the login FORM fields (#un/#pd) render LATE
+  (~10 s on device vs instant on PC): the collector must poll for
+  #un existence before filling (patched; also login deadline 300->480 s).
+  The first fill+click hit a not-yet-rendered form and the yidun token
+  expired before the manual retry - the owner re-clicked and login
+  succeeded; collector deadline expired seconds before success, so the
+  remaining steps were driven ad-hoc against the live session. The
+  patched collector automates exactly that sequence for future runs.
+- Same engine-version parity as the PC rig held: no flow changes needed
+  for the device other than timing tolerance.
+
 ## PC rig: FULL JNU flow PASS + feishu delivered (2026-09-03)
 
 End-to-end on the PC comparison rig (same WPE/cog pins as device):
