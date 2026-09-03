@@ -30,7 +30,11 @@ modify the completion, requeue, PCM, DTS, mixer, firmware or userspace path.
 `NO_REWINDS | SYNC_APPLPTR` capability pair for capture, requiring manual
 application-pointer synchronization. It retains `0007`'s bounded trace and
 does not modify playback or the Q6ASM/DTS/mixer/firmware/userspace code.
+`0009` adds only a bounded, first-16 log at capture `ASM_DATA_CMD_READ_V2`
+submission, immediately before the APR send. Together with `0007`, it exposes
+the ordering of initial queueing, requeueing and DSP READ_DONE packets without
+altering their buffer selection, cadence or handling.
 
 The corresponding committed source state is
-`3be5def6f7c1c3216fdd6f844be655ac9df10532` on branch
+`f1c19271bba49bf13b52b5bc0d1488a5f19cc825` on branch
 `agent/implementation/op3-audio-mic-001` in the dedicated kernel worktree.
