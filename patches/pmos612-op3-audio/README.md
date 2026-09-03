@@ -26,7 +26,11 @@ applying this sequence on top of `0005`. `0007` then adds a bounded Q6ASM
 capture diagnostic: the first 16 `READ_DONE` events per audio client log DSP
 status, token, returned address and expected mapped address. It does not
 modify the completion, requeue, PCM, DTS, mixer, firmware or userspace path.
+`0008` is the next isolated capture test: it restores only the legacy
+`NO_REWINDS | SYNC_APPLPTR` capability pair for capture, requiring manual
+application-pointer synchronization. It retains `0007`'s bounded trace and
+does not modify playback or the Q6ASM/DTS/mixer/firmware/userspace code.
 
 The corresponding committed source state is
-`71f994fb84ab16d3fc3745604b09e7a0a8fb64a2` on branch
+`3be5def6f7c1c3216fdd6f844be655ac9df10532` on branch
 `agent/implementation/op3-audio-mic-001` in the dedicated kernel worktree.

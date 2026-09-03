@@ -1,0 +1,28 @@
+From 3be5def6f7c1c3216fdd6f844be655ac9df10532 Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Thu, 3 Sep 2026 16:54:36 +0800
+Subject: [PATCH] ASoC: q6asm: synchronize capture application pointers
+
+Capture READ_DONE responses become immediately paced after the first
+ring on OnePlus 3. Restore the legacy capture capabilities that require
+userspace to synchronize appl_ptr and forbid rewinds; leave playback and
+Q6ASM event handling unchanged.
+
+Signed-off-by: kai <249905534@qq.com>
+
+diff --git a/sound/soc/qcom/qdsp6/q6asm-dai.c b/sound/soc/qcom/qdsp6/q6asm-dai.c
+index 045100c94352..e9bdf8da45a3 100644
+--- a/sound/soc/qcom/qdsp6/q6asm-dai.c
++++ b/sound/soc/qcom/qdsp6/q6asm-dai.c
+@@ -84,6 +84,8 @@ struct q6asm_dai_data {
+ static const struct snd_pcm_hardware q6asm_dai_hardware_capture = {
+ 	.info =                 (SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_BATCH |
+ 				SNDRV_PCM_INFO_BLOCK_TRANSFER |
++				SNDRV_PCM_INFO_NO_REWINDS |
++				SNDRV_PCM_INFO_SYNC_APPLPTR |
+ 				SNDRV_PCM_INFO_MMAP_VALID |
+ 				SNDRV_PCM_INFO_INTERLEAVED |
+ 				SNDRV_PCM_INFO_PAUSE | SNDRV_PCM_INFO_RESUME),
+-- 
+2.53.0
+
