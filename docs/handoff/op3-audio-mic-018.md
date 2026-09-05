@@ -89,8 +89,8 @@ one-line `git diff HEAD^ HEAD | checkpatch` check with zero errors and warnings.
 
 ## Device result
 
-**PASS for ALSA cadence/accounting (owner-run, 2026-09-05); payload acceptance
-pending.** The owner built and booted
+**PASS for ALSA cadence/accounting and payload spot-check (owner-run,
+2026-09-05); final signal-quality acceptance pending.** The owner built and booted
 `boot-oneplus3-pmos612-own-dtb-audio-effective-norewinds-diagnostic.img`, used
 the verified AMIC4/MM1 route, and captured with the command above. Uptime
 advanced from `23.90` to `29.02` seconds (~5.12 s), and TinyALSA reported
@@ -99,5 +99,9 @@ the wrap, `status->hw_ptr` and `appl_ptr` advanced to 3840, then 4320, 4800,
 and onward. The core trace never returned to `appl_ptr=0` or
 `avail=3840`, and READ_DONE events remained approximately 10 ms apart. This
 is the expected effect of `NO_REWINDS` rejecting the stale backwards private
-sync update. The WAV still needs separated block hashes and sample inspection
-to establish non-silence and non-repetition before microphone acceptance.
+sync update. Four 4 KiB payload blocks at offsets 1, 32, 64 and 96 had
+distinct SHA256 values (`046b2b68…`, `24968e39…`, `70c28932…`, `c0395803…`).
+The first 64 bytes after the WAV header were startup zeroes, but mid-stream
+and end samples were nonzero. This establishes nonzero, nonrepeated payload at
+spot-check locations; an audible replay or equivalent signal-quality
+measurement is still needed before final microphone acceptance.
