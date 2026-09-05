@@ -1,0 +1,108 @@
+From 6901bbd86f7b6de14af36b170196ed403ef52e2e Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Sat, 5 Sep 2026 22:56:46 +0800
+Subject: [PATCH] ASoC: apq8096: enable QUAT MI2S speaker clock
+
+The OnePlus 3 TFA9890 amplifier consumes the Quaternary MI2S clock.
+Set the AFE format so the DSP provides BCLK/LRCLK and enable the 48 kHz
+S16 stereo IBIT clock while the speaker backend is active. Disable the
+clock when the backend shuts down.
+
+Signed-off-by: kai <249905534@qq.com>
+---
+ sound/soc/qcom/apq8096.c | 59 ++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 59 insertions(+)
+
+diff --git a/sound/soc/qcom/apq8096.c b/sound/soc/qcom/apq8096.c
+index 4f6594cc723c..bccb8140c37e 100644
+--- a/sound/soc/qcom/apq8096.c
++++ b/sound/soc/qcom/apq8096.c
+@@ -8,6 +8,7 @@
+ #include <sound/soc-dapm.h>
+ #include <sound/pcm.h>
+ #include "common.h"
++#include "qdsp6/q6afe.h"
+ 
+ #define SLIM_MAX_TX_PORTS 16
+ #define SLIM_MAX_RX_PORTS 16
+@@ -60,13 +61,63 @@ static int msm_snd_hw_params(struct snd_pcm_substream *substream,
+ 	return ret;
+ }
+ 
++static int apq8096_be_startup(struct snd_pcm_substream *substream)
++{
++	struct snd_soc_pcm_runtime *rtd = snd_soc_substream_to_rtd(substream);
++	struct snd_soc_dai *cpu_dai = snd_soc_rtd_to_cpu(rtd, 0);
++	int ret;
++
++	if (cpu_dai->id != QUATERNARY_MI2S_RX)
++		return 0;
++
++	/*
++	 * The OnePlus 3 speaker amplifier is a clock consumer on QUAT MI2S.
++	 * The AFE port must provide the 48 kHz / S16 stereo bit clock
++	 * (48,000 * 16 * 2 = 1.536 MHz) before the TFA9890 can receive audio.
++	 */
++	ret = snd_soc_dai_set_fmt(cpu_dai, SND_SOC_DAIFMT_BP_FP);
++	if (ret)
++		return dev_err_probe(rtd->card->dev, ret,
++				     "failed to select QUAT MI2S clock provider\n");
++
++	ret = snd_soc_dai_set_sysclk(cpu_dai,
++				     Q6AFE_LPASS_CLK_ID_QUAD_MI2S_IBIT,
++				     1536000, SND_SOC_CLOCK_OUT);
++	if (ret)
++		return dev_err_probe(rtd->card->dev, ret,
++				     "failed to enable QUAT MI2S IBIT clock\n");
++
++	return 0;
++}
++
++static void apq8096_be_shutdown(struct snd_pcm_substream *substream)
++{
++	struct snd_soc_pcm_runtime *rtd = snd_soc_substream_to_rtd(substream);
++	struct snd_soc_dai *cpu_dai = snd_soc_rtd_to_cpu(rtd, 0);
++	int ret;
++
++	if (cpu_dai->id != QUATERNARY_MI2S_RX)
++		return;
++
++	ret = snd_soc_dai_set_sysclk(cpu_dai,
++				     Q6AFE_LPASS_CLK_ID_QUAD_MI2S_IBIT,
++				     0, SND_SOC_CLOCK_OUT);
++	if (ret)
++		dev_warn(rtd->card->dev,
++			 "failed to disable QUAT MI2S IBIT clock: %d\n", ret);
++}
++
+ static const struct snd_soc_ops apq8096_ops = {
++	.startup = apq8096_be_startup,
++	.shutdown = apq8096_be_shutdown,
+ 	.hw_params = msm_snd_hw_params,
+ };
+ 
+ static int apq8096_init(struct snd_soc_pcm_runtime *rtd)
+ {
+ 	struct snd_soc_dai *codec_dai = snd_soc_rtd_to_codec(rtd, 0);
++	struct snd_soc_dai *cpu_dai = snd_soc_rtd_to_cpu(rtd, 0);
++	int ret;
+ 
+ 	/*
+ 	 * Codec SLIMBUS configuration
+@@ -86,6 +137,14 @@ static int apq8096_init(struct snd_soc_pcm_runtime *rtd)
+ 	snd_soc_dai_set_sysclk(codec_dai, 0, WCD9335_DEFAULT_MCLK_RATE,
+ 				SNDRV_PCM_STREAM_PLAYBACK);
+ 
++	/* The DSP must provide BCLK/LRCLK to the TFA9890 on QUAT MI2S. */
++	if (cpu_dai->id == QUATERNARY_MI2S_RX) {
++		ret = snd_soc_dai_set_fmt(cpu_dai, SND_SOC_DAIFMT_BP_FP);
++		if (ret)
++			return dev_err_probe(rtd->card->dev, ret,
++					     "failed to set QUAT MI2S clock provider\n");
++	}
++
+ 	return 0;
+ }
+ 
+-- 
+2.53.0

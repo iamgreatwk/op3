@@ -55,6 +55,15 @@ on both descriptors. The owner A/B now passes the ALSA cadence/accounting gate:
 the stale backwards application-pointer update is rejected and the stream
 remains period-paced. WAV payload validation is still pending.
 
+`0015` adds the first speaker-only kernel change. It programs the
+`QUATERNARY_MI2S_RX` AFE DAI as the BCLK/LRCLK provider and enables its
+`Q6AFE_LPASS_CLK_ID_QUAD_MI2S_IBIT` at 1.536 MHz while the `Speaker` backend is
+active, then disables that clock on shutdown. This is the port of the
+legacy-6.3.1 v23 clock fix, adapted to the current 6.12 ASoC helper names. It
+does not change the DTS topology, mixer helper, TFA989x codec, or userspace;
+the owner must test whether the TFA9890 `NOCLK` condition clears and playback
+becomes audible.
+
 The corresponding committed source state is
-`57b9a78bdc2e` on branch
+`6901bbd86f7b` on branch
 `agent/implementation/op3-audio-mic-001` in the dedicated kernel worktree.
