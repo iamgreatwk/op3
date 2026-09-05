@@ -3,10 +3,12 @@
 ## Scope
 
 This is a kernel-only speaker-output experiment on the pmOS MSM8996 Linux
-6.12.1 baseline. The only source file changed is
+6.12.1 baseline. The clock-provider/IBIT experiment changes only
 `sound/soc/qcom/apq8096.c`. DTS topology, the `route.sh` mixer helper,
 `tfa989x.c`, q6asm capture changes, firmware, initramfs and the playback test
-fixture remain fixed.
+fixture remain fixed. The owner result below shows that the raw `tinyplay`
+harness still fails before a backend reaches `start`; this does not establish
+that the clock experiment is accepted or rejected.
 
 The OnePlus 3 speaker path already enumerates as card 0/device 5
 (`Speaker tfa989x-hifi-5`) and is wired by the DTS as
@@ -32,30 +34,31 @@ Hypothesis tested: the TFA9890 is silent because the QUAT MI2S AFE backend
 Only variable changed: QUAT MI2S clock-provider format plus the
   Q6AFE_LPASS_CLK_ID_QUAD_MI2S_IBIT enable/disable calls in apq8096.c.
 
-Build run by project owner: FAIL (first attempt at 6901bbd86f7b)
-Build result: `apq8096.c` failed to compile because `QUATERNARY_MI2S_RX`
-  was undeclared at the new startup, shutdown and init references. The shell
-  continued to the packaging command because it was not running with
-  `set -e`; the resulting image is stale and must not be tested.
-Artifacts and SHA256: stale image from failed build,
-  `0c4a1bd0ca29368ab777105a84790efa70cf5394f4f064b808cd81d41aa6b6ad`;
-  invalid for this experiment. Compile-only fix is committed as
-  `8c181e065c6fc4f911cdc746dbf5ce8bd3e391ca`; next owner build pending.
+Build run by project owner: PASS after the compile-only include follow-up
+`8c181e065c6fc4f911cdc746dbf5ce8bd3e391ca`.
+Build result: Image/package completed; the workspace copy of the tested image
+has SHA256 `7ec3c3268d332b70ae6c02e7d3c3833d60927ada521eb82fa854edd9cd7fa0bd`.
+The earlier `0c4a1bd0…` package came from the failed build and remains stale.
 
-Device test run by project owner: NOT_RUN
-Device result: NOT_RUN
-Evidence links / log paths: pending owner report
+Device test run by project owner: YES (2026-09-05)
+Device result: INCONCLUSIVE for the clock hypothesis. `route.sh speaker`
+set `QUAT_MI2S_RX Audio Mixer MultiMedia3` to `On`, but `tinyplay` printed
+`error playing sample` and the `MultiMedia3` playback state was already
+`close` with no active DSP links. The reported background-job result was
+`127`; it is not a kernel/AFE status code. No QUAT/IBIT/TFA runtime error or
+direct acoustic confirmation was captured.
+Evidence links / log paths: owner SSH output in the task; image
+`artifacts/boot-oneplus3-pmos612-own-dtb-audio-speaker-clock-diagnostic.img`.
 
 Conclusion: INCONCLUSIVE
-Uncertainties: no 6.12 device result yet; tinyplay prints an error but its
-  current implementation can still return zero after a failed pcm_writei, so
-  the text output and acoustic result must be checked separately.
-Recommended next experiment: build this commit and test a known 48 kHz,
-  S16_LE, stereo WAV on card 0/device 2. If the backend starts, the IBIT
-  clock error is absent, and the owner hears the phone speaker, record the
-  TFA9890 clock-status result if available. If it remains silent or fails,
-  keep this commit as rejected evidence and isolate TFA989x runtime
-  configuration as a separate task.
+Uncertainties: the raw `tinyplay` path can fail at the first PCM write and
+does not expose `pcm_get_error()`, so the failure does not distinguish a
+Q6ASM playback-buffer scheduling problem from a later QUAT/TFA989x route
+problem. The known-good 6.3.1 `pcm-tone`/`pcm-wav` harness must be used after
+the next source checkpoint.
+Recommended next experiment: build OP3-AUDIO-020's q6asm playback ACK
+queueing change, then run a five-second `pcm-tone` on card 0/device 2 before
+trying a paced stereo WAV.
 ```
 
 ## Why this variable

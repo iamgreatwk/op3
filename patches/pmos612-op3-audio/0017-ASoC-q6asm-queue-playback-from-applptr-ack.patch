@@ -1,0 +1,95 @@
+From f95f3b02ec1e770ff50604a252a310c443620006 Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Sat, 5 Sep 2026 23:31:07 +0800
+Subject: [PATCH] ASoC: q6asm: queue playback buffers from appl_ptr ACK
+
+---
+ sound/soc/qcom/qdsp6/q6asm-dai.c | 38 +++++++++++++++++++++++++++++++-------
+ 1 file changed, 31 insertions(+), 7 deletions(-)
+
+diff --git a/sound/soc/qcom/qdsp6/q6asm-dai.c b/sound/soc/qcom/qdsp6/q6asm-dai.c
+index aa03829fdefd..e291dfab5f4f 100644
+--- a/sound/soc/qcom/qdsp6/q6asm-dai.c
++++ b/sound/soc/qcom/qdsp6/q6asm-dai.c
+@@ -58,6 +58,7 @@ struct q6asm_dai_rtd {
+ 	unsigned int pcm_size;
+ 	unsigned int pcm_count;
+ 	unsigned int pcm_irq_pos;       /* IRQ position */
++	snd_pcm_uframes_t queue_ptr;
+ 	unsigned int capture_period_log_count;
+ 	unsigned int capture_pointer_log_count;
+ 	unsigned int periods;
+@@ -110,6 +111,7 @@ static const struct snd_pcm_hardware q6asm_dai_hardware_playback = {
+ 	.info =                 (SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_BATCH |
+ 				SNDRV_PCM_INFO_BLOCK_TRANSFER |
+ 				SNDRV_PCM_INFO_NO_REWINDS |
++				SNDRV_PCM_INFO_SYNC_APPLPTR |
+ 				SNDRV_PCM_INFO_MMAP_VALID |
+ 				SNDRV_PCM_INFO_INTERLEAVED |
+ 				SNDRV_PCM_INFO_PAUSE | SNDRV_PCM_INFO_RESUME),
+@@ -185,9 +187,6 @@ static void event_handler(uint32_t opcode, uint32_t token,
+ 
+ 	switch (opcode) {
+ 	case ASM_CLIENT_EVENT_CMD_RUN_DONE:
+-		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+-			q6asm_write_async(prtd->audio_client, prtd->stream_id,
+-				   prtd->pcm_count, 0, 0, 0);
+ 		break;
+ 	case ASM_CLIENT_EVENT_CMD_EOS_DONE:
+ 		prtd->state = Q6ASM_STREAM_STOPPED;
+@@ -195,10 +194,6 @@ static void event_handler(uint32_t opcode, uint32_t token,
+ 	case ASM_CLIENT_EVENT_DATA_WRITE_DONE: {
+ 		prtd->pcm_irq_pos += prtd->pcm_count;
+ 		snd_pcm_period_elapsed(substream);
+-		if (prtd->state == Q6ASM_STREAM_RUNNING)
+-			q6asm_write_async(prtd->audio_client, prtd->stream_id,
+-					   prtd->pcm_count, 0, 0, 0);
+-
+ 		break;
+ 		}
+ 	case ASM_CLIENT_EVENT_DATA_READ_DONE:
+@@ -326,6 +321,34 @@ static int q6asm_dai_prepare(struct snd_soc_component *component,
+ 	return ret;
+ }
+ 
++static int q6asm_dai_ack(struct snd_soc_component *component,
++				 struct snd_pcm_substream *substream)
++{
++	struct snd_pcm_runtime *runtime = substream->runtime;
++	struct q6asm_dai_rtd *prtd = runtime->private_data;
++	snd_pcm_uframes_t avail_periods;
++	int i, ret = 0;
++
++	if (substream->stream != SNDRV_PCM_STREAM_PLAYBACK ||
++	    prtd->state != Q6ASM_STREAM_RUNNING)
++		return 0;
++
++	avail_periods = (runtime->control->appl_ptr - prtd->queue_ptr) /
++		runtime->period_size;
++	for (i = 0; i < avail_periods; i++) {
++		ret = q6asm_write_async(prtd->audio_client, prtd->stream_id,
++					prtd->pcm_count, 0, 0, 0);
++		if (ret < 0) {
++			dev_err(component->dev,
++				"Error queuing playback buffer %d\n", ret);
++			return ret;
++		}
++		prtd->queue_ptr += runtime->period_size;
++	}
++
++	return 0;
++}
++
+ static int q6asm_dai_trigger(struct snd_soc_component *component,
+ 			     struct snd_pcm_substream *substream, int cmd)
+ {
+@@ -1230,6 +1253,7 @@ static const struct snd_soc_component_driver q6asm_fe_dai_component = {
+ 	.close			= q6asm_dai_close,
+ 	.prepare		= q6asm_dai_prepare,
+ 	.trigger		= q6asm_dai_trigger,
++	.ack			= q6asm_dai_ack,
+ 	.pointer		= q6asm_dai_pointer,
+ 	.pcm_construct		= q6asm_dai_pcm_new,
+ 	.compress_ops		= &q6asm_dai_compress_ops,
+-- 
+2.53.0
