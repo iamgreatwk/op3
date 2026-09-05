@@ -105,3 +105,13 @@ The first 64 bytes after the WAV header were startup zeroes, but mid-stream
 and end samples were nonzero. This establishes nonzero, nonrepeated payload at
 spot-check locations; an audible replay or equivalent signal-quality
 measurement is still needed before final microphone acceptance.
+
+## Scope correction
+
+The owner later attempted `route.sh speaker` followed by `tinyplay` and got
+`error playing sample`. The current migration has not implemented or accepted
+the external-speaker path; `route.sh speaker` only toggles the Quaternary MI2S
+mixer and is not evidence that the TFA989x backend, clocks and amplifier route
+are complete. This playback error is therefore out of scope for OP3-AUDIO-018
+and does not invalidate the microphone capture result. Speaker bring-up must
+be tracked as a separate audio-output task.
