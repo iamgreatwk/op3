@@ -67,6 +67,18 @@ Recommended next experiment: no further speaker source change is required for
   `vddd-supply` as a separate variable.
 ```
 
+## Hardware volume status
+
+The current QUAT path has no supported TFA9890 hardware-volume control. The
+speaker link is `MultiMedia3 -> q6routing -> QUAT_MI2S_RX -> TFA9890`, while
+the TFA989x driver deliberately bypasses CoolFlux DSP; its source notes that
+this bypass disables the amplifier's volume control. The `RX* Digital Volume`
+controls exported by WCD9335 belong to a different codec path and must not be
+treated as QUAT speaker controls. Until a TFA profile/container or a
+documented gain register is integrated as a separate experiment, use the
+verified `pcm-wav -v 0..100` software scaling and leave the hardware route
+unchanged.
+
 ## Why this variable
 
 The mainline pinctrl driver exposes `qua_mi2s` on GPIO57–63, but the current
