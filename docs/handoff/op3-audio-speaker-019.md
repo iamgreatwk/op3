@@ -23,7 +23,8 @@ Role: Implementation agent
 Baseline commit: 67b0bbc3cbf46bae712a2606a43361756fcbd829
 Working branch: agent/implementation/op3-audio-mic-001
 Changed files: sound/soc/qcom/apq8096.c
-Commit SHA: 6901bbd86f7b6de14af36b170196ed403ef52e2e
+Commit SHA: 6901bbd86f7b6de14af36b170196ed403ef52e2e (speaker behavior) +
+  8c181e065c6fc4f911cdc746dbf5ce8bd3e391ca (compile follow-up)
 
 Layer: audio kernel / ASoC machine-driver clock setup
 Hypothesis tested: the TFA9890 is silent because the QUAT MI2S AFE backend
@@ -31,9 +32,15 @@ Hypothesis tested: the TFA9890 is silent because the QUAT MI2S AFE backend
 Only variable changed: QUAT MI2S clock-provider format plus the
   Q6AFE_LPASS_CLK_ID_QUAD_MI2S_IBIT enable/disable calls in apq8096.c.
 
-Build run by project owner: NOT_RUN
-Build result: NOT_RUN
-Artifacts and SHA256: pending owner build
+Build run by project owner: FAIL (first attempt at 6901bbd86f7b)
+Build result: `apq8096.c` failed to compile because `QUATERNARY_MI2S_RX`
+  was undeclared at the new startup, shutdown and init references. The shell
+  continued to the packaging command because it was not running with
+  `set -e`; the resulting image is stale and must not be tested.
+Artifacts and SHA256: stale image from failed build,
+  `0c4a1bd0ca29368ab777105a84790efa70cf5394f4f064b808cd81d41aa6b6ad`;
+  invalid for this experiment. Compile-only fix is committed as
+  `8c181e065c6fc4f911cdc746dbf5ce8bd3e391ca`; next owner build pending.
 
 Device test run by project owner: NOT_RUN
 Device result: NOT_RUN
@@ -71,15 +78,27 @@ This port keeps the two calls under one falsifiable clock hypothesis:
 
 No claim of acceptance is made until the owner performs the device test.
 
+## Build-failure follow-up
+
+The first owner build reached `sound/soc/qcom/apq8096.o` and failed only
+because this machine driver used `QUATERNARY_MI2S_RX` without explicitly
+including the DT binding that defines the AFE DAI identifiers. The minimal
+follow-up commit `8c181e065c6fc4f911cdc746dbf5ce8bd3e391ca` adds
+`<dt-bindings/sound/qcom,q6afe.h>` to that same source file. It changes no
+runtime behavior and keeps the speaker clock hypothesis unchanged.
+
 ## Owner build and package commands
 
 The owner must build and boot the committed kernel; the agent does not run a
 large kernel build or flash the phone. The source worktree must report
-`6901bbd86f7b6de14af36b170196ed403ef52e2e` before building:
+`8c181e065c6fc4f911cdc746dbf5ce8bd3e391ca` before building. Stop on any build
+error so a stale `Image.gz` cannot be packed:
 
 ```sh
+set -e
 cd /home/kai/src/oneplus3-mainline
-git -C /home/kai/src/oneplus3-audio-dts-001 rev-parse HEAD
+test "$(git -C /home/kai/src/oneplus3-audio-dts-001 rev-parse HEAD)" = \
+  8c181e065c6fc4f911cdc746dbf5ce8bd3e391ca
 
 make -C /home/kai/src/oneplus3-audio-dts-001 \
   O=/home/kai/src/oneplus3-mainline/out/linux-pmos-msm8996-6.12-defconfig-audio \
@@ -149,6 +168,9 @@ configuration is complete.
 
 `patches/pmos612-op3-audio/0015-ASoC-apq8096-enable-QUAT-MI2S-speaker-clock.patch`
 
-The patch is generated from the single source commit and changes no DTS or
-userspace file. The historical reference is
+`patches/pmos612-op3-audio/0016-ASoC-apq8096-include-q6afe-DAI-bindings.patch`
+
+`0015` contains the runtime speaker-clock hypothesis; `0016` is its
+compile-only include follow-up. Together they change no DTS or userspace
+file. The historical reference is
 `/home/kai/下载/Documents-Codex-20260826/Codex/2026-08-20/3-pcm-tone-c-0-7/work/handoff/apq8096_v23_quat_ibit_clock.patch`.

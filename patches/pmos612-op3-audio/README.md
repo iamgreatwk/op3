@@ -64,6 +64,13 @@ does not change the DTS topology, mixer helper, TFA989x codec, or userspace;
 the owner must test whether the TFA9890 `NOCLK` condition clears and playback
 becomes audible.
 
+`0016` is the compile-only follow-up to `0015`: it explicitly includes
+`<dt-bindings/sound/qcom,q6afe.h>` so the `QUATERNARY_MI2S_RX` identifier is
+visible in `apq8096.c`. It changes no runtime behavior and keeps the same
+speaker-clock hypothesis. The first owner build at `0015` failed at this
+missing include; the shell then packed a stale image, which must not be
+tested.
+
 The corresponding committed source state is
-`6901bbd86f7b` on branch
+`8c181e065c6f` on branch
 `agent/implementation/op3-audio-mic-001` in the dedicated kernel worktree.

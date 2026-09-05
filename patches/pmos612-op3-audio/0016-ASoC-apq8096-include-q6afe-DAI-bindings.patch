@@ -1,0 +1,30 @@
+From 8c181e065c6fc4f911cdc746dbf5ce8bd3e391ca Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Sat, 5 Sep 2026 23:08:25 +0800
+Subject: [PATCH] ASoC: apq8096: include q6afe DAI bindings
+
+Expose the QUATERNARY_MI2S_RX DAI identifier used by the QUAT MI2S speaker
+clock hooks.
+
+This is a compile-only follow-up to the speaker clock experiment; it does not
+change runtime behavior.
+
+Signed-off-by: kai <249905534@qq.com>
+---
+ sound/soc/qcom/apq8096.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/sound/soc/qcom/apq8096.c b/sound/soc/qcom/apq8096.c
+index bccb8140c37e..d84968c9f93a 100644
+--- a/sound/soc/qcom/apq8096.c
++++ b/sound/soc/qcom/apq8096.c
+@@ -4,6 +4,7 @@
+ #include <linux/mod_devicetable.h>
+ #include <linux/module.h>
+ #include <linux/platform_device.h>
++#include <dt-bindings/sound/qcom,q6afe.h>
+ #include <sound/soc.h>
+ #include <sound/soc-dapm.h>
+ #include <sound/pcm.h>
+-- 
+2.53.0
