@@ -86,4 +86,18 @@ acceptance criterion.
 
 The archive is generated from the single source commit and passes the
 one-line `git diff HEAD^ HEAD | checkpatch` check with zero errors and warnings.
-No device test has occurred yet.
+
+## Device result
+
+**PASS for ALSA cadence/accounting (owner-run, 2026-09-05); payload acceptance
+pending.** The owner built and booted
+`boot-oneplus3-pmos612-own-dtb-audio-effective-norewinds-diagnostic.img`, used
+the verified AMIC4/MM1 route, and captured with the command above. Uptime
+advanced from `23.90` to `29.02` seconds (~5.12 s), and TinyALSA reported
+`241920` frames with a 472.5 KiB WAV. The first ring remained period-paced; at
+the wrap, `status->hw_ptr` and `appl_ptr` advanced to 3840, then 4320, 4800,
+and onward. The core trace never returned to `appl_ptr=0` or
+`avail=3840`, and READ_DONE events remained approximately 10 ms apart. This
+is the expected effect of `NO_REWINDS` rejecting the stale backwards private
+sync update. The WAV still needs separated block hashes and sample inspection
+to establish non-silence and non-repetition before microphone acceptance.

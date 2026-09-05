@@ -51,8 +51,9 @@ the device result showed that ARM64 still uses private sync storage and that
 `q6asm_dai_open()` overwrites capture hardware parameters with playback ones.
 `0014` therefore adds only `SNDRV_PCM_INFO_NO_REWINDS` to the effective
 playback descriptor, reproducing the flag that the legacy 6.3.1 source placed
-on both descriptors. It is the next owner-run A/B for rejecting the stale
-backwards application-pointer update; it is not yet a production fix.
+on both descriptors. The owner A/B now passes the ALSA cadence/accounting gate:
+the stale backwards application-pointer update is rejected and the stream
+remains period-paced. WAV payload validation is still pending.
 
 The corresponding committed source state is
 `57b9a78bdc2e` on branch
