@@ -45,6 +45,15 @@ position, wrap decision, reset position and returned frame position. It does
 not change the queue, completion, PCM capability, DTS, mixer, firmware,
 initramfs or userspace behavior.
 
+`0012` adds only bounded ALSA-core accounting logs in `sound/core/pcm_lib.c`.
+`0013` removes only `SNDRV_PCM_INFO_SYNC_APPLPTR` from the capture descriptor;
+the device result showed that ARM64 still uses private sync storage and that
+`q6asm_dai_open()` overwrites capture hardware parameters with playback ones.
+`0014` therefore adds only `SNDRV_PCM_INFO_NO_REWINDS` to the effective
+playback descriptor, reproducing the flag that the legacy 6.3.1 source placed
+on both descriptors. It is the next owner-run A/B for rejecting the stale
+backwards application-pointer update; it is not yet a production fix.
+
 The corresponding committed source state is
-`9de073b8b144565db524c885eb7252335aaa933a` on branch
+`57b9a78bdc2e` on branch
 `agent/implementation/op3-audio-mic-001` in the dedicated kernel worktree.
