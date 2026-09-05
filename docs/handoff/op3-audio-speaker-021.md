@@ -32,22 +32,38 @@ Hypothesis tested: PCM prepare returns -EINVAL because the QUAT AFE DAI has
 Only variable changed: one `q6afedai` child node with
   `qcom,sd-lines = <0 1>`. Kernel q6asm/clock code and userspace are fixed.
 
-Build run by project owner: NOT_RUN
-Build result: the owner must rebuild `Image.gz` and `dtbs` from commit
+Build run by project owner: YES (2026-09-05)
+Build result: PASS. The owner rebuilt `Image.gz` and `dtbs` from commit
   `1d6cdbb49ce8b2d4fd9d0888704097a797cc3f4e`.
-Artifacts and SHA256: pending owner build
+Artifacts and SHA256:
+  `Image.gz` = `89ff623ca7880504ae96bbc176af5ab6f9ed906d96f0ef1706a931f083122385`
+  `msm8996-oneplus3.dtb` = `ef82580e2e9c6c81ef41bbd6d6bfdd9b52ec8a30bb3f8b8f22ce85d6aa691142`
+  boot image = `e37d78db19bfab698b3d18d64c88acf76a736a8e6d8a88ba0d06afc7eda9621d`
+  (`boot-oneplus3-pmos612-own-dtb-audio-speaker-sdlines-diagnostic.img`)
 
-Device test run by project owner: NOT_RUN
-Device result: NOT_RUN
-Evidence links / log paths: pending owner report
+Device test run by project owner: YES (2026-09-05)
+Device result: FAIL (prepare gate unchanged). After
+  `route.sh speaker`, the QUAT mixer control was `On`; `tinypcminfo` showed
+  the expected 2-channel 48 kHz playback capability. The first tone write
+  still returned `cannot prepare channel: Invalid argument`, exited before
+  playback, left `MultiMedia3` in `close` with no active DSP links, and left
+  `div1-clk` disabled. The owner captured no QUAT/AFE runtime activity.
+Evidence links / log paths: owner terminal output for the
+  `audio-speaker-sdlines-diagnostic` image; the rebuilt DTB decompiles to
+  `q6afedai/dai@22/qcom,sd-lines = <0 1>`.
 
-Conclusion: INCONCLUSIVE
-Uncertainties: no DTB rebuild or device test has occurred yet. A prepare
-  pass only proves that the AFE port can start; q6asm playback scheduling,
-  QUAT clock status, TFA989x configuration and audible output remain to be
-  checked.
-Recommended next experiment: rebuild the DTB plus Image.gz, boot the new
-  image, and repeat the five-second `pcm-tone` test from OP3-AUDIO-020.
+Conclusion: REJECTED (the SD-line declaration alone does not clear the
+  speaker prepare failure)
+Uncertainties: the DTB property is present, but the speaker link is still
+  parsed without a `platform` child. In `qcom_snd_parse_of()`, a link without
+  that child is not marked `no_pcm` and therefore is not a DPCM backend;
+  `apq8096_add_be_ops()` consequently does not install the backend fixup or
+  QUAT clock callbacks. The absence of active DSP links and a disabled clock
+  is consistent with this topology defect. q6asm scheduling, TFA989x
+  configuration and acoustic output remain untested.
+Recommended next experiment: OP3-AUDIO-022 adds only the historical
+  `platform { sound-dai = <&q6routing>; };` child to `speaker-dai-link`, then
+  repeats the same bounded prepare/state/clock test.
 ```
 
 ## Why this change
