@@ -33,23 +33,38 @@ Only variable changed: the `&sound` default pinctrl reference and the three
   QUAT pinctrl states for GPIO58–61. No TFA supply/reset, clock code, q6asm,
   routing, mixer or userspace behavior changed.
 
-Build run by project owner: NOT_RUN
-Build result: NOT_RUN
-Artifacts and SHA256: pending owner build
+Build run by project owner: YES (2026-09-06)
+Build result: PASS. The owner rebuilt `Image.gz` and `dtbs` from
+  `c76160cde821b2f4908b0751a7c19aa2a828a6cf` and packaged the diagnostic boot
+  image.
+Artifacts and SHA256:
+  `Image.gz` =
+  `89ff623ca7880504ae96bbc176af5ab6f9ed906d96f0ef1706a931f083122385`
+  `msm8996-oneplus3.dtb` =
+  `5998241ee287b23ae83afdeb81207298c8a34040af12c8e099f2a47dac313dc8`
+  `boot-oneplus3-pmos612-own-dtb-audio-speaker-pinctrl-diagnostic.img` =
+  `6572d1e2d207313c3a96161cf04f55a317bd4e697df30d8d46cea5d57b36ece8`
 
-Device test run by project owner: NOT_RUN
-Device result: NOT_RUN
-Evidence links / log paths: pending owner test
+Device test run by project owner: YES (2026-09-06)
+Device result: PASS (pinmux and acoustic gate). Runtime pinmux showed GPIO58,
+  GPIO59, GPIO60 and GPIO61 owned by `sound` with `function qua_mi2s`. The
+  owner enabled `QUAT_MI2S_RX Audio Mixer MultiMedia3`; `pcm-tone` completed
+  493 writes and allowed the final buffer to drain, and the owner confirmed
+  that the external speaker was audible.
+Evidence links / log paths: owner SSH output; runtime
+  `/sys/kernel/debug/pinctrl/*/pinmux-pins`; `/tmp/op3-speaker-pcm-tone-pinctrl.log`.
 
-Conclusion: INCONCLUSIVE (prepared for owner build)
+Conclusion: SUPPORTED (pinmux hypothesis supported by owner test; Integration
+  promotion remains pending)
 Uncertainties: OP3-AUDIO-022's `tfa989x ... supply vddd not found, using
   dummy regulator` warning remains unchanged. The TFA9890 reset/power state
   is a separate follow-up variable and must not be folded into this pinmux A/B.
   The unrelated PHY `-517`, RMI4 `-22`, GPU firmware `-2`, and PDR `-6` lines
   are not evidence of a speaker-stream failure.
-Recommended next experiment: boot the image below, verify all four pins read
-  `sound ... function qua_mi2s`, then run one bounded stereo 440 Hz tone and
-  report both the active ASoC state and whether the external speaker is heard.
+Recommended next experiment: no further speaker source change is required for
+  basic output. Preserve this PASS while the owner records the result for
+  Integration; if codec/power cleanup is desired later, test the historical
+  `vddd-supply` as a separate variable.
 ```
 
 ## Why this variable
@@ -77,7 +92,7 @@ stale DTB cannot be packaged:
 set -e
 cd /home/kai/src/oneplus3-mainline
 test "$(git -C /home/kai/src/oneplus3-audio-dts-001 rev-parse HEAD)" = \
-  c76160cde821
+  c76160cde821b2f4908b0751a7c19aa2a828a6cf
 
 make -C /home/kai/src/oneplus3-audio-dts-001 \
   O=/home/kai/src/oneplus3-mainline/out/linux-pmos-msm8996-6.12-defconfig-audio \
