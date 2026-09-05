@@ -35,22 +35,29 @@ Only variable changed: playback q6asm queue ownership. The patch adds a
   descriptor, removes the two blind playback requeues, and implements the
   component `.ack` callback. Capture code is unchanged.
 
-Build run by project owner: NOT_RUN
-Build result: the owner must build commit `f95f3b02ec1e770ff50604a252a310c443620006`.
-Artifacts and SHA256: pending owner build
+Build run by project owner: PASS (2026-09-05)
+Build result: commit `f95f3b02ec1e770ff50604a252a310c443620006` compiled and
+was packaged successfully.
+Artifacts and SHA256: `be41815eb03c5127ec0c7726a79a2dc025542b3e30cb799761776587b0d26fe6`
+(`boot-oneplus3-pmos612-own-dtb-audio-speaker-ack-diagnostic.img`)
 
-Device test run by project owner: NOT_RUN
-Device result: NOT_RUN
-Evidence links / log paths: pending owner report
+Device test run by project owner: YES (2026-09-05)
+Device result: INCONCLUSIVE at the PCM-prepare gate. `pcm-tone` failed on
+its first 3840-frame write with `cannot prepare channel: Invalid argument`
+(`errno 22`), `MultiMedia3` stayed `close`, and `div1-clk` stayed disabled.
+No q6asm playback completion or QUAT runtime event was reached.
+Evidence links / log paths: owner pasted terminal output in the task;
+`/tmp/op3-speaker-pcm-tone.log` on the device.
 
 Conclusion: INCONCLUSIVE
-Uncertainties: the q6asm ACK path has not yet been compiled or exercised on
-  the phone. A successful `pcm-tone` run would establish only that playback
-  buffers can be scheduled; QUAT clock status, TFA989x configuration and
-  audible output still require owner confirmation.
-Recommended next experiment: run the fail-fast build below, boot the new
-  image, then use `pcm-tone` for five seconds and collect the active ASoC,
-  clock, regmap and q6asm logs before trying a WAV file.
+Uncertainties: the failure occurs before q6asm playback scheduling can be
+  observed. Source inspection identifies the existing DTS omission of
+  `qcom,sd-lines` for `QUATERNARY_MI2S_RX`; `q6afe_i2s_port_prepare()` then
+  rejects the port with `sd_line_mask=0`. This is tracked as OP3-AUDIO-021 and
+  does not reject the ACK hypothesis.
+Recommended next experiment: add only the historical QUAT SD0/SD1 DTS
+  declaration, rebuild the DTB together with this q6asm commit, and repeat
+  the same `pcm-tone` test.
 ```
 
 ## Why this variable
@@ -67,6 +74,18 @@ by the historical successful speaker path.
 The patch deliberately adds the capability bit only to playback. The
 microphone capture runtime and its accepted `NO_REWINDS` behavior are not
 part of this experiment.
+
+## Prepare-gate finding
+
+The owner run proved that the ACK callback was not reached: the first
+`pcm_writei()` returned `-EINVAL`, the frontend state was `close`, and
+`div1-clk` never became enabled. In the 6.12 source,
+`of_q6afe_parse_dai_data()` initializes the QUAT DAI's SD-line mask to zero
+when its child node has no `qcom,sd-lines`. `q6afe_i2s_port_prepare()` then
+returns `-EINVAL` for `num_sd_lines == 0` before it can start the AFE port.
+The legacy OnePlus DTS contains the missing declaration:
+`dai@22 { reg = <QUATERNARY_MI2S_RX>; qcom,sd-lines = <0 1>; }`.
+That DTS-only correction is isolated in OP3-AUDIO-021.
 
 ## Owner build and package commands
 

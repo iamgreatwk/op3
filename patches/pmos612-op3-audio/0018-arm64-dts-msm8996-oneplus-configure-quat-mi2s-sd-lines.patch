@@ -1,0 +1,30 @@
+From 1d6cdbb49ce8b2d4fd9d0888704097a797cc3f4e Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Sat, 5 Sep 2026 23:43:44 +0800
+Subject: [PATCH] arm64: dts: msm8996-oneplus: configure QUAT MI2S SD lines
+
+---
+ arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi b/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi
+index ebbac854c900..760b71e7fe22 100644
+--- a/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi
++++ b/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi
+@@ -376,6 +376,14 @@ dai@2 {
+ 	};
+ };
+ 
++/* QUAT MI2S speaker amplifier uses SD0/SD1 as its stereo data lines. */
++&q6afedai {
++	dai@22 {
++		reg = <QUATERNARY_MI2S_RX>;
++		qcom,sd-lines = <0 1>;
++	};
++};
++
+ &rpm_requests {
+ 	regulators {
+ 		compatible = "qcom,rpm-pm8994-regulators";
+-- 
+2.53.0
