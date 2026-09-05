@@ -34,23 +34,44 @@ Only variable changed: one `platform` child in `speaker-dai-link`:
   `sound-dai = <&q6routing>;`. No code, clock, codec, mixer or userspace
   behavior changed.
 
-Build run by project owner: NOT_RUN
-Build result: the owner must rebuild `Image.gz` and `dtbs` from commit
+Build run by project owner: YES (2026-09-06)
+Build result: PASS. The owner rebuilt `Image.gz` and `dtbs` from commit
   `44429af1bfab351c5046fdd9d00a1140b7586b1e`.
-Artifacts and SHA256: pending owner build
+Artifacts and SHA256:
+  `Image.gz` = `89ff623ca7880504ae96bbc176af5ab6f9ed906d96f0ef1706a931f083122385`
+  `msm8996-oneplus3.dtb` = `afe5023e4d649035a21fc5cbb658cab510adb4078012d216b4ffc525f22b5239`
+  boot image = `e762ad8b0925bd7387cf7a715a31541a8dab455cd490d6e4298efdb8b62622b2`
+  (`boot-oneplus3-pmos612-own-dtb-audio-speaker-q6routing-diagnostic.img`)
 
-Device test run by project owner: NOT_RUN
-Device result: NOT_RUN
-Evidence links / log paths: pending owner report
+Device test run by project owner: YES (2026-09-06)
+Device result: PASS for prepare and playback scheduling; acoustic output is
+  NOT_RUN. After `route.sh speaker`, the QUAT mixer control read `On`. The
+  playback state reached `start` with a `Speaker` backend at S16_LE, 2
+  channels and 48 kHz. `pcm-tone` completed 493 writes, allowed the final
+  buffer to drain, and exited 0. There was no `cannot prepare channel` and no
+  runtime QUAT/AFE/TFA error in the captured log. The displayed
+  `div1-clk` remained disabled; it is the WCD9335 MCLK and is not the QUAT
+  speaker clock.
+Evidence links / log paths: owner SSH output for the
+  `audio-speaker-q6routing-diagnostic` image; `/tmp/op3-speaker-pcm-tone-q6routing.log`.
 
-Conclusion: INCONCLUSIVE
-Uncertainties: a prepare pass will only prove the DPCM/AFE path reaches the
-  active state. q6asm playback scheduling, QUAT clock status, TFA989x
-  configuration and audible output still require separate evidence.
-Recommended next experiment: boot the rebuilt image, enable the observed
-  `QUAT_MI2S_RX Audio Mixer MultiMedia3` route, and repeat the bounded
-  `pcm-tone` prepare/state/clock test below. If it passes, run the historical
-  paced WAV fixture and record direct speaker output.
+Conclusion: INCONCLUSIVE (DPCM topology hypothesis supported at the
+  prepare/scheduling gate; the Integration role must still require direct
+  acoustic confirmation)
+Uncertainties: `pcm-tone` proves that the FE→q6routing→Speaker path can
+  prepare, run and drain, but the owner has not yet reported hearing the
+  external speaker. TFA989x reset/power state and the actual QUAT data clock
+  still need a bounded WAV/acoustic test.
+Recommended next experiment: with the same boot and route, run the
+  historical paced stereo WAV fixture, capture its log, and report whether
+  the OnePlus 3 external speaker emits the recording:
+
+```sh
+pcm-wav -D 0 -d 2 \
+  /newroot/var/log/op3-amic4-effective-norewinds.wav \
+  >/tmp/op3-speaker-pcm-wav-q6routing.log 2>&1
+cat /tmp/op3-speaker-pcm-wav-q6routing.log
+```
 ```
 
 ## Why this change
