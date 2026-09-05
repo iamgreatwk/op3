@@ -89,8 +89,8 @@ one-line `git diff HEAD^ HEAD | checkpatch` check with zero errors and warnings.
 
 ## Device result
 
-**PASS for ALSA cadence/accounting and payload spot-check (owner-run,
-2026-09-05); final signal-quality acceptance pending.** The owner built and booted
+**PASS for ALSA cadence/accounting, payload spot-check and audible replay
+(owner-run, 2026-09-05).** The owner built and booted
 `boot-oneplus3-pmos612-own-dtb-audio-effective-norewinds-diagnostic.img`, used
 the verified AMIC4/MM1 route, and captured with the command above. Uptime
 advanced from `23.90` to `29.02` seconds (~5.12 s), and TinyALSA reported
@@ -103,8 +103,10 @@ sync update. Four 4 KiB payload blocks at offsets 1, 32, 64 and 96 had
 distinct SHA256 values (`046b2b68…`, `24968e39…`, `70c28932…`, `c0395803…`).
 The first 64 bytes after the WAV header were startup zeroes, but mid-stream
 and end samples were nonzero. This establishes nonzero, nonrepeated payload at
-spot-check locations; an audible replay or equivalent signal-quality
-measurement is still needed before final microphone acceptance.
+spot-check locations. The owner copied the WAV to the host and confirmed that
+`aplay` played the recorded sound. This completes the device-level microphone
+capture/replay evidence; promotion to the project baseline remains the
+Integration role's decision.
 
 ## Scope correction
 
