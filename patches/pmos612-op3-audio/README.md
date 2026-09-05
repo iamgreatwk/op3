@@ -71,6 +71,21 @@ speaker-clock hypothesis. The first owner build at `0015` failed at this
 missing include; the shell then packed a stale image, which must not be
 tested.
 
+`0017` changes only q6asm playback period ownership: it advertises the
+playback application-pointer synchronization flag, stops blind requeueing from
+RUN/DATA_WRITE_DONE events, and queues newly exposed periods from `.ack`.
+Capture behavior remains unchanged. `0018` adds only the QUAT AFE DAI's
+`qcom,sd-lines = <0 1>` declaration. `0019` adds only the q6routing platform
+component to the speaker DAI link, turning it into a DPCM backend so the
+MultiMedia3 frontend can reach QUAT MI2S.
+
+`0020` adds only the historical QUAT MI2S pinctrl states: GPIO58/59 are the
+clock/frame pair and GPIO60/61 are SD0/SD1, all with `qua_mi2s` function and
+drive strength 8. The states are attached to the sound card's default pinctrl;
+TFA supply/reset, q6asm, clock code, mixer and userspace remain unchanged.
+This is an isolated physical-pin hypothesis after OP3-AUDIO-022 passed the
+prepare/scheduling gate but produced no audible output.
+
 The corresponding committed source state is
-`8c181e065c6f` on branch
+`c76160cde821b2f4908b0751a7c19aa2a828a6cf` on branch
 `agent/implementation/op3-audio-mic-001` in the dedicated kernel worktree.

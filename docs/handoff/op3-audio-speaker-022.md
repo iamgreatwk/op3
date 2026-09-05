@@ -44,27 +44,29 @@ Artifacts and SHA256:
   (`boot-oneplus3-pmos612-own-dtb-audio-speaker-q6routing-diagnostic.img`)
 
 Device test run by project owner: YES (2026-09-06)
-Device result: PASS for prepare and playback scheduling; acoustic output is
-  NOT_RUN. After `route.sh speaker`, the QUAT mixer control read `On`. The
+Device result: PASS for prepare and playback scheduling; FAIL for acoustic
+  output. After `route.sh speaker`, the QUAT mixer control read `On`. The
   playback state reached `start` with a `Speaker` backend at S16_LE, 2
   channels and 48 kHz. `pcm-tone` completed 493 writes, allowed the final
-  buffer to drain, and exited 0. There was no `cannot prepare channel` and no
-  runtime QUAT/AFE/TFA error in the captured log. The displayed
-  `div1-clk` remained disabled; it is the WCD9335 MCLK and is not the QUAT
-  speaker clock.
+  buffer to drain, and exited 0. The follow-up `pcm-wav` run also completed
+  497 writes and exited 0, but the owner heard no sound. There was no
+  `cannot prepare channel` and no runtime QUAT/AFE/TFA error in the captured
+  log. The displayed `div1-clk` remained disabled; it is the WCD9335 MCLK
+  and is not the QUAT speaker clock.
 Evidence links / log paths: owner SSH output for the
   `audio-speaker-q6routing-diagnostic` image; `/tmp/op3-speaker-pcm-tone-q6routing.log`.
 
 Conclusion: INCONCLUSIVE (DPCM topology hypothesis supported at the
-  prepare/scheduling gate; the Integration role must still require direct
-  acoustic confirmation)
-Uncertainties: `pcm-tone` proves that the FE→q6routing→Speaker path can
-  prepare, run and drain, but the owner has not yet reported hearing the
-  external speaker. TFA989x reset/power state and the actual QUAT data clock
-  still need a bounded WAV/acoustic test.
-Recommended next experiment: with the same boot and route, run the
-  historical paced stereo WAV fixture, capture its log, and report whether
-  the OnePlus 3 external speaker emits the recording:
+  prepare/scheduling gate but not sufficient for acoustic output)
+Uncertainties: the FE→q6routing→Speaker path can prepare, run and drain, but
+  neither the tone nor the WAV produced audible output. The current DTS does
+  not configure the historical QUAT MI2S GPIO58–61 pinctrl state; the TFA989x
+  `vddd` supply is also still a dummy regulator. These are separate variables
+  and must not be changed in the same experiment.
+Recommended next experiment: OP3-AUDIO-023 adds only the historical QUAT
+  MI2S pinctrl state and checks that GPIO58–61 are owned by `sound` with
+  function `qua_mi2s` during playback. Keep the TFA supply and all kernel,
+  mixer and userspace behavior fixed.
 
 ```sh
 pcm-wav -D 0 -d 2 \

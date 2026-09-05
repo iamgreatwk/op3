@@ -1,0 +1,70 @@
+From c76160cde821b2f4908b0751a7c19aa2a828a6cf Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Sun, 6 Sep 2026 00:04:33 +0800
+Subject: [PATCH] arm64: dts: msm8996-oneplus: mux QUAT MI2S speaker pins
+
+---
+ .../boot/dts/qcom/msm8996-oneplus-common.dtsi | 40 +++++++++++++++++++
+ 1 file changed, 40 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi b/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi
+index 26abf690bc18..e90e15fd84d4 100644
+--- a/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi
++++ b/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi
+@@ -626,6 +626,9 @@ wcd9335: codec@1,0 {
+ &sound {
+ 	compatible = "qcom,apq8096-sndcard";
+ 	model = "OnePlus3";
++	pinctrl-names = "default";
++	pinctrl-0 = <&quat_mi2s_active &quat_mi2s_sd0_active
++			 &quat_mi2s_sd1_active>;
+ 	audio-routing = "RX_BIAS", "MCLK",
+ 			"AMIC2", "MIC BIAS2",
+ 			"MIC BIAS2", "Headset Mic",
+@@ -814,6 +817,43 @@ codec {
+ &tlmm {
+ 	gpio-reserved-ranges = <81 4>;
+ 
++	quat_mi2s_active: quat_mi2s_active {
++		mux {
++			pins = "gpio58", "gpio59";
++			function = "qua_mi2s";
++		};
++		config {
++			pins = "gpio58", "gpio59";
++			drive-strength = <8>;
++			bias-disable;
++			output-high;
++		};
++	};
++
++	quat_mi2s_sd0_active: quat_mi2s_sd0_active {
++		mux {
++			pins = "gpio60";
++			function = "qua_mi2s";
++		};
++		config {
++			pins = "gpio60";
++			drive-strength = <8>;
++			bias-disable;
++		};
++	};
++
++	quat_mi2s_sd1_active: quat_mi2s_sd1_active {
++		mux {
++			pins = "gpio61";
++			function = "qua_mi2s";
++		};
++		config {
++			pins = "gpio61";
++			drive-strength = <8>;
++			bias-disable;
++		};
++	};
++
+ 	mdss_dsi_active: mdss-dsi-active-state {
+ 		pins = "gpio8";
+ 		function = "gpio";
+-- 
+2.53.0
+
