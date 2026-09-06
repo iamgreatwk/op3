@@ -30,6 +30,9 @@ CH=/newroot/pmos
 CHR=/newroot/opt/op3-chromium
 LOG=/var/log/op3-chromium-boot.log
 PERSIST_LOG=/newroot/var/log/op3-chromium-boot.log
+ONESHOT=${OP3_CHROMIUM_ONESHOT:-0}
+weston_pid=""
+chromium_pid=""
 
 mkdir -p /var/log
 : > "$LOG"
@@ -45,7 +48,47 @@ sync_log() {
 	sync
 }
 
+kill_stale(){
+	leftovers=""
+	for p in /proc/[0-9]*; do
+		[ "$p" = "/proc/$$" ] && continue
+		c=$(tr '\0' ' ' < "$p/cmdline" 2>/dev/null)
+		case "$c" in
+			*"/usr/bin/weston "*|*"/usr/lib/chromium/chrome"*|*"/usr/lib/chromium/chromium"*)
+				leftovers="$leftovers ${p#/proc/}"
+				;;
+		esac
+	done
+	if [ -n "$leftovers" ]; then
+		log "killing stale processes:$leftovers"
+		kill -9 $leftovers 2>/dev/null
+		sleep 1
+	fi
+}
+
+cleanup(){
+	rc=$?
+	trap - EXIT INT TERM
+	if [ -n "$chromium_pid" ]; then
+		kill -TERM "$chromium_pid" 2>/dev/null
+		wait "$chromium_pid" 2>/dev/null
+		chromium_pid=""
+	fi
+	if [ -n "$weston_pid" ]; then
+		kill -TERM "$weston_pid" 2>/dev/null
+		sleep 2
+		kill -9 "$weston_pid" 2>/dev/null
+		wait "$weston_pid" 2>/dev/null
+		weston_pid=""
+	fi
+	kill_stale
+	sync_log
+	exit "$rc"
+}
+trap cleanup EXIT INT TERM
+
 log "chromium boot launcher start pid=$$"
+kill_stale
 
 # ---- op3-browser bundle dynamic loader --------------------------------------
 set -- "$BASE"/lib/ld-linux-*.so*
@@ -220,7 +263,25 @@ while :; do
 		--remote-debugging-port=9222 \
 		--lang=zh-CN \
 		--start-fullscreen \
-		"$URL" >> "$LOG" 2>&1
-	log "chromium exited ($?); respawn in 5s"
+		"$URL" >> "$LOG" 2>&1 &
+	chromium_pid=$!
+	wait "$chromium_pid" 2>/dev/null
+	chromium_rc=$?
+	chromium_pid=""
+	log "chromium exited ($chromium_rc)"
+	if [ "$ONESHOT" = 1 ]; then
+		break
+	fi
+	log "respawn in 5s"
 	sleep 5
 done
+
+log "stopping weston"
+kill -TERM "$weston_pid" 2>/dev/null
+sleep 2
+kill -9 "$weston_pid" 2>/dev/null
+wait "$weston_pid" 2>/dev/null
+weston_pid=""
+kill_stale
+sync_log
+exit "${chromium_rc:-0}"

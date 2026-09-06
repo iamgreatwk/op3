@@ -24,7 +24,10 @@
 # wrapped through the loader the same way as the weston helpers.
 # ============================================================
 
-BASE=$(dirname "$0")
+# A recovery session may stage this runner outside the browser bundle. Keep
+# the bundle root explicit so its absolute-path bridges still point at the
+# validated Buildroot tree.
+BASE=${OP3_BROWSER_BASE:-$(dirname "$0")}
 
 export GBM_BACKENDS_PATH="$BASE/usr/lib/gbm"
 unset DISPLAY WAYLAND_DISPLAY XDG_RUNTIME_DIR LD_LIBRARY_PATH
@@ -88,6 +91,29 @@ kill_stale() {
 		sleep 1
 	fi
 }
+cog_pid=""
+weston_pid=""
+
+cleanup(){
+	rc=$?
+	trap - EXIT INT TERM
+	if [ -n "$cog_pid" ]; then
+		kill -TERM "$cog_pid" 2>/dev/null
+		wait "$cog_pid" 2>/dev/null
+		cog_pid=""
+	fi
+	if [ -n "$weston_pid" ]; then
+		kill -TERM "$weston_pid" 2>/dev/null
+		sleep 2
+		kill -9 "$weston_pid" 2>/dev/null
+		wait "$weston_pid" 2>/dev/null
+		weston_pid=""
+	fi
+	kill_stale
+	exit "$rc"
+}
+trap cleanup EXIT INT TERM
+
 kill_stale
 
 # --- Bridge compile-time-absolute paths into the bundle ----------------------
@@ -348,7 +374,6 @@ fi
 #
 # The cog platform name changed across versions (wl / fdo / wayland); try the
 # candidates in order and keep the first that stays alive for 4 s.
-cog_pid=""
 for plat in wl fdo wayland; do
 	echo "=== starting cog (platform $plat) for ${BROWSER_SECONDS}s: $PAGE_URI ==="
 	run "$BASE/usr/bin/cog" --platform="$plat" "$PAGE_URI" \
@@ -366,24 +391,32 @@ done
 if [ -z "$cog_pid" ]; then
 	echo "FATAL: every cog platform attempt failed"
 	tail -n 15 "$XDG_RUNTIME_DIR/cog.log" 2>/dev/null
-	kill_stale
 	exit 1
 fi
-sleep "$BROWSER_SECONDS"
 
-echo "=== stopping browser ==="
-kill -TERM "$cog_pid" 2>/dev/null
-sleep 2
-kill_stale
-wait "$cog_pid" 2>/dev/null
-echo "cog exit=$?"
+if [ "${OP3_BROWSER_ONESHOT:-0}" = 1 ]; then
+	echo "=== waiting for cog exit (recovery session) ==="
+	wait "$cog_pid" 2>/dev/null
+	cog_rc=$?
+else
+	sleep "$BROWSER_SECONDS"
+	echo "=== stopping browser after ${BROWSER_SECONDS}s ==="
+	kill -TERM "$cog_pid" 2>/dev/null
+	wait "$cog_pid" 2>/dev/null
+	cog_rc=$?
+fi
+
+cog_pid=""
+echo "cog exit=$cog_rc"
 
 echo "=== stopping weston ==="
 kill -TERM "$weston_pid" 2>/dev/null
 sleep 2
-kill_stale
+kill -9 "$weston_pid" 2>/dev/null
 wait "$weston_pid" 2>/dev/null
 echo "weston exit=$?"
+weston_pid=""
+kill_stale
 
 echo "=== cog output (filtered) ==="
 grep -iE "error|fail|warning|backend|display" "$XDG_RUNTIME_DIR/cog.log" 2>/dev/null | head -n 15
