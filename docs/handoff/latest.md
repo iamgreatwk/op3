@@ -1,5 +1,18 @@
 # Latest handoff
 
+## OP3 recovery Wi-Fi association timeout guard correction (Issue #10 follow-up, 2026-09-06)
+
+The prior 90-second association change updated the wait loop but left the
+post-loop timeout guard hard-coded at 30 seconds. Commit `b617476` changes
+that guard to use the same `ASSOC_TIMEOUT` value. This is a one-line
+correction in the existing recovery Wi-Fi userspace layer; `/newroot` paths,
+module loading, DHCP, IPv6 policy, kernel, DTS, DRM, audio, input, and browser
+contents are unchanged. Static shell checks pass. Replacement bundle:
+`artifacts/op3-wifi-bundle-ipv6-assoc90-fixed.tar.gz`, SHA256
+`143714f00fb17fe5c63f3cb00821ea77e3e0c8616504d8e497b89e9d65f200f7`.
+Owner device retest is pending. Handoff:
+`docs/handoff/op3-recovery-wifi-timeout-001.md`.
+
 ## OP3 recovery Wi-Fi DHCP retry checkpoint (Issue #11, 2026-09-06)
 
 Historical 6.3.1 recovery used background `udhcpc -b -q`, while the current
