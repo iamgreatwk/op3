@@ -19,7 +19,9 @@ is the final kernel integration branch; no additional feature branch should be
 selected. Kernel branch: `agent/implementation/recovery-browser-audio-full-001`, HEAD
 `9491be0d6460`. The first owner build exposed and the agent fixed a missing
 DTS closing brace (`9f81c0cd4289`, `9491be0d6460`); the worktree is now clean.
-No successful kernel build or post-boot test has run. Handoff:
+The next build exposed missing ignored ath10k `extfw` inputs; both required
+files are now staged locally in the final worktree. No successful kernel build
+or post-boot test has run. Handoff:
 `docs/handoff/op3-recovery-audio-card-001.md`. This checkpoint is
 INCONCLUSIVE pending owner build and ALSA enumeration evidence.
 

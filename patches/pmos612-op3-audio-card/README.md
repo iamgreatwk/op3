@@ -27,6 +27,17 @@ The owner should compile this final integration worktree and collect `/proc/asou
 `/proc/asound/pcm`, `/dev/snd`, and audio dmesg before testing recovery
 `tinycap`/`tinyplay`.
 
+The kernel configuration also embeds the ath10k firmware. Because `*.bin` is
+ignored by the kernel repository, the final worktree must have these local
+inputs before compiling:
+
+```text
+extfw/ath10k/QCA6174/hw3.0/firmware-6.bin  706360 bytes
+extfw/ath10k/QCA6174/hw3.0/board-2.bin     740076 bytes
+```
+
+They are staged in the current local worktree and are not committed to Git.
+
 The first owner build stopped in DTC because the physical-key merge was
 missing the closing brace for the audio `&soc` node. Commits `9f81c0cd4289`
 and `9491be0d6460` repair that nesting and indentation; compile the current

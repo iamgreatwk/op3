@@ -55,7 +55,11 @@ The owner build first failed at DTC line 91 of
 `msm8996-oneplus-common.dtsi` because the conflict resolution omitted the
 closing brace for `&soc`. Commit `9f81c0cd4289` adds the missing brace and
 `9491be0d6460` restores the affected indentation. The current worktree is
-clean and ready for a new owner build.
+clean and ready for a new owner build. A subsequent build also exposed that
+the copied output configuration embeds ath10k firmware from the ignored
+`extfw/` directory. The two required files are now staged locally in the
+final worktree: `firmware-6.bin` (706360 bytes) and `board-2.bin` (740076
+bytes). They are external firmware inputs and intentionally are not committed.
 
 Recommended next experiment: the owner should compile the final integration worktree,
 pack and boot the resulting image, then collect `/proc/asound/cards`,
