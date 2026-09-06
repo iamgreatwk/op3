@@ -43,6 +43,9 @@ Uncertainties:
     regress the direct-DRM recovery GUI and existing RNDIS/ACM/SSH services.
 Recommended next experiment: owner runs the recovery initrd generation,
   repacks the approved 6.12.1 recovery image, boots it without browser, and
-  captures `/root/wifi_auto.log`, `wifi current`, `ip -4 addr show wlan0`,
-  the default route, filtered ath10k/wlan dmesg, and recovery GUI/SSH status.
+  captures `/root/boot_mainline.log` (including the `wifi_auto started`
+  marker), `/root/dmesg_early.txt` or `/root/dmesg_rootfs.txt`, `wifi current`,
+  `ip -4 addr show wlan0`, the default route, filtered ath10k/wlan dmesg, and
+  recovery GUI/SSH status. The reference init_mainline redirects the hook's
+  own stdout/stderr to `/dev/null`, so there is no dedicated wifi_auto.log.
 ```
