@@ -9,7 +9,7 @@ Changed files: boot/wifi/opt/op3-wifi/wifi;
   boot/wifi/initramfs/usr/bin/wifi_auto.sh; boot/wifi/README.md;
   boot/recovery-browser-test/README.md; docs/handoff/latest.md;
   docs/handoff/op3-recovery-ipv6-001.md
-Commit SHA: pending implementation commit
+Commit SHA: cf6675c
 
 Layer: 02 recovery network userspace / IPv6 policy
 Previous PASS milestone: Issue #8 recovery initrd includes the validated
@@ -26,10 +26,11 @@ Command interface:
   `wifi ipv6 on` enables it; `wifi ipv6 status` reports the state.
 
 Build run by project owner: NOT_RUN
-Build result: Agent shell/static checks pending final checkpoint; owner boot
-  image repack NOT_RUN
-Artifacts and SHA256: The existing Issue #8 recovery initrd must be
-  regenerated after this source change; SHA256 pending.
+Build result: Agent shell/static checks PASS; owner boot-image repack NOT_RUN
+Artifacts and SHA256: `artifacts/initrd-op3-recovery-browser.cpio.gz`
+  `e9f7ffd3555c7d0796cee002f6ec58e83546dc8871c91a72d0c4d8d49ee7ea2b`.
+  The appended entries include `usr/bin/wifi_auto.sh` with the IPv6-off
+  preamble, the recovery selector, and the three A530 firmware files.
 
 Device test run by project owner: NOT_RUN
 Device result: NOT_RUN
