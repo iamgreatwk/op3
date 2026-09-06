@@ -28,6 +28,19 @@ only for compatibility with older images. No browser packages were enabled in
 the default profile. Handoff:
 `docs/handoff/op3-wifi-buildroot-001.md`.
 
+## OP3 recovery bundle integrated into default Buildroot target (2026-09-06)
+
+The default recovery Buildroot profile now includes the project-owned
+`op3-recovery` package. During the Buildroot build it compiles the tracked
+direct-DRM `recovery_mainline` and installs `/sbin/recovery_mainline`, the
+`browser` command, the browser-session supervisor, and both browser runner
+scripts into the same persistent target that already receives audio and
+Wi-Fi. The old standalone recovery stager and recovery-audio initrd overlay
+remain compatibility tools only. The browser runtime itself remains an
+explicit separate bundle. No kernel or device test was run for this
+packaging change. Handoff:
+`docs/handoff/op3-recovery-buildroot-001.md`.
+
 ## OP3 external input bundle (2026-09-06)
 
 All binary inputs that must survive deletion of the checkout are organized in

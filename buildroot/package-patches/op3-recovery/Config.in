@@ -1,0 +1,5 @@
+config BR2_PACKAGE_OP3_RECOVERY
+	bool "op3 recovery"
+	help
+	  Build the direct-DRM OnePlus 3 recovery terminal and install its
+	  browser-session helpers into the persistent recovery target.

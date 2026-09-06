@@ -15,6 +15,7 @@ buildroot_dir="${1:-$project_root/$BUILDROOT_SOURCE_DIR}"
 buildroot_dir="$(readlink -m "$buildroot_dir")"
 patch_dir="$project_root/$BUILDROOT_COG_PATCH_SOURCE_DIR"
 recovery_postbuild="$project_root/buildroot/op3-recovery-post-build.sh"
+recovery_package="$project_root/buildroot/package-patches/op3-recovery"
 wifi_source="$project_root/boot/wifi"
 profile="${2:-recovery}"
 
@@ -56,6 +57,17 @@ config_hash="$(sha256sum "$config_source" | awk '{print $1}')"
 if [ "$profile" = recovery ]; then
 	test -f "$recovery_postbuild" || die "missing recovery post-build hook: $recovery_postbuild"
 	test -d "$wifi_source" || die "missing Wi-Fi sources: $wifi_source"
+	for input in \
+		"$recovery_package/Config.in" \
+		"$recovery_package/op3-recovery.mk" \
+		"$project_root/recovery/recovery_mainline.c" \
+		"$project_root/recovery/recovery_drm.c" \
+		"$project_root/third_party/libtsm" \
+		"$project_root/boot/recovery-browser-test/opt/op3-recovery/browser-session.sh" \
+		"$project_root/boot/browser-test/opt/op3-browser/run.sh" \
+		"$project_root/boot/pmos-chromium-test/opt/op3-chromium/run.sh"; do
+		test -e "$input" || die "missing recovery package input: $input"
+	done
 	for symbol in \
 		BR2_PACKAGE_MESA3D \
 		BR2_PACKAGE_WESTON \
@@ -93,6 +105,32 @@ if [ "$profile" = recovery ]; then
 		"$recovery_board/post-build.sh"
 	mkdir -p "$recovery_board/wifi"
 	cp -a "$wifi_source/." "$recovery_board/wifi/"
+	recovery_package_dir="$buildroot_dir/package/op3-recovery"
+	install -D -m 0644 "$recovery_package/Config.in" \
+		"$recovery_package_dir/Config.in"
+	install -D -m 0644 "$recovery_package/op3-recovery.mk" \
+		"$recovery_package_dir/op3-recovery.mk"
+	mkdir -p "$recovery_package_dir/source/recovery" \
+		"$recovery_package_dir/source/libtsm" \
+		"$recovery_package_dir/source/runners"
+	cp -a "$project_root/recovery/." "$recovery_package_dir/source/recovery/"
+	cp -a "$project_root/third_party/libtsm/." \
+		"$recovery_package_dir/source/libtsm/"
+	install -m 0755 \
+		"$project_root/boot/recovery-browser-test/opt/op3-recovery/browser-session.sh" \
+		"$recovery_package_dir/source/runners/browser-session.sh"
+	install -m 0755 \
+		"$project_root/boot/browser-test/opt/op3-browser/run.sh" \
+		"$recovery_package_dir/source/runners/cog-run.sh"
+	install -m 0755 \
+		"$project_root/boot/pmos-chromium-test/opt/op3-chromium/run.sh" \
+		"$recovery_package_dir/source/runners/chromium-run.sh"
+	package_config="$buildroot_dir/package/Config.in"
+	if grep -Fq 'source "package/op3-recovery/Config.in"' "$package_config"; then
+		die "Buildroot already contains the op3-recovery package registration"
+	fi
+	sed -i '/^[[:space:]]*source "package\/strace\/Config.in"$/a\	source "package/op3-recovery/Config.in"' \
+		"$package_config"
 fi
 
 if [ "$install_browser_patches" -eq 1 ]; then

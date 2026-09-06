@@ -14,6 +14,10 @@ BR2_TARGET_ROOTFS_TAR=y
 BR2_PACKAGE_TINYALSA=y
 BR2_PACKAGE_TINYALSA_TOOLS=y
 
+# The direct-DRM recovery binary and its browser-session helpers are compiled
+# and installed by the project-owned Buildroot package.
+BR2_PACKAGE_OP3_RECOVERY=y
+
 # Wi-Fi userspace is built into the recovery target. The post-build hook also
 # copies the matching kernel module closure from OP3_WIFI_MODULES_ROOT.
 BR2_PACKAGE_WPA_SUPPLICANT=y

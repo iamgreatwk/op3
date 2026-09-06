@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Stage the Buildroot target as the persistent OP3 audio payload. The target
-# must already have been built by the project owner with TinyALSA tools. This
-# script does not invoke Buildroot and does not create a boot image.
+# Stage the Buildroot target as the persistent OP3 recovery/audio/Wi-Fi
+# payload. The target must already have been built by the project owner with
+# the recovery package, TinyALSA tools, and integrated Wi-Fi. This script does
+# not invoke Buildroot and does not create a boot image.
 #
 # Usage:
 #   scripts/stage-op3-audio-rootfs.sh [buildroot-target] [output-tarball]
@@ -31,6 +32,19 @@ ls "$target"/usr/lib/libtinyalsa.so.* >/dev/null 2>&1 || {
 	printf 'Missing libtinyalsa in %s/usr/lib\n' "$target" >&2
 	exit 1
 }
+
+for input in \
+	"$target/sbin/recovery_mainline" \
+	"$target/usr/bin/browser" \
+	"$target/usr/bin/op3-browser-session" \
+	"$target/opt/op3-recovery/cog-run.sh" \
+	"$target/opt/op3-recovery/chromium-run.sh"; do
+	test -x "$input" || {
+		printf 'Missing integrated recovery input: %s; enable BR2_PACKAGE_OP3_RECOVERY and rebuild Buildroot.\n' \
+			"$input" >&2
+		exit 1
+	}
+done
 
 for input in \
 	"$target/opt/op3-wifi/wifi" \

@@ -98,8 +98,15 @@ Use the recovery target for the audio bundle:
 ```bash
 ./scripts/stage-op3-audio-rootfs.sh \
   out/buildroot-op3-recovery/target \
-  artifacts/op3-audio-rootfs.tar.gz
+  artifacts/op3-recovery-audio-rootfs.tar.gz
 ```
+
+This same target is the canonical persistent recovery payload. The
+`BR2_PACKAGE_OP3_RECOVERY` package compiles and installs the static
+`/sbin/recovery_mainline` binary, the `browser` command, the browser-session
+supervisor, and the two browser runner scripts. The staging script verifies
+these recovery files in addition to the audio and Wi-Fi files, so a partial
+or legacy target cannot be mistaken for the final payload.
 
 The browser remains an explicit opt-in profile. It uses a separate output
 directory and a separate Buildroot source checkout; it installs the three Cog
@@ -230,36 +237,35 @@ Credentials are entered on the device with `wifi connect`; QCA6174 firmware
 remains in the verified initrd. IPv6 is disabled by the initramfs hook and can
 be enabled later with `wifi ipv6 on`.
 
-## 6. Recovery and audio bundles
+## 6. Recovery/audio payload and initrd
 
-The small recovery bundle is compiled from tracked C/libtsm sources. This is
-not a kernel or Buildroot build:
+The recovery binary and its browser-session helpers are compiled by the
+`op3-recovery` Buildroot package. The combined persistent payload is staged
+from the completed recovery target:
 
 ```bash
-./scripts/build-recovery-mainline.sh \
-  out/recovery/recovery_mainline
-./scripts/stage-recovery-rootfs.sh \
-  artifacts/op3-recovery-browser-audio-bundle.tar.gz \
-  out/recovery/recovery_mainline
+./scripts/stage-op3-audio-rootfs.sh \
+  out/buildroot-op3-recovery/target \
+  artifacts/op3-recovery-audio-rootfs.tar.gz
 ```
 
-The audio payload is the recovery Buildroot target plus the tracked diagnostic
-route helper. It contains the TinyALSA tools required by the recovery
-microphone key. The archive is a persistent payload, not an initramfs and not
-a complete filesystem image.
+This archive is a persistent `/newroot` payload, not an initramfs and not a
+complete filesystem image. It contains recovery, audio, Wi-Fi, and the small
+browser-session wrappers; the browser runtime itself remains in the optional
+browser bundle.
 
-The final recovery initrd overlays the recovery bundle on the firmware-
-provenance browser initrd:
+The final recovery initrd only overlays the launcher, Wi-Fi auto-start hook,
+and A530 firmware on the firmware-provenance initrd:
 
 ```bash
 ./scripts/make-recovery-browser-initrd.sh \
   artifacts/initrd-op3-firmware-provenance-v2.cpio.gz \
   artifacts/initrd-op3-recovery-browser.cpio.gz
-./scripts/make-recovery-audio-initrd.sh \
-  artifacts/initrd-op3-recovery-browser.cpio.gz \
-  artifacts/op3-recovery-browser-audio-bundle.tar.gz \
-  artifacts/initrd-op3-recovery-browser-audio.cpio.gz
 ```
+
+`scripts/build-recovery-mainline.sh`, `scripts/stage-recovery-rootfs.sh`, and
+`scripts/make-recovery-audio-initrd.sh` remain compatibility tools for older
+images and are not part of the canonical Buildroot flow.
 
 ## 7. Pack and verify the boot image
 
@@ -269,7 +275,7 @@ After the owner builds the restored kernel, pack the Android boot image:
 ./scripts/pack-boot.sh \
   "$kout/arch/arm64/boot/Image.gz" \
   "$kout/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dtb" \
-  artifacts/initrd-op3-recovery-browser-audio.cpio.gz \
+  artifacts/initrd-op3-recovery-browser.cpio.gz \
   artifacts/boot-oneplus3-pmos612-recovery-audio-s1302-retry.img
 
 ./scripts/verify-op3-recovery-manifest.sh --source

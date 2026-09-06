@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Append the current recovery audio/browser bundle to the validated recovery
-# initramfs. The kernel consumes concatenated gzip cpio members in order, so
-# the later recovery binary and helper paths override the older entries while
-# the reference initramfs remains byte-identical.
+# Compatibility tool for older images: append a separately staged recovery
+# bundle to the validated recovery initramfs. The canonical recovery binary
+# and helpers now come from the op3-recovery Buildroot package and live in the
+# persistent target; new builds should use make-recovery-browser-initrd.sh.
 #
 # Usage:
 #   scripts/make-recovery-audio-initrd.sh [reference-initrd] [audio-bundle] [output]

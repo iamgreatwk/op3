@@ -55,18 +55,28 @@ the SoC. This is a power trade-off until the DTB regulator fix is available.
 
 ## Owner build and staging
 
-The following commands prepare the persistent payload and derived initramfs;
-the agent must not run the device build/flash/test:
+The following commands prepare the persistent Buildroot payload and derived
+initramfs; the agent must not run the device build/flash/test:
 
 ```sh
-scripts/build-recovery-mainline.sh
-scripts/stage-recovery-rootfs.sh
+./scripts/prepare-op3-buildroot.sh source/buildroot recovery
+OP3_WIFI_MODULES_ROOT="$PWD/artifacts/op3-wifi-modules-root" \
+make -C source/buildroot O="$PWD/out/buildroot-op3-recovery" \
+  op3_recovery_defconfig
+OP3_WIFI_MODULES_ROOT="$PWD/artifacts/op3-wifi-modules-root" \
+make -C source/buildroot O="$PWD/out/buildroot-op3-recovery" \
+  BR2_JLEVEL=3
+scripts/stage-op3-audio-rootfs.sh \
+  out/buildroot-op3-recovery/target \
+  artifacts/op3-recovery-audio-rootfs.tar.gz
 scripts/make-recovery-browser-initrd.sh \
   artifacts/initrd-op3-firmware-provenance-v2.cpio.gz \
   artifacts/initrd-op3-recovery-browser.cpio.gz
 ```
 
-Deploy the tarball to the already mounted `/newroot` using the device's
+The Buildroot target contains `recovery_mainline`, the browser-session
+helpers, TinyALSA, and the integrated Wi-Fi target. Deploy the tarball to the
+already mounted `/newroot` using the device's
 BusyBox-compatible extraction path, then pack the owner-approved boot image
 with `artifacts/initrd-op3-recovery-browser.cpio.gz`. Existing sda15 browser
 bundles must be present at `/newroot/opt/op3-browser` and, for Chromium, at

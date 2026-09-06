@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Assemble the persistent sda15 payload for Issue #6.  The initramfs only
-# carries the tiny run_recovery.sh selector; the recovery binary, browser
-# session supervisor, and the two existing browser runners live on /newroot.
+# Compatibility stager for older Issue #6 images. The canonical recovery
+# binary and browser-session helpers now come from the op3-recovery Buildroot
+# package and are staged with scripts/stage-op3-audio-rootfs.sh.
 #
 # Usage:
 #   scripts/stage-recovery-rootfs.sh [output-tarball] [recovery-binary]
