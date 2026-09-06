@@ -11,6 +11,8 @@ set -euo pipefail
 #   scripts/stage-browser-rootfs.sh [buildroot-target] [output-tarball]
 
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=/dev/null
+source "$project_root/manifests/op3-recovery-audio-full.env"
 target="${1:-$project_root/out/buildroot-op3-egl/target}"
 output="${2:-$project_root/artifacts/op3-browser-bundle.tar.gz}"
 run_script="$project_root/boot/browser-test/opt/op3-browser/run.sh"
@@ -72,6 +74,12 @@ install -m 0644 "$page" "$bundle/test-page.html"
 font="$project_root/artifacts/fonts/wqy-microhei.ttc"
 test -f "$font" || {
 	printf 'Missing CJK font: %s\nFollow the fetch recipe in this script\n' "$font" >&2
+	exit 1
+}
+font_hash="$(sha256sum "$font" | awk '{print $1}')"
+test "$font_hash" = "$WQY_FONT_SHA256" || {
+	printf 'CJK font SHA256 mismatch: expected %s, got %s\n' \
+		"$WQY_FONT_SHA256" "$font_hash" >&2
 	exit 1
 }
 mkdir -p "$bundle/usr/share/fonts/truetype/wqy-microhei"

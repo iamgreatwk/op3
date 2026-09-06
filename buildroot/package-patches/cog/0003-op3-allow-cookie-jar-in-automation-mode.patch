@@ -1,0 +1,78 @@
+--- a/launcher/cog-launcher.c
++++ b/launcher/cog-launcher.c
+@@ -57,6 +57,13 @@
+     gboolean enable_sandbox;
+ #endif
+     gboolean automation;
++#if COG_USE_WPE2
++    /* OP3 patch: cookie jar options are stored here during option parsing
++     * and applied once the network session is reachable (see the WebView
++     * creation below) - the session does not exist during option parsing. */
++    char *cookie_jar_path;
++    int   cookie_jar_format;
++#endif
+ #if HAVE_WEBKIT_NETWORK_PROXY_API
+     char    *proxy;
+     gchar  **ignore_hosts;
+@@ -306,6 +313,21 @@
+                      "zoom-level", s_options.scale_factor, "backend", view_backend, "is-controlled-by-automation",
+                      cog_shell_is_automated(shell), NULL);
+
++#if COG_USE_WPE2
++    /* OP3 patch: apply the requested persistent cookie jar now that the
++     * WebView exists and its network session is reachable. */
++    if (s_options.cookie_jar_path) {
++        WebKitNetworkSession *session = webkit_web_view_get_network_session(web_view);
++        if (session) {
++            webkit_cookie_manager_set_persistent_storage(
++                webkit_network_session_get_cookie_manager(session),
++                s_options.cookie_jar_path,
++                (WebKitCookiePersistentStorage) s_options.cookie_jar_format);
++            g_debug("Persistent cookie jar set to %s", s_options.cookie_jar_path);
++        }
++    }
++#endif
++
+     if (s_options.filter) {
+         WebKitUserContentManager *manager = webkit_web_view_get_user_content_manager(web_view);
+         webkit_user_content_manager_add_filter(manager, s_options.filter);
+@@ -531,13 +553,10 @@
+     }
+
+ #if COG_USE_WPE2
+-    if (launcher->automated) {
+-        g_set_error_literal(error,
+-                            G_OPTION_ERROR,
+-                            G_OPTION_ERROR_BAD_VALUE,
+-                            "Cannot set persistent cookies in automation mode");
+-        return FALSE;
+-    }
++    /* OP3 patch: allow --cookie-jar in automation mode. Battery-powered
++     * device requirement: the browser process must not stay resident, so
++     * the login session has to survive restarts via the native cookie jar.
++     * See docs/handoff/latest.md (2026-09-03). */
+ #endif
+
+     g_autofree char *cookie_jar_path = NULL;
+@@ -581,14 +600,19 @@
+         cookie_jar_path = g_build_filename(g_get_user_data_dir(), g_get_prgname(), file_name, NULL);
+     }
+
++#if COG_USE_WPE2
++    /* OP3 patch: the network session does not exist yet during option
++     * parsing - store the jar options and apply them when the WebView
++     * (and its session) has been created. */
++    s_options.cookie_jar_path  = g_steal_pointer(&cookie_jar_path);
++    s_options.cookie_jar_format = enum_value->value;
++    return TRUE;
++#else
+     webkit_cookie_manager_set_persistent_storage(
+-#if COG_USE_WPE2
+-        webkit_network_session_get_cookie_manager(launcher->network_session),
+-#else
+         webkit_website_data_manager_get_cookie_manager(launcher->web_data_manager),
+-#endif
+         cookie_jar_path, enum_value->value);
+     return TRUE;
++#endif
+ }

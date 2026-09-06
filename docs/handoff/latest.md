@@ -1,5 +1,22 @@
 # Latest handoff
 
+## OP3 recovery clean-rebuild provenance (2026-09-06)
+
+`docs/rebuild-recovery.md` now gives the complete current build order for
+Buildroot, the external reference initrd, browser, Wi-Fi, audio, recovery
+bundles, and final boot-image packaging. Buildroot is pinned to commit
+`679b9ead7620bbf193620d1ebf56f53c1764d37a`; its project-owned Cog patches are
+archived on the current GitHub branch, and the browser defconfig explicitly
+enables TinyALSA plus `tinycap`/`tinymix`/`tinyplay` so audio tools are not
+silently inherited from a stale `out/` tree. New preparation scripts restore
+the Buildroot source, extract the hash-pinned historical initrd from the
+external v100 boot image, and stage the audio target bundle.
+
+This is a source/provenance checkpoint only: no large build, device test, or
+local-directory deletion was performed. The reference v100 boot image,
+Qualcomm/ath10k firmware inputs, and font remain external and must be retained
+outside GitHub. Handoff: `docs/handoff/op3-rebuild-provenance-001.md`.
+
 ## OP3 recovery integrated rebuild organization (2026-09-06)
 
 The current rebuild is locked by

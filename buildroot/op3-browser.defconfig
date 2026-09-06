@@ -68,6 +68,12 @@ BR2_PACKAGE_WPEWEBKIT=y
 BR2_PACKAGE_WPEWEBKIT_WEBDRIVER=y
 BR2_PACKAGE_COG=y
 
+# Recovery voice capture/playback uses the TinyALSA command-line tools from
+# the same persistent target tree. They are deliberately dynamic because the
+# recovery initramfs remains the small historical pmOS archive.
+BR2_PACKAGE_TINYALSA=y
+BR2_PACKAGE_TINYALSA_TOOLS=y
+
 # TLS for remote browsing (OP3-BROWSER-005 phase 2). libsoup3 gets its GLib
 # TLS backend from glib-networking at runtime (GIO module), so no WebKit
 # rebuild is expected; ca-certificates supplies the trust store that https
