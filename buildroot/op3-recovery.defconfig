@@ -8,7 +8,12 @@
 BR2_aarch64=y
 BR2_TOOLCHAIN_BUILDROOT_GLIBC=y
 
+# Keep a TAR for the optional persistent /newroot payload and make the CPIO
+# image the canonical, self-built initramfs used by pack-boot.sh.
 BR2_TARGET_ROOTFS_TAR=y
+BR2_TARGET_ROOTFS_CPIO=y
+BR2_TARGET_ROOTFS_CPIO_FULL=y
+BR2_TARGET_ROOTFS_CPIO_GZIP=y
 
 # Recovery audio capture/playback uses TinyALSA on the persistent target.
 BR2_PACKAGE_TINYALSA=y
@@ -17,6 +22,7 @@ BR2_PACKAGE_TINYALSA_TOOLS=y
 # The direct-DRM recovery binary and its browser-session helpers are compiled
 # and installed by the project-owned Buildroot package.
 BR2_PACKAGE_OP3_RECOVERY=y
+BR2_PACKAGE_OP3_INITRAMFS=y
 
 # Wi-Fi userspace is built into the recovery target. The post-build hook also
 # copies the matching kernel module closure from OP3_WIFI_MODULES_ROOT.

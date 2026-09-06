@@ -1,0 +1,6 @@
+config BR2_PACKAGE_OP3_INITRAMFS
+	bool "op3 self-built initramfs"
+	help
+	  Install the project-owned initramfs entrypoint, inittab, mainline
+	  startup scripts, recovery launcher, audio route helper, and static
+	  diagnostics into the Buildroot CPIO image.

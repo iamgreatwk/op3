@@ -75,6 +75,12 @@ test -n "$external_root" ||
   die 'set OP3_EXTERNAL_INPUTS to the external input directory'
 firmware_source="$external_root/$ATH10K_FIRMWARE_REL"
 board_source="$external_root/$ATH10K_BOARD_REL"
+if [ ! -f "$firmware_source" ] && [[ "$ATH10K_FIRMWARE_REL" == extfw/* ]]; then
+	# The external-input archive stores the same files without the kernel
+	# source-tree prefix. They are installed below extfw/ in the restored tree.
+	firmware_source="$external_root/${ATH10K_FIRMWARE_REL#extfw/}"
+	board_source="$external_root/${ATH10K_BOARD_REL#extfw/}"
+fi
 check_sha256 "$ATH10K_FIRMWARE_SHA256" "$firmware_source"
 check_sha256 "$ATH10K_BOARD_SHA256" "$board_source"
 

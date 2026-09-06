@@ -1,2 +1,5 @@
 #!/bin/sh
-exec /newroot/opt/op3-wifi/wifi "$@"
+if [ -x /newroot/opt/op3-wifi/wifi ]; then
+	exec /newroot/opt/op3-wifi/wifi "$@"
+fi
+exec /opt/op3-wifi/wifi "$@"

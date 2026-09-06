@@ -16,6 +16,8 @@ buildroot_dir="$(readlink -m "$buildroot_dir")"
 patch_dir="$project_root/$BUILDROOT_COG_PATCH_SOURCE_DIR"
 recovery_postbuild="$project_root/buildroot/op3-recovery-post-build.sh"
 recovery_package="$project_root/buildroot/package-patches/op3-recovery"
+initramfs_package="$project_root/buildroot/package-patches/op3-initramfs"
+initramfs_source="$project_root/boot/initramfs"
 wifi_source="$project_root/boot/wifi"
 profile="${2:-recovery}"
 
@@ -63,6 +65,17 @@ if [ "$profile" = recovery ]; then
 		"$project_root/recovery/recovery_mainline.c" \
 		"$project_root/recovery/recovery_drm.c" \
 		"$project_root/third_party/libtsm" \
+		"$initramfs_package/Config.in" \
+		"$initramfs_package/op3-initramfs.mk" \
+		"$initramfs_source/init" \
+		"$initramfs_source/etc/inittab" \
+		"$initramfs_source/sbin/init_mainline.sh" \
+		"$initramfs_source/sbin/run_recovery.sh" \
+		"$initramfs_source/usr/bin/init_audio_mainline.sh" \
+		"$initramfs_source/usr/bin/feed_entropy.c" \
+		"$initramfs_source/usr/bin/netcat.c" \
+		"$project_root/boot/audio-test/opt/op3-audio/route.sh" \
+		"$wifi_source/initramfs/usr/bin/wifi_auto.sh" \
 		"$project_root/boot/recovery-browser-test/opt/op3-recovery/browser-session.sh" \
 		"$project_root/boot/browser-test/opt/op3-browser/run.sh" \
 		"$project_root/boot/pmos-chromium-test/opt/op3-chromium/run.sh"; do
@@ -131,6 +144,35 @@ if [ "$profile" = recovery ]; then
 	fi
 	sed -i '/^[[:space:]]*source "package\/strace\/Config.in"$/a\	source "package/op3-recovery/Config.in"' \
 		"$package_config"
+	initramfs_package_dir="$buildroot_dir/package/op3-initramfs"
+	install -D -m 0644 "$initramfs_package/Config.in" \
+		"$initramfs_package_dir/Config.in"
+	install -D -m 0644 "$initramfs_package/op3-initramfs.mk" \
+		"$initramfs_package_dir/op3-initramfs.mk"
+	mkdir -p "$initramfs_package_dir/source"
+	install -m 0755 "$initramfs_source/init" \
+		"$initramfs_package_dir/source/init"
+	install -m 0644 "$initramfs_source/etc/inittab" \
+		"$initramfs_package_dir/source/inittab"
+	install -m 0755 "$initramfs_source/sbin/init_mainline.sh" \
+		"$initramfs_package_dir/source/init_mainline.sh"
+	install -m 0755 "$initramfs_source/sbin/run_recovery.sh" \
+		"$initramfs_package_dir/source/run_recovery.sh"
+	install -m 0755 "$initramfs_source/usr/bin/init_audio_mainline.sh" \
+		"$initramfs_package_dir/source/init_audio_mainline.sh"
+	install -m 0644 "$initramfs_source/usr/bin/feed_entropy.c" \
+		"$initramfs_package_dir/source/feed_entropy.c"
+	install -m 0644 "$initramfs_source/usr/bin/netcat.c" \
+		"$initramfs_package_dir/source/netcat.c"
+	install -m 0755 "$project_root/boot/audio-test/opt/op3-audio/route.sh" \
+		"$initramfs_package_dir/source/route.sh"
+	install -m 0755 "$wifi_source/initramfs/usr/bin/wifi_auto.sh" \
+		"$initramfs_package_dir/source/wifi_auto.sh"
+	if grep -Fq 'source "package/op3-initramfs/Config.in"' "$package_config"; then
+		die "Buildroot already contains the op3-initramfs package registration"
+	fi
+	sed -i '/^[[:space:]]*source "package\/op3-recovery\/Config.in"$/a\	source "package/op3-initramfs/Config.in"' \
+		"$package_config"
 fi
 
 if [ "$install_browser_patches" -eq 1 ]; then
@@ -162,7 +204,8 @@ if [ "$profile" = recovery ]; then
 	printf '  OP3_WIFI_MODULES_ROOT=%q make -C %q O=%q %s\n' \
 		"$project_root/$BUILDROOT_WIFI_MODULES_ROOT" \
 		"$buildroot_dir" "$buildroot_output" "$config_name"
-	printf '  OP3_WIFI_MODULES_ROOT=%q make -C %q O=%q BR2_JLEVEL=3\n' \
+	printf '  OP3_INITRAMFS_FIRMWARE_ROOT=%q OP3_WIFI_MODULES_ROOT=%q make -C %q O=%q BR2_JLEVEL=3\n' \
+		"$project_root/artifacts/op3-initramfs-firmware" \
 		"$project_root/$BUILDROOT_WIFI_MODULES_ROOT" \
 		"$buildroot_dir" "$buildroot_output"
 else

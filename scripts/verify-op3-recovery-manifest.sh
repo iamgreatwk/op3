@@ -56,6 +56,23 @@ check_sha256() {
   printf 'PASS sha256 %s %s\n' "$actual" "$file"
 }
 
+check_artifact_sha256() {
+  local expected="$1"
+  local file="$2"
+  local actual
+
+  test -f "$file" || die "missing file: $file"
+  actual="$(sha256sum "$file" | awk '{print $1}')"
+  if [[ "$expected" == OWNER_BUILD_REQUIRED ]]; then
+    printf 'PASS artifact present (owner hash to record): %s %s\n' \
+      "$actual" "$file"
+  else
+    [[ "$actual" == "$expected" ]] ||
+      die "SHA256 mismatch: $file (expected $expected, got $actual)"
+    printf 'PASS sha256 %s %s\n' "$actual" "$file"
+  fi
+}
+
 project_branch="$(git -C "$project_root" symbolic-ref --quiet --short HEAD || true)"
 [[ "$project_branch" == "$PROJECT_BRANCH" ]] ||
   die "top-level branch is '$project_branch', expected '$PROJECT_BRANCH'"
@@ -84,14 +101,16 @@ test -f "$project_root/$BOOT_PROFILE" ||
   die "missing boot profile: $project_root/$BOOT_PROFILE"
 test -x "$project_root/scripts/pack-boot.sh" ||
   die "missing executable boot packer: $project_root/scripts/pack-boot.sh"
-test -f "$project_root/$RECOVERY_INITRD" ||
-  die "missing recovery initrd: $project_root/$RECOVERY_INITRD"
 test -d "$project_root/$KERNEL_PATCH_SERIES_DIR" ||
   die "missing kernel patch series: $project_root/$KERNEL_PATCH_SERIES_DIR"
 test -f "$project_root/$KERNEL_CONFIG_SOURCE" ||
   die "missing tracked kernel config: $project_root/$KERNEL_CONFIG_SOURCE"
+test -f "$project_root/$BUILDROOT_CONFIG_SOURCE" ||
+  die "missing tracked Buildroot defconfig: $project_root/$BUILDROOT_CONFIG_SOURCE"
 check_sha256 "$KERNEL_CONFIG_SOURCE_SHA256" \
   "$project_root/$KERNEL_CONFIG_SOURCE"
+check_sha256 "$BUILDROOT_CONFIG_SOURCE_SHA256" \
+  "$project_root/$BUILDROOT_CONFIG_SOURCE"
 
 patch_count="$(find "$project_root/$KERNEL_PATCH_SERIES_DIR" -maxdepth 1 \
   -type f -name '*.patch' | wc -l)"
@@ -111,9 +130,9 @@ if [[ "$mode" == artifacts ]]; then
     "$project_root/$KERNEL_OUTPUT_DIR/$KERNEL_IMAGE_REL"
   check_sha256 "$KERNEL_DTB_SHA256" \
     "$project_root/$KERNEL_OUTPUT_DIR/$KERNEL_DTB_REL"
-  check_sha256 "$RECOVERY_INITRD_SHA256" \
+  check_artifact_sha256 "$RECOVERY_INITRD_SHA256" \
     "$project_root/$RECOVERY_INITRD"
-  check_sha256 "$BOOT_IMAGE_SHA256" \
+  check_artifact_sha256 "$BOOT_IMAGE_SHA256" \
     "$project_root/$BOOT_IMAGE"
 fi
 

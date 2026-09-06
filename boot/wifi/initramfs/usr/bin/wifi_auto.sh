@@ -1,8 +1,16 @@
 #!/bin/sh
-# Called by the validated init_mainline.sh after /newroot is mounted.
-# The package and credentials both live on sda15, so a Wi-Fi profile update
-# needs neither an initramfs rebuild nor a boot image change. IPv6 is opt-in;
-# the persistent CLI exposes `wifi ipv6 on` for an explicit enable.
+# Called by init_mainline.sh. The default CPIO root contains the same Wi-Fi
+# CLI as the persistent payload; when sda15 is mounted, prefer its profiles
+# and binaries so wifi connect remains persistent. IPv6 is opt-in.
 
-/newroot/opt/op3-wifi/wifi ipv6 off || exit $?
-exec /newroot/opt/op3-wifi/wifi auto
+if [ -x /newroot/opt/op3-wifi/wifi ]; then
+	OP3_WIFI_ROOT=/newroot
+	WIFI=/newroot/opt/op3-wifi/wifi
+else
+	OP3_WIFI_ROOT=/
+	WIFI=/opt/op3-wifi/wifi
+fi
+
+export OP3_WIFI_ROOT
+"$WIFI" ipv6 off || exit $?
+exec "$WIFI" auto

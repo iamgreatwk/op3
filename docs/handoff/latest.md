@@ -1,25 +1,37 @@
 # Latest handoff
 
-## OP3 v100 boot image retired as a rebuild input (2026-09-06)
+## OP3 initramfs source migration prepared (owner build and device test pending, 2026-09-06)
 
-The only component of the historical `boot_fa5_v100_auto.img` used by the
-current recovery rebuild was its gzip-compressed ramdisk. It was extracted
-once from the hash-verified 62,226,432-byte image and stored outside GitHub as
+The canonical recovery initramfs is now intended to come from the project-owned
+Buildroot package op3-initramfs and its CPIO/GZIP output
+out/buildroot-op3-recovery/images/rootfs.cpio.gz. Tracked sources under
+boot/initramfs provide /init, inittab, init_mainline.sh, the recovery launcher,
+audio initialization, feed_entropy, and the diagnostic nc helper. The default
+Buildroot profile enables CPIO_FULL and CPIO_GZIP while retaining TAR for the
+same target's optional persistent /newroot payload.
+
+The post-build hook now requires artifacts/op3-initramfs-firmware and copies
+the hash-verified A530, Qualcomm, and ath10k firmware into the Buildroot
+target. Wi-Fi scripts support both /newroot and the CPIO root, with IPv6 still
+disabled by default. The historical v100 boot image and standalone reference
+initrd are no longer operational inputs for this path.
+
+No Buildroot build, kernel build, boot-image packaging, or device test was run
+by this checkpoint. Handoff: docs/handoff/op3-initramfs-source-001.md.
+
+## OP3 v100 boot image retained as historical provenance (2026-09-06)
+
+Earlier work extracted the gzip-compressed ramdisk from the hash-verified
+62,226,432-byte `boot_fa5_v100_auto.img` and stored it outside GitHub as
 `/home/kai/op3-recovery-external-inputs/initrd/reference-initrd.img`.
-The standalone file is 50,705,116 bytes, contains 653 cpio entries, and has
-SHA256 `c3358a1cadb747996ddaa492e636827f2d72974040e8fd40d81f8a213e676366`.
-It is byte-identical to the previously validated local reference artifact.
+That 50,705,116-byte file and the original image under `archive/` are retained
+only for historical comparison. They are not required by the current rebuild,
+are excluded from the external required-input checksum manifest, and must not
+be passed to the current initramfs preparation or packaging commands.
 
-The current flow no longer consumes the historical image, its kernel payload,
-appended DTB, boot header, or old cmdline, and no longer requires `abootimg`.
-The original image was moved to
-`/home/kai/op3-recovery-external-inputs/archive/` as a reversible provenance
-copy; it is excluded from `SHA256SUMS` and from the canonical rebuild input.
-The external checksum manifest now verifies the standalone initrd. The
-tracked `scripts/extract-reference-initrd.sh` name is retained for command
-compatibility, but it now verifies/copies the standalone initrd rather than
-parsing a boot image. No kernel, Buildroot, or device test was run.
-Handoff: `docs/handoff/op3-reference-initrd-001.md`.
+The current flow does not consume the old kernel payload, appended DTB, boot
+header, cmdline, or ramdisk. The old extraction/reserialization scripts and
+their handoffs remain historical records, not the canonical build path.
 
 ## OP3 default Buildroot profile excludes browser (2026-09-06)
 
@@ -79,8 +91,8 @@ repository.
 ## OP3 recovery clean-rebuild provenance (2026-09-06)
 
 `docs/rebuild-recovery.md` now gives the complete current build order for
-Buildroot, the external reference initrd, browser, Wi-Fi, audio, recovery
-bundles, and final boot-image packaging. Buildroot is pinned to commit
+Buildroot-generated initramfs, external firmware, browser, Wi-Fi, audio,
+recovery bundles, and final boot-image packaging. Buildroot is pinned to commit
 `679b9ead7620bbf193620d1ebf56f53c1764d37a`; its project-owned Cog patches are
 archived on the current GitHub branch. The default `op3_recovery_defconfig`
 explicitly enables TinyALSA plus `tinycap`/`tinymix`/`tinyplay` while leaving
@@ -90,9 +102,10 @@ restore the Buildroot source, extract the hash-pinned historical initrd from
 the external v100 boot image, and stage the audio target bundle.
 
 This is a source/provenance checkpoint only: no large build, device test, or
-local-directory deletion was performed. The reference v100 boot image,
-Qualcomm/ath10k firmware inputs, and font remain external and must be retained
-outside GitHub. Handoff: `docs/handoff/op3-rebuild-provenance-001.md`.
+local-directory deletion was performed. Qualcomm/A530/ath10k firmware inputs
+and the optional browser font remain external and must be retained outside
+GitHub; the historical v100 image and extracted initrd are not current
+rebuild inputs. Handoff: `docs/handoff/op3-rebuild-provenance-001.md`.
 
 ## OP3 recovery integrated rebuild organization (2026-09-06)
 

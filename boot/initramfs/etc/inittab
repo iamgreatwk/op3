@@ -1,0 +1,8 @@
+# Project-owned inittab for the Buildroot-generated OP3 recovery initramfs.
+# There is no getty: init_mainline.sh creates the optional USB ACM shell and
+# recovery_mainline owns the phone display/input foreground session.
+::sysinit:/sbin/init_mainline.sh
+::respawn:/sbin/run_recovery.sh
+::ctrlaltdel:/sbin/reboot
+::shutdown:/sbin/umount -a -r
+::restart:/sbin/init

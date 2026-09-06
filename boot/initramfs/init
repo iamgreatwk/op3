@@ -1,0 +1,30 @@
+#!/bin/sh
+# Project-owned PID 1 for the Buildroot-generated OP3 recovery initramfs.
+#
+# Buildroot's CPIO image is the actual boot root. It remains the root after
+# boot; /newroot is only the optional persistent sda15 payload used for
+# profiles, logs, and browser bundles. Keeping this contract explicit makes
+# the initramfs reproducible without an opaque historical ramdisk.
+
+mount -t proc proc /proc 2>/dev/null || true
+mount -t sysfs sysfs /sys 2>/dev/null || true
+mount -t devtmpfs devtmpfs /dev 2>/dev/null || true
+mkdir -p /dev/pts /dev/shm /tmp /run /var/log
+mount -t devpts devpts /dev/pts 2>/dev/null || true
+mount -t tmpfs tmpfs /tmp 2>/dev/null || true
+mount -t tmpfs tmpfs /run 2>/dev/null || true
+
+# Populate dynamic device nodes and preserve hotplug after the persistent
+# filesystem is mounted by init_mainline.sh.
+echo /sbin/mdev > /proc/sys/kernel/hotplug 2>/dev/null || true
+/sbin/mdev -s 2>/dev/null || true
+
+# cpio.mk normally creates this node; keep redirection safe when a different
+# Buildroot device policy is selected.
+if [ -c /dev/console ]; then
+    exec 0</dev/console
+    exec 1>/dev/console
+    exec 2>/dev/console
+fi
+
+exec /sbin/init "$@"

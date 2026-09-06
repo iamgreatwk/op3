@@ -3,13 +3,15 @@ set -euo pipefail
 
 # Buildroot post-build hook for the default OP3 recovery profile. It installs
 # the tracked Wi-Fi CLI and only the ath10k module dependency closure from the
-# owner-built kernel modules root. Credentials and firmware stay outside the
-# Buildroot target; the firmware-provenance initrd supplies the latter.
+# owner-built kernel modules root. Credentials stay outside the Buildroot
+# target. A separate staging step supplies the verified firmware tree that
+# is copied into both the CPIO and TAR outputs.
 
 target_dir="${1:?Buildroot target directory is required}"
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 wifi_dir="$script_dir/wifi"
 modules_root="${OP3_WIFI_MODULES_ROOT:-}"
+firmware_root="${OP3_INITRAMFS_FIRMWARE_ROOT:-}"
 
 die() {
 	printf 'OP3 recovery post-build failed: %s\n' "$*" >&2
@@ -20,6 +22,20 @@ test -d "$target_dir" || die "missing target directory: $target_dir"
 test -d "$wifi_dir/opt/op3-wifi" || die "missing staged Wi-Fi sources: $wifi_dir"
 test -n "$modules_root" || die 'set OP3_WIFI_MODULES_ROOT to owner-built modules_install output'
 test -d "$modules_root/lib/modules" || die "missing modules root: $modules_root"
+test -n "$firmware_root" || die 'set OP3_INITRAMFS_FIRMWARE_ROOT to staged firmware tree'
+test -d "$firmware_root/lib/firmware" || die "missing firmware root: $firmware_root"
+
+for required in \
+	"$firmware_root/lib/firmware/qcom/a530_pm4.fw" \
+	"$firmware_root/lib/firmware/qcom/a530_pfp.fw" \
+	"$firmware_root/lib/firmware/qcom/a530v3_gpmu.fw2" \
+	"$firmware_root/lib/firmware/qcom/msm8996/oneplus3/a530_zap.mbn" \
+	"$firmware_root/lib/firmware/ath10k/QCA6174/hw3.0/firmware-6.bin" \
+	"$firmware_root/lib/firmware/ath10k/QCA6174/hw3.0/board-2.bin"; do
+	test -f "$required" || die "missing staged firmware: $required"
+done
+
+cp -a "$firmware_root/." "$target_dir/"
 
 install -D -m 0755 "$wifi_dir/opt/op3-wifi/wifi" \
 	"$target_dir/opt/op3-wifi/wifi"

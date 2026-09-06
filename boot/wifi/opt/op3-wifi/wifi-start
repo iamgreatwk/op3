@@ -7,7 +7,7 @@
 set -u
 
 release=$(uname -r)
-module_root=/newroot/lib/modules/$release
+module_root="${OP3_WIFI_ROOT:-/newroot}/lib/modules/$release"
 
 if [ ! -d "$module_root" ]; then
 	echo "op3-wifi: missing modules for $release at $module_root" >&2

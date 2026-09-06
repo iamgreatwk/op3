@@ -1,55 +1,59 @@
-# OnePlus 3 recovery clean rebuild
+# OnePlus 3 recovery 从零重建
 
-This is the rebuild recipe for the current integration line:
+本流程对应当前正式整合线：
 
-```text
-top-level GitHub branch: agent/implementation/recovery-browser-001
-kernel baseline:        pmOS MSM8996 Linux 6.12.1
-Buildroot commit:       679b9ead7620bbf193620d1ebf56f53c1764d37a
-```
+~~~text
+GitHub 分支：agent/implementation/recovery-browser-001
+内核基线：pmOS MSM8996 Linux 6.12.1
+Buildroot：679b9ead7620bbf193620d1ebf56f53c1764d37a
+~~~
 
-The top-level GitHub repository contains the source, kernel patch archive,
-configuration, scripts and Buildroot project-owned patches. Generated
-directories (`source/`, `out/`, `artifacts/`, and `cache/`) are deliberately
-ignored. A small set of binary inputs must be kept outside GitHub in one
-external-input directory; its SHA256 values are checked by the recipe.
+正式 initramfs 由项目跟踪的源文件和 Buildroot 直接生成
+images/rootfs.cpio.gz。它不读取、解包或追加历史 v100 ramdisk。
+boot_fa5_v100_auto.img 和外部保存的 reference-initrd.img 只用于历史
+溯源，不能出现在当前构建命令中。
 
-Use the directory prepared for this project:
+项目所有者负责内核和 Buildroot 编译；准备脚本不会启动大规模编译，也
+不会刷写设备。
 
-```bash
+## 1. 外部专有输入
+
+以下目录必须独立于 GitHub 工作目录长期保留：
+
+~~~text
+/home/kai/op3-recovery-external-inputs/
+├── ath10k/QCA6174/hw3.0/firmware-6.bin
+├── ath10k/QCA6174/hw3.0/board-2.bin
+├── qualcomm/NON-HLOS.bin
+├── qualcomm/a530_zap.elf
+├── qualcomm/a530/a530_pm4.fw
+├── qualcomm/a530/a530_pfp.fw
+├── qualcomm/a530/a530v3_gpmu.fw2
+├── fonts/wqy-microhei.ttc                 # 仅可选浏览器 bundle
+└── tools/bin/{mcopy,pil-squasher}
+~~~
+
+initrd/reference-initrd.img 和 archive/boot_fa5_v100_auto.img 可以保留作
+历史对照，但不属于本流程输入。先校验外部目录：
+
+~~~bash
 export OP3_EXTERNAL_INPUTS=/home/kai/op3-recovery-external-inputs
 ./scripts/verify-op3-external-inputs.sh "$OP3_EXTERNAL_INPUTS"
 export OP3_ATH10K_EXTFW_SOURCE="$OP3_EXTERNAL_INPUTS"
 export OP3_MCOPY="$OP3_EXTERNAL_INPUTS/tools/bin/mcopy"
 export OP3_PIL_SQUASHER="$OP3_EXTERNAL_INPUTS/tools/bin/pil-squasher"
-```
+~~~
 
-Its layout and retention rules are documented in
-`/home/kai/op3-recovery-external-inputs/README.md`. The directory is outside
-the checkout and must not be deleted with the GitHub working tree.
+## 2. 获取 GitHub 源码和 6.12.1 内核
 
-## 1. Fresh checkout
+~~~bash
+mkdir -p /home/kai/op3-rebuild
+cd /home/kai/op3-rebuild
 
-```bash
 git clone --branch agent/implementation/recovery-browser-001 \
-  --single-branch https://github.com/iamgreatwk/op3.git op3-rebuild
-cd op3-rebuild
+  --single-branch https://github.com/iamgreatwk/op3.git .
 ./scripts/agent-start.sh
-```
 
-The kernel source is a separate repository. Restore it from the pinned pmOS
-6.12.1 baseline and the tracked 31-patch series. `OP3_EXTERNAL_INPUTS`
-contains the ath10k files at:
-
-```text
-ath10k/QCA6174/hw3.0/firmware-6.bin
-ath10k/QCA6174/hw3.0/board-2.bin
-```
-
-Both files are proprietary/external and their expected hashes are in
-`manifests/op3-recovery-audio-full.env`.
-
-```bash
 mkdir -p source
 git clone --branch msm8996-stable-6.12.y --single-branch \
   https://gitlab.com/msm8996-mainline/linux.git \
@@ -59,260 +63,184 @@ git clone --branch msm8996-stable-6.12.y --single-branch \
   source/linux-pmos-msm8996-6.12-base \
   source/linux-pmos-msm8996-6.12-recovery-audio-full \
   agent/implementation/recovery-browser-audio-full-001
-```
+~~~
 
-The restore script applies all 31 patches and verifies the expected tree
-object. It does not compile the kernel.
+恢复脚本会应用 GitHub 中归档的 31 个补丁，并把外部 ath10k 文件安装
+到内核要求的 extfw/ 路径。它不会编译内核。
 
-## 2. Buildroot source and profiles
+## 3. 内核编译（项目所有者执行）
 
-Run this against a fresh Buildroot checkout. It pins commit
-`679b9ead7620bbf193620d1ebf56f53c1764d37a` and installs the selected tracked
-profile. The default `recovery` profile does not select Mesa/Freedreno
-EGL/GLES, Weston DRM, WPE WebKit, Cog, or WPEWebDriver. It installs the
-TinyALSA tools needed by recovery audio, the Buildroot Wi-Fi userspace, and
-small diagnostics. This script does not build anything.
+~~~bash
+project=/home/kai/op3-rebuild
+kernel="$project/source/linux-pmos-msm8996-6.12-recovery-audio-full"
+kout="$project/out/pmos-msm8996-6.12-recovery-audio-full-s1302-retry"
+wifi_mods="$project/artifacts/op3-wifi-modules-root"
 
-```bash
-./scripts/prepare-op3-buildroot.sh source/buildroot
-```
+mkdir -p "$kout"
+cp "$project/kernel/configs/oneplus3-recovery-audio-full.config" \
+  "$kout/.config"
+make -C "$kernel" O="$kout" ARCH=arm64 \
+  CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 olddefconfig
+make -C "$kernel" O="$kout" ARCH=arm64 \
+  CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
+  -j"$(nproc)" Image.gz dtbs modules
 
-The installed recovery defconfig is locked by SHA256 in
-`manifests/op3-recovery-audio-full.env`; the preparation script rejects a
-modified project defconfig before touching the Buildroot checkout.
+test ! -e "$wifi_mods/lib/modules"
+mkdir -p "$wifi_mods"
+make -C "$kernel" O="$kout" ARCH=arm64 \
+  CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
+  INSTALL_MOD_PATH="$wifi_mods" modules_install
+~~~
 
-The owner then performs the large Buildroot build:
+## 4. 暂存启动固件
 
-```bash
-mkdir -p out/buildroot-op3-recovery
-OP3_WIFI_MODULES_ROOT="$PWD/artifacts/op3-wifi-modules-root" \
-make -C source/buildroot O="$PWD/out/buildroot-op3-recovery" \
-  op3_recovery_defconfig
-OP3_WIFI_MODULES_ROOT="$PWD/artifacts/op3-wifi-modules-root" \
-make -C source/buildroot O="$PWD/out/buildroot-op3-recovery" \
-  BR2_JLEVEL=3 2>&1 | tee /tmp/buildroot-op3-recovery.log
-```
+这些命令只生成经过哈希校验的固件目录，不生成 initramfs：
 
-Use the recovery target for the audio bundle:
-
-```bash
-./scripts/stage-op3-audio-rootfs.sh \
-  out/buildroot-op3-recovery/target \
-  artifacts/op3-recovery-audio-rootfs.tar.gz
-```
-
-This same target is the canonical persistent recovery payload. The
-`BR2_PACKAGE_OP3_RECOVERY` package compiles and installs the static
-`/sbin/recovery_mainline` binary, the `browser` command, the browser-session
-supervisor, and the two browser runner scripts. The staging script verifies
-these recovery files in addition to the audio and Wi-Fi files, so a partial
-or legacy target cannot be mistaken for the final payload.
-
-The browser remains an explicit opt-in profile. It uses a separate output
-directory and a separate Buildroot source checkout; it installs the three Cog
-patches:
-
-```bash
-./scripts/prepare-op3-buildroot.sh source/buildroot-browser browser
-
-make -C source/buildroot-browser O="$PWD/out/buildroot-op3-egl" \
-  op3_browser_defconfig
-make -C source/buildroot-browser O="$PWD/out/buildroot-op3-egl" \
-  BR2_JLEVEL=3 2>&1 | tee /tmp/buildroot-op3-browser.log
-```
-
-Only if browser testing is explicitly requested, stage its target with
-`scripts/stage-browser-rootfs.sh`.
-
-For a clean retry of a failed WebKit package build, keep the Buildroot output
-directory and run the relevant owner-approved package dirclean before the
-normal `make`; do not copy files from an older `out/` tree.
-
-## 3. Reference initrd and firmware-provenance initrd
-
-The historical pmOS ramdisk is not generated from the GitHub source tree. It
-is retained as a standalone external input at
-`$OP3_EXTERNAL_INPUTS/initrd/reference-initrd.img`. Its SHA256 is:
-
-```text
-c3358a1cadb747996ddaa492e636827f2d72974040e8fd40d81f8a213e676366
-```
-
-Verify and copy it into the local artifact directory with the tracked script:
-
-```bash
-./scripts/extract-reference-initrd.sh \
-  "$OP3_EXTERNAL_INPUTS/initrd/reference-initrd.img" \
-  artifacts/reference-initrd.img
-```
-
-The staged `artifacts/reference-initrd.img` must hash to
-`c3358a1cadb747996ddaa492e636827f2d72974040e8fd40d81f8a213e676366`.
-
-The old v100 boot image was used only once to obtain this byte-preserved
-ramdisk. The current rebuild does not require that image or `abootimg`:
-
-| Former boot-image component | Current status | Current source |
-| --- | --- | --- |
-| gzip ramdisk | required | standalone `initrd/reference-initrd.img` |
-| kernel payload | not used | owner-built pinned 6.12.1 kernel |
-| appended DTB | not used | owner-built OP3 DTB |
-| boot header and old cmdline | not used | `scripts/pack-boot.sh` and selected build cmdline |
-
-The standalone ramdisk is kept as one exact archive rather than split into
-individual files: the current firmware-provenance and recovery staging steps
-depend on its complete historical baseline, while their selected firmware
-overlays are independently verified below.
-
-The following two steps replace the declared Qualcomm firmware files while
-leaving the rest of the historical archive controlled and auditable. They
-use `NON-HLOS.bin`, `a530_zap.elf`, `mcopy`, and `pil-squasher` from
-`$OP3_EXTERNAL_INPUTS`; `sha512sum` is the only required host utility for
-these inputs:
-
-```bash
-./scripts/prepare-a530-firmware.sh \
-  artifacts/a530-firmware
+~~~bash
+./scripts/prepare-a530-firmware.sh artifacts/a530-firmware
 
 ./scripts/stage-msm8996-oneplus3-firmware.sh \
   artifacts/msm8996-oneplus3-firmware-verified
 
-./scripts/make-firmware-provenance-initrd.sh \
-  artifacts/reference-initrd.img \
-  artifacts/msm8996-oneplus3-firmware-verified \
-  artifacts/initrd-op3-firmware-provenance-v2.cpio.gz
-```
+./scripts/stage-op3-initramfs-firmware.sh \
+  artifacts/op3-initramfs-firmware
+~~~
 
-`prepare-a530-firmware.sh` uses the verified copies under
-`$OP3_EXTERNAL_INPUTS/qualcomm/a530/`. Without that directory it falls back
-to the host `linux-firmware` package. The Qualcomm modem/ADSP/SLPI/Venus
-files are derived from the SHA512-pinned
-`$OP3_EXTERNAL_INPUTS/qualcomm/NON-HLOS.bin` by the second script. These
-firmware blobs are not committed to GitHub.
+最终目录至少包含：
 
-## 4. Browser bundle
+~~~text
+artifacts/op3-initramfs-firmware/lib/firmware/
+├── ath10k/QCA6174/hw3.0/{firmware-6.bin,board-2.bin}
+├── qcom/{a530_pm4.fw,a530_pfp.fw,a530v3_gpmu.fw2}
+└── qcom/msm8996/oneplus3/{adsp.mbn,modem.mbn,slpi.mbn,venus.mbn,mba.mbn,a530_zap.mbn}
+~~~
 
-The exact CJK font used by the tested browser image is already stored under
-`$OP3_EXTERNAL_INPUTS/fonts/`. The `.deb` is retained there as a recovery
-copy; the staged font must hash to the value in the manifest.
+## 5. 准备并编译默认 recovery Buildroot
 
-```bash
-sha256sum "$OP3_EXTERNAL_INPUTS/fonts/wqy-microhei.ttc"
-```
+准备脚本必须对全新的、干净的 Buildroot 源树运行：
 
-After the owner Buildroot build succeeds, stage the whole self-contained
-Wayland/WPE browser tree:
+~~~bash
+./scripts/prepare-op3-buildroot.sh source/buildroot recovery
+~~~
 
-```bash
-./scripts/stage-browser-rootfs.sh \
-  out/buildroot-op3-egl/target \
-  artifacts/op3-browser-bundle.tar.gz
-```
+它会安装项目跟踪的 op3-recovery 和 op3-initramfs 包、启动源文件、Wi-Fi
+脚本和 post-build hook，并启用 op3_recovery_defconfig。默认配置包含
+recovery、TinyALSA、Wi-Fi 工具和诊断工具；Mesa/Freedreno、Weston、
+WPE WebKit、Cog、WPEWebDriver 均不启用。
 
-This creates an archive whose device path is `/newroot/opt/op3-browser`.
-It includes the Buildroot runtime libraries, Cog/WPE/WebKit, Weston, Mesa,
-font data, the tracked browser runner and the local test page.
+~~~bash
+mkdir -p out/buildroot-op3-recovery
 
-## 5. Wi-Fi in the recovery Buildroot target
-
-Wi-Fi is integrated into the default recovery Buildroot target. The kernel
-owner must first build and install modules into a new, empty staging directory;
-the Buildroot post-build hook then selects the matching ath10k dependency
-closure and installs it together with the Wi-Fi CLI and `wpa_supplicant`:
-
-```bash
-kernel=source/linux-pmos-msm8996-6.12-recovery-audio-full
-kout=out/pmos-msm8996-6.12-recovery-audio-full-s1302-retry
-wifi_mods=artifacts/op3-wifi-modules-root
-
-make -C "$kernel" O="$PWD/$kout" ARCH=arm64 \
-  CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 modules
-make -C "$kernel" O="$PWD/$kout" ARCH=arm64 \
-  CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
-  INSTALL_MOD_PATH="$PWD/$wifi_mods" modules_install
-```
-
-Build the default recovery target with the modules root exported:
-
-```bash
 OP3_WIFI_MODULES_ROOT="$PWD/artifacts/op3-wifi-modules-root" \
-make -C source/buildroot \
-  O="$PWD/out/buildroot-op3-recovery" \
+OP3_INITRAMFS_FIRMWARE_ROOT="$PWD/artifacts/op3-initramfs-firmware" \
+make -C source/buildroot O="$PWD/out/buildroot-op3-recovery" \
+  op3_recovery_defconfig
+
+OP3_WIFI_MODULES_ROOT="$PWD/artifacts/op3-wifi-modules-root" \
+OP3_INITRAMFS_FIRMWARE_ROOT="$PWD/artifacts/op3-initramfs-firmware" \
+make -C source/buildroot O="$PWD/out/buildroot-op3-recovery" \
   BR2_JLEVEL=3 2>&1 | tee /tmp/buildroot-op3-recovery.log
-```
+~~~
 
-The resulting `out/buildroot-op3-recovery/target` contains
-`/opt/op3-wifi`, `/usr/bin/wifi`, `/usr/sbin/wpa_supplicant`, `/usr/sbin/wpa_cli`,
-`iw`, the regulatory database, and the matching `/lib/modules/<release>`
-closure. `scripts/stage-op3-wifi-rootfs.sh` remains only as a compatibility
-stager for older images; it is no longer part of the default build.
+Buildroot 输出有两个用途：
 
-The Buildroot target does not contain credentials or ath10k firmware.
-Credentials are entered on the device with `wifi connect`; QCA6174 firmware
-remains in the verified initrd. IPv6 is disabled by the initramfs hook and can
-be enabled later with `wifi ipv6 on`.
+~~~text
+out/buildroot-op3-recovery/images/rootfs.cpio.gz
+    正式、自建 initramfs；直接作为 pack-boot.sh 的 ramdisk 输入
 
-## 6. Recovery/audio payload and initrd
+out/buildroot-op3-recovery/target/
+    同一份 target 的持久化 /newroot 内容
+~~~
 
-The recovery binary and its browser-session helpers are compiled by the
-`op3-recovery` Buildroot package. The combined persistent payload is staged
-from the completed recovery target:
+确认 CPIO 是本次 Buildroot 生成的完整 rootfs，而不是旧 overlay：
 
-```bash
+~~~bash
+mkdir -p artifacts
+install -D -m 0644 \
+  out/buildroot-op3-recovery/images/rootfs.cpio.gz \
+  artifacts/initrd-op3-recovery-buildroot.cpio.gz
+gzip -t artifacts/initrd-op3-recovery-buildroot.cpio.gz
+sha256sum artifacts/initrd-op3-recovery-buildroot.cpio.gz
+~~~
+
+如需把同一 target 部署到持久化分区：
+
+~~~bash
 ./scripts/stage-op3-audio-rootfs.sh \
   out/buildroot-op3-recovery/target \
   artifacts/op3-recovery-audio-rootfs.tar.gz
-```
+~~~
 
-This archive is a persistent `/newroot` payload, not an initramfs and not a
-complete filesystem image. It contains recovery, audio, Wi-Fi, and the small
-browser-session wrappers; the browser runtime itself remains in the optional
-browser bundle.
+这个 tar 包不是 initramfs；它是可选的 /newroot 持久化内容。Wi-Fi 凭据
+仍需在设备上通过 wifi connect 写入，默认 IPv6 关闭。
 
-The final recovery initrd only overlays the launcher, Wi-Fi auto-start hook,
-and A530 firmware on the firmware-provenance initrd:
+## 6. 打包 boot image
 
-```bash
-./scripts/make-recovery-browser-initrd.sh \
-  artifacts/initrd-op3-firmware-provenance-v2.cpio.gz \
-  artifacts/initrd-op3-recovery-browser.cpio.gz
-```
+~~~bash
+kout=out/pmos-msm8996-6.12-recovery-audio-full-s1302-retry
 
-`scripts/build-recovery-mainline.sh`, `scripts/stage-recovery-rootfs.sh`, and
-`scripts/make-recovery-audio-initrd.sh` remain compatibility tools for older
-images and are not part of the canonical Buildroot flow.
-
-## 7. Pack and verify the boot image
-
-After the owner builds the restored kernel, pack the Android boot image:
-
-```bash
 ./scripts/pack-boot.sh \
   "$kout/arch/arm64/boot/Image.gz" \
   "$kout/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dtb" \
-  artifacts/initrd-op3-recovery-browser.cpio.gz \
-  artifacts/boot-oneplus3-pmos612-recovery-audio-s1302-retry.img
+  artifacts/initrd-op3-recovery-buildroot.cpio.gz \
+  artifacts/boot-oneplus3-pmos612-recovery-buildroot-initramfs.img
+~~~
 
+该步骤读取项目自己的 boot/oneplus3-fa5.env 参数，不读取历史 v100 镜像。
+主机需要 mkbootimg 和 abootimg；后者这里只用于检查新生成的 Android
+boot image。
+
+## 7. 校验和设备测试
+
+~~~bash
 ./scripts/verify-op3-recovery-manifest.sh --source
 ./scripts/verify-op3-recovery-manifest.sh --artifacts
-```
+~~~
 
-The last verifier compares the generated kernel/initrd/image against the
-locked values when the exact tested outputs are being reproduced. A different
-compiler or a changed external input can produce a valid boot image with a
-different hash; record that as a new build result instead of copying old
-artifacts.
+artifacts 模式会打印本次 Buildroot initramfs 和 boot image 的实际
+SHA256；新构建的 hash 由项目所有者在设备测试后回填 manifest/handoff。
+在此之前它们显示为 OWNER_BUILD_REQUIRED，不能误认为旧测试 artifact。
 
-## What must survive outside the local checkout
+授权测试时再执行设备侧 fastboot boot。收集至少：
 
-To delete the checkout and later rebuild it, retain the complete directory
-`/home/kai/op3-recovery-external-inputs` (or move it as one unit). It contains
-the v100 boot image, ath10k files, `NON-HLOS.bin`, `a530_zap.elf`, A530 GPU
-firmware, CJK font/package, `mcopy`, and the pinned `pil-squasher` source and
-binary. The pinned Buildroot download cache is optional and is needed only
-for offline builds.
+~~~text
+/root/boot_mainline.log
+/tmp/op3-recovery.log
+/tmp/op3-audio-init.log
+wifi current
+ip -4 addr show wlan0
+cat /proc/asound/cards
+cat /proc/bus/input/devices
+~~~
 
-`local/` contains private credentials and is intentionally excluded. It must
-not be copied into GitHub or into a public recovery bundle. The complete
-external-input directory is `/home/kai/op3-recovery-external-inputs`; retain
-that directory independently of the checkout.
+## 8. 可选浏览器 bundle
+
+浏览器不进入默认 recovery initramfs。需要测试 Cog/WPE 时使用独立的
+Buildroot 源树和输出目录：
+
+~~~bash
+./scripts/prepare-op3-buildroot.sh source/buildroot-browser browser
+make -C source/buildroot-browser O="$PWD/out/buildroot-op3-egl" \
+  op3_browser_defconfig
+make -C source/buildroot-browser O="$PWD/out/buildroot-op3-egl" \
+  BR2_JLEVEL=3 2>&1 | tee /tmp/buildroot-op3-browser.log
+./scripts/stage-browser-rootfs.sh \
+  out/buildroot-op3-egl/target \
+  artifacts/op3-browser-bundle.tar.gz
+~~~
+
+浏览器 bundle 使用外部 CJK 字体，部署到设备后才由 recovery 的 browser
+命令调用；它不改变默认 initramfs。
+
+## 9. 删除本地文件后的恢复
+
+可以删除 checkout、source/、out/ 和 artifacts/。以后只需重新 clone 本文
+第 2 节的 GitHub 分支，再保留并校验完整的：
+
+~~~text
+/home/kai/op3-recovery-external-inputs
+~~~
+
+不要删除该外部目录中的 ath10k、Qualcomm、A530 固件和工具。历史
+archive/boot_fa5_v100_auto.img 与 initrd/reference-initrd.img 不参与当前
+initramfs 生成；它们只在需要复核历史启动结果时使用。

@@ -44,11 +44,6 @@ for tool in mcopy pil-squasher; do
 	}
 done
 
-test -f "$external/initrd/reference-initrd.img" || {
-	printf 'Missing standalone reference initrd: %s/initrd/reference-initrd.img\n' "$external" >&2
-	exit 1
-}
-
 printf 'External inputs verified: %s\n' "$external"
 printf 'Use: export OP3_EXTERNAL_INPUTS=%q\n' "$external"
 printf 'Use: export OP3_ATH10K_EXTFW_SOURCE=\"$OP3_EXTERNAL_INPUTS\"\n'
