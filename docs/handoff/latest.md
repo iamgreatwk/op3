@@ -3,7 +3,7 @@
 ## OP3 recovery direct DRM checkpoint (Issue #7, 2026-09-06)
 
 The unified recovery branch `agent/implementation/recovery-browser-001` now
-contains commits `a58f166`, `398ec3a`, and `071cc75`; they replace recovery's `/dev/fb0` + `FBIOPAN`
+contains commits `a58f166`, `398ec3a`, `071cc75`, and `eeba948`; they replace recovery's `/dev/fb0` + `FBIOPAN`
 display path with a small raw `/dev/dri/card0` KMS backend. It selects the
 connected DSI connector/CRTC/preferred mode, creates an XRGB8888 dumb buffer,
 uses `DRM_IOCTL_MODE_DIRTYFB` for full-frame submissions, and destroys the
@@ -12,9 +12,9 @@ redraw its existing PTY/libtsm UI after the other DRM client exits.
 
 Agent static aarch64 compilation and bundle staging pass. Current recovery
 binary SHA256 is
-`75eba8d23d433c24c7ff6b7092ac2941fed35c851070665dd7bf6ab8db7f0a8c`; the
+`6ab82320aa87fd6255a203d94077a3e9afd1e7e147d957822b97127545414ac0`; the
 current persistent bundle SHA256 is
-`5c9af5001601cf5b64d8ebdf583a25670bf01aef7b4c9137cdbe3f0a6bd04bf4`.
+`484d7db7d4a977bb0b451cb148b50532c83a7eddedd8938817e340c7cb83cb3a`.
 Owner DRM-only boot evidence is now a successful smoke test: recovery opened
 `/dev/dri/card0` (connector 33, CRTC 106, 1080x1920, pitch 4352), and its
 process held no `/dev/fb0` descriptor; A530 PM4/PFP/GPMU firmware also
@@ -25,9 +25,10 @@ reopen, and display restore; both session markers cleared and recovery PID
 a pre-recovery boot warning. The DRM-only result is not yet an Integration
 acceptance because the owner reported no visible restored UI even though the
 backlight restored to 255. Commit `398ec3a` preserves that brightness, and
-`071cc75` now defers `SETCRTC` until the first recovery frame is rendered,
-matching the validated standalone KMS probe. This sequencing fix is awaiting
-device retest. Issue #7 handoff:
+`071cc75` defers `SETCRTC` until the first recovery frame is rendered.
+The latest commit `eeba948` also leaves the active panel scanout in place
+while closing recovery's DRM fd; the explicit disable was powering down the
+DSI panel unnecessarily. This fix is awaiting device retest. Issue #7 handoff:
 `docs/handoff/op3-recovery-drm-001.md`. Browser testing remains paused until
 this DRM-only gate has evidence.
 

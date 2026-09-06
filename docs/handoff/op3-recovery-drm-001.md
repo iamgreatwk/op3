@@ -7,7 +7,7 @@ Baseline commit: fa3c83e89876fa147c762d34bc2701400fa3bcff
 Working branch: agent/implementation/recovery-browser-001
 Changed files: recovery/recovery_mainline.c; recovery/recovery_drm.c;
   recovery/recovery_drm.h; scripts/build-recovery-mainline.sh
-Commit SHA: a58f166, 398ec3a, 071cc75
+Commit SHA: a58f166, 398ec3a, 071cc75, eeba948
 
 Layer: 04 DRM, recovery display backend
 Hypothesis: Direct `/dev/dri/card0` KMS with an XRGB8888 dumb buffer can
@@ -20,9 +20,9 @@ Build run by project owner: NOT_RUN
 Build result: NOT_RUN
 Artifacts and SHA256: Agent static aarch64 recovery compile passed:
   out/recovery/recovery_mainline
-  75eba8d23d433c24c7ff6b7092ac2941fed35c851070665dd7bf6ab8db7f0a8c
+  6ab82320aa87fd6255a203d94077a3e9afd1e7e147d957822b97127545414ac0
   artifacts/op3-recovery-browser-bundle.tar.gz
-  5c9af5001601cf5b64d8ebdf583a25670bf01aef7b4c9137cdbe3f0a6bd04bf4
+  484d7db7d4a977bb0b451cb148b50532c83a7eddedd8938817e340c7cb83cb3a
 
 Device test run by project owner: 2026-09-06
 Device result: PASS (DRM-only smoke test)
@@ -50,17 +50,20 @@ Uncertainties:
     restored while the UI remained black. This rules out brightness level as
     the sole cause.
   - Commit `071cc75` defers `SETCRTC` until after the first frame is rendered,
-    matching the validated standalone KMS probe. This sequencing fix has not
-    yet been device tested.
+    matching the validated standalone KMS probe, but the owner still saw a
+    black panel after the recovery-to-recovery handoff.
+  - Commit `eeba948` stops explicitly disabling the CRTC during recovery DRM
+    close. Closing the DRM fd already drops DRM master; the explicit fb=0
+    modeset was powering down the DSI panel and was not needed for ownership
+    handoff. This change has not yet been device tested.
   - The recovery display now owns and closes `/dev/dri/card0`; browser
     handoff behavior is deliberately not part of this gate.
   - The existing GPU runtime-PM workaround remains unchanged; this issue does
     not repair the DTB's dummy GPU regulators.
-Recommended next experiment: deploy the bundle from commit `071cc75` and
-  rerun the DRM-only boot plus handoff. Confirm `/tmp/fb.log` contains
-  `DRM display activated after first rendered frame`, the backlight save/
-  restore lines, and a visible recovery UI both before and after handoff.
-  Confirm the physical power key still toggles it. Keep browser testing out
-  of this gate; it belongs to Issue #6 after the recovery foundation issues
-  are complete.
+Recommended next experiment: deploy the bundle from commit `eeba948` and
+  rerun the DRM-only boot plus handoff. Confirm `/tmp/fb.log` contains the
+  activation and backlight lines, and verify the recovery UI remains visible
+  after the fake session exits. Confirm the physical power key still toggles
+  it. Keep browser testing out of this gate; it belongs to Issue #6 after the
+  recovery foundation issues are complete.
 ```
