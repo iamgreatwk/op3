@@ -15,13 +15,18 @@ protocol will expose the chin keys as standard EV_KEY devices for recovery.
 Only variable changed: S1302 capkey kernel exposure; recovery userspace,
 volume GPIOs, tri-state, audio, haptics, Wi-Fi, DRM, and browser are unchanged.
 
-Build run by project owner: NOT_RUN
-Build result: NOT_RUN
-Artifacts and SHA256: none
+Build run by project owner: 2026-09-06
+Build result: PASS
+Artifacts and SHA256:
+  - kernel config: c3da142eb257c5b0b501f24b91b74c0dba58a16ac6af252f054a4f14540baeb3
+  - Image.gz: 389ed53b61cdaa44c301a228d126db84113b6d7626e8201d77d1a20647fc05f2
+  - msm8996-oneplus3.dtb: bfb81b236c7e55c2022ae84e4fda6f3e7c0bb602fe91567a542e5e1e6a2fbb76
+  - boot image: 9b7f25f549f69e2398516e46504c143eba7c3e2a3d62a2c9e9f0c16aa886e044
+    (`artifacts/boot-oneplus3-pmos612-capkey.img`)
 
 Device test run by project owner: NOT_RUN
 Device result: NOT_RUN
-Evidence links / log paths: static patch checks only; no device evidence yet
+Evidence links / log paths: boot image is prepared; no device evidence yet
 
 Conclusion: INCONCLUSIVE
 Uncertainties:
