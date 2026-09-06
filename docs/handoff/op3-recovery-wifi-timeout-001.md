@@ -30,8 +30,11 @@ Artifacts and SHA256: `artifacts/op3-wifi-bundle-ipv6-assoc90.tar.gz`
   Both bundles contain the validated modules and no credentials; deploy only
   the replacement bundle for the corrected guard.
 
-Device test run by project owner: NOT_RUN for the timeout-guard correction
-Device result: NOT_RUN
+Device test run by project owner: 2026-09-06 — owner reports automatic Wi-Fi
+  connection after deploying the corrected bundle; no manual `wifi connect`
+  step was reported for this result.
+Device result: PARTIAL — automatic association reported; IPv4/route evidence
+  and a network request are still pending.
 Evidence links / log paths: `/root/boot_mainline.log`,
   `/root/dmesg_early.txt` or `/root/dmesg_rootfs.txt`, `wifi current`,
   `ip -4 addr show wlan0`, `ip -4 route`, `wifi ipv6 status`, and filtered
@@ -41,14 +44,13 @@ Evidence links / log paths: `/root/boot_mainline.log`,
 
 Conclusion: INCONCLUSIVE
 Uncertainties:
-  - The corrected guard is required for the configured 90-second wait to be
-    effective; the owner has not yet boot-tested this replacement bundle.
+  - The owner has reported automatic association with the corrected bundle,
+    but the exact command output and image/bundle identity are not recorded.
   - Repeated roaming between the two weak same-SSID BSSes may still require a
     separate policy change.
   - DHCP will only be attempted after the association wait succeeds.
-Recommended next experiment: first remove the temporary `bssid=` pin from the
-  saved SSID 1106 profile, deploy the corrected bundle to sda15, boot the
-  existing recovery image, and verify automatic `wpa_state=COMPLETED`, IPv4
-  address/default route, and `ipv6=off` without manually running
-  `wifi connect`.
+Recommended next evidence capture: without running `wifi connect`, collect
+  `wifi current`, `iw dev wlan0 link`, `ip -4 addr show wlan0`, `ip -4 route`,
+  `wifi ipv6 status`, and one harmless network request. Then record the exact
+  boot image and bundle SHA256 used for the run.
 ```

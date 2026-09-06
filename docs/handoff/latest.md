@@ -10,7 +10,11 @@ module loading, DHCP, IPv6 policy, kernel, DTS, DRM, audio, input, and browser
 contents are unchanged. Static shell checks pass. Replacement bundle:
 `artifacts/op3-wifi-bundle-ipv6-assoc90-fixed.tar.gz`, SHA256
 `143714f00fb17fe5c63f3cb00821ea77e3e0c8616504d8e497b89e9d65f200f7`.
-Owner device retest is pending. Handoff:
+Owner reports that recovery now connects to Wi-Fi automatically after this
+bundle was deployed, without a manual `wifi connect` step. This confirms the
+automatic path reached the persistent `/newroot` CLI and the 90-second guard
+is effective. Full evidence for IPv4 address, default route, and IPv6-off
+state is still pending; this is not an Integration acceptance. Handoff:
 `docs/handoff/op3-recovery-wifi-timeout-001.md`.
 
 ## OP3 recovery Wi-Fi DHCP retry checkpoint (Issue #11, 2026-09-06)
