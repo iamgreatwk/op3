@@ -12,7 +12,7 @@ Changed files: manifests/op3-recovery-audio-full.env;
   scripts/prepare-op3-buildroot.sh; scripts/extract-reference-initrd.sh;
   scripts/stage-op3-audio-rootfs.sh; scripts/stage-browser-rootfs.sh;
   docs/rebuild-recovery.md
-Commit SHA: pending
+Commit SHA: 68d63ee
 
 Layer: source and build-input provenance
 Hypothesis tested: A fresh checkout of the current top-level GitHub branch,
