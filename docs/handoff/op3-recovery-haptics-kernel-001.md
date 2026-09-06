@@ -16,13 +16,20 @@ pmi8994_haptics node is enabled.
 Only variable changed: PM8994 haptics ERM acceptance and OP3 DTS enablement;
 no recovery userspace, physical-key, audio, Wi-Fi, DRM, or browser changes.
 
-Build run by project owner: NOT_RUN
-Build result: NOT_RUN
-Artifacts and SHA256: none
+Build run by project owner: 2026-09-06
+Build result: PASS (owner reports the combined formal 6.12 kernel build
+completed)
+Artifacts and SHA256: owner did not provide artifact hashes in the test
+report
 
-Device test run by project owner: NOT_RUN
-Device result: NOT_RUN
-Evidence links / log paths: none
+Device test run by project owner: 2026-09-06
+Device result: PASS
+Evidence links / log paths: `/proc/bus/input/devices`, `dmesg`, and
+`/tmp/fb.log` from `root@172.16.42.1`. The kernel exposes
+`spmi_haptics` on `/dev/input/event0` with `EV_FF`; dmesg registers the
+device, and recovery reports `vibration: input FF -> /dev/input/event0
+name=spmi_haptics effect=0`. The owner reports that the vibration motor
+works physically.
 
 Conclusion: INCONCLUSIVE
 Uncertainties:
@@ -39,13 +46,9 @@ Static verification: Both patches pass git apply --check against the active
 top-level git diff --check also passes. No kernel build or device test was
 run by this agent.
 
-Recommended next experiment: In the assigned formal kernel worktree, apply
-the two patches from patches/pmos612-op3-haptics/, reuse the validated OP3
-configuration with CONFIG_INPUT_QCOM_SPMI_HAPTICS=y, and build/boot the
-resulting image. Confirm dmesg exposes the spmi_haptics input device and its
-haptics IRQs, then inspect /tmp/fb.log for
-vibration: input FF -> ... and verify a short startup or touch vibration.
-Test this series independently from the volume/tri-state DTS patch. If the
-input device registers but the motor is silent, open a separate voltage or
-actuator-policy experiment rather than changing recovery userspace here.
+Recommended next experiment: Integration should record this device PASS in
+the aggregate recovery milestone after retaining the exact kernel artifact
+hash and test log. No voltage-policy follow-up is required for the reported
+hardware behavior. Keep the existing `qcom,vmax-mv` omission documented if a
+different motor or board variant is tested.
 ```

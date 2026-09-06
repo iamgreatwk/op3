@@ -1,6 +1,6 @@
 # Latest handoff
 
-## OP3 recovery kernel haptics preparation (pending owner test, 2026-09-06)
+## OP3 recovery kernel haptics device PASS (Integration pending, 2026-09-06)
 
 Commit `d31f471` prepares a separate formal pmOS MSM8996 Linux 6.12.1 patch
 series for the missing OnePlus 3 vibration device. Patch 1 allows the
@@ -9,15 +9,17 @@ enables the existing `pmi8994_haptics` peripheral in the OP3 DTS and sets a
 5 ms wave-play rate. The validated OP3 configuration already has
 `CONFIG_INPUT_QCOM_SPMI_HAPTICS=y`, so no Kconfig change is included. Static
 patch checks pass against the formal baseline and the active kernel checkout;
-no kernel build or device test was run. Historical downstream data suggests
+the owner completed the kernel build and device test. Historical downstream data suggests
 an ERM motor around 2700 mV, but the current driver does not implement the
-old `qcom,vmax-mv` property, so voltage policy remains an explicit follow-up
-if registration succeeds but the motor is silent. Handoff:
+old `qcom,vmax-mv` property. The owner test exposed `spmi_haptics` as
+`/dev/input/event0` with `EV_FF`, recovery logged
+`vibration: input FF -> /dev/input/event0 name=spmi_haptics effect=0`, and
+the owner reports that the physical motor works. Handoff:
 `docs/handoff/op3-recovery-haptics-kernel-001.md`. This is independent of the
-volume/tri-state physical-key patch and remains **INCONCLUSIVE** pending the
-owner's kernel build and OnePlus 3 test.
+volume/tri-state physical-key patch. The device result is PASS; final
+Integration acceptance remains pending.
 
-## OP3 recovery volume and tri-state physical-key preparation (pending owner test, 2026-09-06)
+## OP3 recovery volume and tri-state physical-key device PASS (Integration pending, 2026-09-06)
 
 Commit `6f58544` prepares a formal pmOS MSM8996 Linux 6.12.1 DTS patch for
 the missing OnePlus 3 side keys. It registers the standard `gpio-keys`
@@ -26,9 +28,12 @@ and PMIC GPIO6/4/5 as active-low tri-state top/middle/bottom codes
 600/601/602. The three switch inputs receive PMIC pull-ups. The validated
 kernel configuration already has `CONFIG_KEYBOARD_GPIO=y`, so no config
 change is needed. Baseline and active-checkout `git apply --check` plus
-`git diff --check` pass. No kernel build or current-device test was run for
-this patch. Handoff: `docs/handoff/op3-recovery-physical-keys-001.md`.
-Vibration remains a separate kernel haptics issue and test.
+`git diff --check` pass. The owner then built and booted the combined kernel.
+Device evidence shows `gpio-keys` on `/dev/input/event4`; recovery opened
+`tri=8` and `volume=9`, and the owner reports volume up/down plus all three
+tri-state positions work physically. Handoff:
+`docs/handoff/op3-recovery-physical-keys-001.md`. The device result is PASS;
+final Integration acceptance remains pending.
 
 ## OP3 recovery S1302 chin capacitive-key preparation (pending owner test, 2026-09-06)
 
