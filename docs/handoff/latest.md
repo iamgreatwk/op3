@@ -20,6 +20,11 @@ IPv6 disabled. This proves the isolated firmware fix, but the copy is not
 persistent and no rebuilt kernel/initramfs has been boot-tested yet. Handoff:
 `docs/handoff/op3-wifi-board-fallback-001.md`.
 
+The follow-up staging check also found that `stage-op3-initramfs-firmware.sh`
+double-prefixed `ath10k` when only `OP3_EXTERNAL_INPUTS` was set. Commit
+`b17e838` accepts either the external-input root or its direct `ath10k`
+subdirectory; the staging test now passes with the documented environment.
+
 ## Clean rebuild artifact check (2026-09-06)
 
 The owner-authorized clean rebuild in

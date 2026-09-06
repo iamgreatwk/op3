@@ -5,7 +5,7 @@ Role: Implementation
 Baseline commit: `129f73f` top-level project checkpoint; formal kernel baseline is pinned in `manifests/op3-recovery-audio-full.env`
 Working branch: `agent/implementation/recovery-browser-001`
 Changed files: `scripts/stage-op3-initramfs-firmware.sh`, `scripts/restore-op3-recovery-kernel.sh`, `buildroot/op3-recovery-post-build.sh`, `kernel/configs/oneplus3-recovery-audio-full.config`, `manifests/op3-recovery-audio-full.env`, Wi-Fi/rebuild documentation
-Commit SHA: pending
+Commit SHA: `cb0003e` (firmware fallback), `b17e838` (external staging path)
 
 Layer: Wi-Fi firmware packaging and recovery provisioning
 Hypothesis tested: QCA6174 probe fails because the device reports PCI subsystem `0000:0000`; `board-2.bin` has no matching entry and the firmware loader needs the legacy `board.bin` fallback.
@@ -20,7 +20,7 @@ Evidence before change:
 
 Build run by project owner: NOT_RUN
 Build result: NOT_RUN
-Artifacts and SHA256: Existing locked artifacts do not contain `board.bin`; a new kernel/Buildroot/image build is required.
+Artifacts and SHA256: Existing locked artifacts do not contain `board.bin`; a new kernel/Buildroot/image build is required. The staging script was verified with only `OP3_EXTERNAL_INPUTS` set and produced firmware-6, board-2, and board.bin with the locked hashes.
 
 Device test run by project owner: NOT_RUN (live ACM diagnostic performed under owner authorization)
 Device result: PASS for the isolated fallback; formal rebuilt-image test pending.
