@@ -13,7 +13,49 @@ reproducible kernel CPIO has SHA256
 boot image was repacked successfully with SHA256
 `f0aed8d6e62c6702f68b28003eebc657ef0871d88d4aa3769f21a0dbd13fed46`.
 `verify-op3-recovery-manifest.sh --source` and `--artifacts` both pass. No
-device boot test has been run yet.
+device boot test has been run with `fastboot boot`; basic recovery startup
+passed, while Wi-Fi and persistent-root behavior remain INCONCLUSIVE.
+
+The device reported Linux `6.12.1-msm8996+ #1 SMP PREEMPT Sun Sep 6
+14:36:13 CST 2026`, DRM first-frame activation, the OnePlus3 ALSA card with
+MultiMedia1--3 playback/capture, S1302/volume/tri-state/power/touch input
+devices, and haptics input. Recovery audio produced a 137,324-byte
+`/tmp/voice.wav` and invoked `tinyplay`. Early `/dev/sda15` mounting failed,
+although a later manual mount succeeded; Wi-Fi module loading from `/lib`
+worked but the PCIe log reported `Phy link never came up`, so no `wlan0`
+appeared. SSH password access was unavailable because the Buildroot root
+shadow entry is empty; ACM serial remained available.
+
+## UUID-selected persistent rootfs deployment and boot test (2026-09-06)
+
+The device-specific persistent partition was verified before the destructive
+deployment: `/dev/sda15` had UUID
+`feba81cd-3eee-4971-a703-a7d80dd04b5a` and was mounted at `/newroot`. Its old
+contents were cleared and the owner-built Buildroot `rootfs.tar` was
+extracted there. The deployed UUID-trial TAR had SHA256
+`24f8b2367e91ec8294f74c4c3d1b236ee6cdbac90150ca5e0e88edffaee495da`.
+
+The project branch now contains the UUID mount fix in commits `c941062` and
+`ec52894`. `boot/oneplus3-fa5.env` supplies
+`pmos_root_uuid=feba81cd-3eee-4971-a703-a7d80dd04b5a`; initramfs resolves
+that UUID with `blkid`, creates `/newroot`, and retries the mount for up to 15
+seconds. The first UUID trial exposed the missing mountpoint; the second
+trial included the one-line correction.
+
+The final test image was booted with `fastboot boot` and has SHA256
+`f91a2a69897fae661ba2efe19b664d8ae68779d58dc12767b54aef197186e982`; its
+Buildroot CPIO has SHA256
+`31f3465000b26382a4640799f5ca58b5b8986a92088fcca4dbcff514d6262612`.
+The device cmdline contained the expected UUID, and the boot log recorded:
+`newroot mounted (/dev/sda15 UUID=feba81cd-3eee-4971-a703-a7d80dd04b5a)`.
+`mountpoint /newroot` passed and `recovery_mainline` resolved to
+`/newroot/sbin/recovery_mainline`.
+
+The same boot discovered touch, power, gpio-backed tri-state and volume,
+S1302 capacitive keys, and `spmi_haptics`; ALSA exposed the `OnePlus3` card
+with MultiMedia1--3 playback/capture. This is a mount/integration PASS for
+this run; Wi-Fi association and a fresh audio capture/playback run remain
+separate tests.
 
 ## Buildroot GNU mirror timeout (2026-09-06)
 
