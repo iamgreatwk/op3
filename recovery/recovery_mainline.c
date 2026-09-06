@@ -69,6 +69,8 @@ static int mainline_mode=0;  /* 主线内核(6.x)：无 msm_cmd_autorefresh，�
 static int screen_on;   /* 前置声明（定义在电源键区域） */
 static int vsync_fd=-1;
 #define BROWSER_SESSION_FLAG "/run/op3-browser.active"
+#define BROWSER_SESSION_READY "/run/op3-browser.recovery-ready"
+static size_t fb_map_len;
 
 /* The framebuffer recovery UI and Weston cannot consume input or submit
  * frames at the same time.  browser-session writes its own PID here before
@@ -86,7 +88,7 @@ static int browser_session_active(void){
  * 消除 CPU 写 framebuffer 与内核 autorefresh 推帧不同步导致的残影/白点闪烁（tearing）。*/
 static void wait_vsync(void){
   if(!screen_on)return;   /* 息屏不显示，无需同步（面板停扫时 vsync 不来，等反而卡） */
-  if(vsync_fd<0)vsync_fd=open("/sys/class/graphics/fb0/vsync_event",O_RDONLY|O_NONBLOCK);
+  if(vsync_fd<0)vsync_fd=open("/sys/class/graphics/fb0/vsync_event",O_RDONLY|O_NONBLOCK|O_CLOEXEC);
   if(vsync_fd<0)return;
   char b[64];
   while(read(vsync_fd,b,sizeof(b)-1)>0){}   /* 清掉残留旧事件，避免误判 */
@@ -123,6 +125,51 @@ static void fb_logf(const char*fmt,...){
   char buf[256];va_list ap;va_start(ap,fmt);
   vsnprintf(buf,sizeof(buf),fmt,ap);va_end(ap);
   fb_log(buf);
+}
+
+/* Open fb0 with close-on-exec.  The recovery PTY shell is forked after this
+ * point; without O_CLOEXEC it keeps a second fb0 reference while it execs
+ * browser-session, defeating the DRM handoff even after recovery closes its
+ * own descriptor. */
+static int open_framebuffer(void){
+  int fd=open("/dev/graphics/fb0",O_RDWR|O_CLOEXEC);
+  if(fd<0)fd=open("/dev/fb0",O_RDWR|O_CLOEXEC);
+  if(fd<0){fb_logf("fb open failed: %s\n",strerror(errno));return -1;}
+  fbvi vi;fbfi fi;memset(&vi,0,sizeof(vi));memset(&fi,0,sizeof(fi));
+  if(ioctl(fd,0x4600,&vi)<0||ioctl(fd,0x4602,&fi)<0||
+     !vi.xres||!vi.yres||!fi.line_length){
+    fb_logf("fb geometry query failed: %s\n",strerror(errno));close(fd);return -1;
+  }
+  size_t map_len=(size_t)fi.line_length*vi.yres;
+  u8 *map=mmap(NULL,map_len,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0);
+  if(map==MAP_FAILED){fb_logf("fb mmap failed: %s\n",strerror(errno));close(fd);return -1;}
+  fb_fd=fd;fb=map;fb32=(u32*)map;w=vi.xres;h=vi.yres;stride=fi.line_length;fb_map_len=map_len;
+  fb_logf("fb opened fd=%d %ux%u stride=%u\n",fb_fd,w,h,stride);
+  return 0;
+}
+
+/* Release every recovery-owned display handle before Weston attempts to take
+ * DRM ownership.  The PTY/libtsm state remains alive in this process. */
+static void release_framebuffer(void){
+  dirty=0;
+  if(vsync_fd>=0){close(vsync_fd);vsync_fd=-1;}
+  if(fb&&fb_map_len){munmap(fb,fb_map_len);fb=NULL;}
+  fb32=NULL;fb_map_len=0;
+  if(fb_fd>=0){close(fb_fd);fb_fd=-1;}
+  w=0;h=0;stride=0;
+  fb_log("fb released for browser DRM handoff\n");
+}
+
+static int mark_browser_ready(void){
+  int fd=open(BROWSER_SESSION_READY,O_WRONLY|O_CREAT|O_TRUNC|O_CLOEXEC,0644);
+  if(fd<0){fb_logf("browser handoff ready open failed: %s\n",strerror(errno));return -1;}
+  char b[]="released\n";
+  int ok=(write(fd,b,sizeof(b)-1)==(ssize_t)(sizeof(b)-1));
+  if(ok)fsync(fd);
+  close(fd);
+  if(!ok){fb_logf("browser handoff ready write failed: %s\n",strerror(errno));return -1;}
+  fb_log("browser handoff ready\n");
+  return 0;
 }
 
 // Console buffer: avoid re-rendering unchanged rows
@@ -1548,6 +1595,28 @@ static void apply_fontsize(int fw){
   draw_kb();do_pan();
 }
 
+/* Reacquire fb0 only after the browser supervisor has removed its active flag.
+ * This reuses the live PTY/libtsm screens and redraws the recovery UI so the
+ * browser session returns to the same console instead of starting a second
+ * recovery process. */
+static int restore_framebuffer(void){
+  if(open_framebuffer()<0)return -1;
+  int fd=fb_fd;
+  fbvi ip;memset(&ip,0,sizeof(ip));
+  if(ioctl(fd,0x4600,&ip)<0)fb_log("fb restore: GET var failed\n");
+  ip.yoff=0;
+  if(ioctl(fd,0x4601,&ip)<0)fb_log("fb restore: initial commit failed\n");
+  activated=0;
+  fill(0,0,w,h,0xFF000000);
+  draw_statusbar();
+  if(cur_scr)tsm_screen_draw(cur_scr,render_cell,NULL);
+  draw_kb();draw_ui_overlay();
+  for(int i=0;i<30;i++){do_pan();usleep(20000);}
+  activated=1;
+  fb_log("fb restored after browser\n");
+  return 0;
+}
+
 // Touch: auto-detect + ABS range scaling to screen pixels
 static int ts_x_min=0,ts_x_max=1080,ts_y_min=0,ts_y_max=1920;
 static int scale_x(int raw){
@@ -1717,12 +1786,9 @@ int main(){
   setenv("TZ","CST-8",1);tzset();  /* 中国时区 UTC+8，状态栏时间用本地时间 */
   restore_saved_time();
   vibe_init();vibe(500);
-  fb_fd=open("/dev/graphics/fb0",O_RDWR);if(fb_fd<0)fb_fd=open("/dev/fb0",O_RDWR);if(fb_fd<0)return 1;
+  unlink(BROWSER_SESSION_READY);
+  if(open_framebuffer()<0)return 1;
   int fd=fb_fd;
-  fbvi vi;fbfi fi;memset(&vi,0,sizeof(vi));memset(&fi,0,sizeof(fi));
-  ioctl(fd,0x4600,&vi);ioctl(fd,0x4602,&fi);w=vi.xres;h=vi.yres;stride=fi.line_length;
-  fb=mmap(NULL,stride*h,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0);
-  if(fb==MAP_FAILED)return 1;fb32=(u32*)fb;
   /* 主线内核(6.x)适配：KD_GRAPHICS 反而破坏推帧（VT 切图形模式 → DRM client 释放
    * → 面板状态被破坏 → 后续 commit 黑屏）。test_push 实测：无 KD_GRAPHICS 时
    * FBIOPAN 推帧正常（屏幕变红）。fbcon 共存即可，recovery 每次渲染后 FBIOPAN 覆盖。
@@ -1808,7 +1874,15 @@ int main(){
 
   while(1){
     int browser_active=browser_session_active();
+    if(browser_active&&!browser_was_active){
+      /* Do not let Weston race an open fbdev mapping.  browser-session waits
+       * for this marker before it starts Weston/DRM. */
+      release_framebuffer();
+      mark_browser_ready();
+    }
     if(browser_was_active && !browser_active){
+      unlink(BROWSER_SESSION_READY);
+      if(restore_framebuffer()<0)fb_log("fb restore failed; recovery UI is unavailable\n");
       /* Discard touch/key events generated for the browser before handing
        * input ownership back to recovery.  Otherwise the browser's final
        * touch release can become a phantom recovery click. */

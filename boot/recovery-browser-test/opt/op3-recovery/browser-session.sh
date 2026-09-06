@@ -7,8 +7,10 @@
 # recovery program can clear an orphaned flag after a killed session.
 
 FLAG=/run/op3-browser.active
+READY=/run/op3-browser.recovery-ready
 LOG=/newroot/var/log/op3-browser-session.log
 RECOVERY_BIN=/newroot/opt/op3-recovery
+READY_LIMIT=15
 
 mkdir -p /run /newroot/var/log 2>/dev/null
 
@@ -55,6 +57,7 @@ if [ -e "$FLAG" ]; then
 	rm -f "$FLAG"
 fi
 
+rm -f "$READY"
 printf '%s\n' "$$" > "$FLAG"
 runner_pid=""
 cleanup(){
@@ -66,6 +69,7 @@ cleanup(){
 		runner_pid=""
 	fi
 	rm -f "$FLAG"
+	rm -f "$READY"
 	log "session cleanup engine=$engine rc=$rc"
 	sync
 	exit "$rc"
@@ -73,6 +77,21 @@ cleanup(){
 trap cleanup EXIT INT TERM
 
 log "session start engine=$engine url=${url:-bundle default} supervisor=$$"
+# recovery_mainline closes its fbdev mapping and writes READY.  Do not start
+# Weston until that marker exists; otherwise the browser can race the old
+# recovery DRM/fb0 client and reset the device before any child log is flushed.
+sync
+ready_wait=0
+while [ ! -e "$READY" ] && [ "$ready_wait" -lt "$READY_LIMIT" ]; do
+	sleep 1
+	ready_wait=$((ready_wait + 1))
+done
+if [ ! -e "$READY" ]; then
+	log "FATAL: recovery framebuffer handoff timeout after ${ready_wait}s"
+	exit 1
+fi
+log "recovery framebuffer released after ${ready_wait}s"
+sync
 "$runner" &
 runner_pid=$!
 wait "$runner_pid" 2>/dev/null
