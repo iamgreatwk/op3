@@ -7,7 +7,7 @@ Baseline commit: 1fb9bdc
 Working branch: agent/implementation/recovery-browser-001
 Changed files: boot/wifi/opt/op3-wifi/wifi; boot/wifi/README.md;
   docs/handoff/latest.md; docs/handoff/op3-recovery-wifi-dhcp-001.md
-Commit SHA: 8a25bbc
+Commit SHA: 8a25bbc; stale-lease cleanup correction: 835a926
 
 Layer: 02 recovery network userspace / DHCP client lifecycle
 Previous evidence: Issue #10 increased association wait; owner logs showed
@@ -26,10 +26,16 @@ Build result: Agent shell/static checks PASS; owner boot-image repack NOT_RUN
 Artifacts and SHA256: `artifacts/op3-wifi-bundle-ipv6-dhcp-retry.tar.gz`
   `435b0a06826c1f9e6352698af6bbbcf2dcb90349271da8153c868d1f3d44d075`.
   The bundle contains the validated modules and the updated persistent CLI;
-  no credentials are packaged.
+  no credentials are packaged. That bundle is superseded by
+  `artifacts/op3-wifi-bundle-ipv6-assoc90-clean-retry.tar.gz`, SHA256
+  `2d1bbe71a56363e2b7599936971d0d57a6e2d3d0fc9e1b203c5b512cb238b5a7`, which
+  also includes the stale-lease cleanup.
 
-Device test run by project owner: NOT_RUN
-Device result: NOT_RUN
+Device test run by project owner: 2026-09-06 — owner observed
+  `wpa_state=SCANNING` and `NO-CARRIER` with a retained IPv4 address and
+  default route during the previous bundle test.
+Device result: INCONCLUSIVE — the retained address/route invalidated that
+  connection-state observation; cleanup bundle retest is pending.
 Evidence links / log paths: `/root/boot_mainline.log`,
   `/root/dmesg_early.txt` or `/root/dmesg_rootfs.txt`, `wifi current`,
   `ip -4 addr show wlan0`, `ip -4 route`, `wifi ipv6 status`, and the
@@ -42,8 +48,9 @@ Uncertainties:
     link that remains disconnected.
   - The background client remains available after the 30-second observation
     window, so a delayed lease may appear after the command returns nonzero.
-Recommended next experiment: generate and deploy the replacement bundle to
-  sda15, boot the existing recovery image without manual `wifi connect`, wait
-  through the 90-second association and 30-second DHCP observation windows,
-  then collect IPv4, route, WPA state, IPv6 status, and filtered dmesg.
+Recommended next experiment: deploy the cleanup bundle to sda15, boot the
+  existing recovery image without manual `wifi connect`, wait through the
+  90-second association and 30-second DHCP observation windows, then collect
+  `iw dev wlan0 link`, IPv4 address/route, WPA state, IPv6 status, and filtered
+  dmesg. A disconnected state must show no retained wlan0 IPv4 address.
 ```
