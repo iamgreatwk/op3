@@ -1,5 +1,18 @@
 # Latest handoff
 
+## OP3 recovery integrated rebuild organization (2026-09-06)
+
+The current rebuild is locked by
+`manifests/op3-recovery-audio-full.env`. It selects the top-level recovery
+branch `agent/implementation/recovery-browser-001`, the separate kernel
+worktree `source/linux-pmos-msm8996-6.12-recovery-audio-full` at commit
+`4a486e2ea7e4`, the owner output directory, boot profile, recovery initrd, and
+the latest tested artifact hashes. Run
+`scripts/verify-op3-recovery-manifest.sh --source` before building and
+`scripts/verify-op3-recovery-manifest.sh --artifacts` after packaging. Old
+worktrees, `out/`, `cache/`, and historical artifacts remain outside the
+rebuild input and are not copied into it.
+
 ## OP3 recovery S1302 startup retry follow-up (registration PASS, physical test pending, 2026-09-06)
 
 The final audio-integrated image registered the audio card and `/dev/snd`

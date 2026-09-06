@@ -65,6 +65,12 @@ repository and a separate Git repository for the formal kernel source.
    authorized pushing. For a nested kernel branch, a top-level GitHub push
    does not publish the kernel commits; record the local kernel path/commit and
    any remote-credential limitation in the handoff.
+9. For the current integrated recovery rebuild, use
+   `manifests/op3-recovery-audio-full.env` as the only source/artifact lock.
+   Run `scripts/verify-op3-recovery-manifest.sh --source` before the owner
+   builds and `scripts/verify-op3-recovery-manifest.sh --artifacts` after
+   packaging. If a source, branch, commit, or hash changes, update the
+   manifest and handoff in the same assigned branch before building.
 
 Recommended state check:
 

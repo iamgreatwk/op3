@@ -54,6 +54,28 @@ Keep each owner build in a distinct `out/` directory named for the kernel
 line and experiment. Never delete a branch with an attached worktree; remove
 the exact worktree first and then use `git branch -d`, never `-D`.
 
+## Integrated rebuild lock
+
+The current recovery rebuild is described by the tracked manifest
+`manifests/op3-recovery-audio-full.env`. It is the single mapping from the
+top-level project branch to the independent kernel branch, external output
+directory, boot profile, initrd, and tested SHA256 values. Do not reconstruct a
+build by copying files from old worktrees or by applying every patch directory.
+
+The owner workflow is:
+
+```bash
+scripts/verify-op3-recovery-manifest.sh --source
+# owner compiles the locked kernel worktree and packs the locked initrd
+scripts/verify-op3-recovery-manifest.sh --artifacts
+```
+
+The kernel commit in this manifest is currently local to the independent
+kernel worktree; the formal kernel remote URL and this limitation are recorded
+in the manifest. A fresh rebuild host must either receive that exact kernel
+commit through an authorized remote or use an exported, reviewed patch series
+before the artifact check can pass.
+
 ## Change rules
 
 1. Start every change by recording its layer, hypothesis, one variable, and
