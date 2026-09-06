@@ -9,19 +9,28 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 manifest="$project_root/boot/base-initramfs/msm8996-oneplus3-firmware.tsv"
 destination="${1:-$project_root/artifacts/msm8996-oneplus3-firmware}"
 destination="$(realpath -m "$destination")"
+# shellcheck source=/dev/null
+source "$project_root/manifests/op3-recovery-audio-full.env"
 
 non_hlos_url="https://gitlab.com/DrGitX/firmware-oneplus3/-/raw/master/oneplus3/NON-HLOS.bin"
-non_hlos_sha512="c0f3f908e237202003d9b2fe4071e2800bdcdae180e8311fbc0671478fcd63aba5a3fe5ab5d297010c12c232501f05f31141fc39a44c5b86ac2b56016f553a7f"
+non_hlos_sha512="$NON_HLOS_SHA512"
 zap_url="https://github.com/TheMuppets/proprietary_vendor_oneplus/raw/lineage-17.1/oneplus3/proprietary/vendor/firmware/a530_zap.elf"
-zap_sha512="374ed1606a8c12bd8fb8adb3e0d91603aa53ff9aed175921c9e6b579104407b01274e5f3cf158007b83ecb5aa2c7343c526e360aebc8bca557cd4b9c4c711f98"
+zap_sha512="$A530_ZAP_SHA512"
+external_inputs="${OP3_EXTERNAL_INPUTS:-}"
+mcopy_cmd="${OP3_MCOPY:-mcopy}"
+pil_squasher_cmd="${OP3_PIL_SQUASHER:-pil-squasher}"
 
-for command in curl mcopy pil-squasher sha256sum sha512sum; do
+for command in "$mcopy_cmd" "$pil_squasher_cmd" sha256sum sha512sum; do
 	command -v "$command" >/dev/null || {
 		printf 'Missing required command: %s\n' "$command" >&2
 		printf 'Install mtools and pil-squasher through the owner-approved host package workflow.\n' >&2
 		exit 1
 	}
 done
+[ -n "$external_inputs" ] || command -v curl >/dev/null || {
+	printf 'Missing required command: curl\n' >&2
+	exit 1
+}
 
 test -f "$manifest" || { printf 'Missing manifest: %s\n' "$manifest" >&2; exit 1; }
 test ! -e "$destination" || { printf 'Refusing to overwrite: %s\n' "$destination" >&2; exit 1; }
@@ -40,21 +49,34 @@ fetch() {
 	}
 }
 
-fetch "$non_hlos_url" "$workdir/NON-HLOS.bin" "$non_hlos_sha512"
-fetch "$zap_url" "$workdir/a530_zap.elf" "$zap_sha512"
+if [ -n "$external_inputs" ]; then
+	install -m 0644 "$external_inputs/qualcomm/NON-HLOS.bin" "$workdir/NON-HLOS.bin"
+	install -m 0644 "$external_inputs/qualcomm/a530_zap.elf" "$workdir/a530_zap.elf"
+	[ "$(sha512sum "$workdir/NON-HLOS.bin" | awk '{print $1}')" = "$non_hlos_sha512" ] || {
+		printf 'SHA512 mismatch for external NON-HLOS.bin\n' >&2
+		exit 1
+	}
+	[ "$(sha512sum "$workdir/a530_zap.elf" | awk '{print $1}')" = "$zap_sha512" ] || {
+		printf 'SHA512 mismatch for external a530_zap.elf\n' >&2
+		exit 1
+	}
+else
+	fetch "$non_hlos_url" "$workdir/NON-HLOS.bin" "$non_hlos_sha512"
+	fetch "$zap_url" "$workdir/a530_zap.elf" "$zap_sha512"
+fi
 
 for item in adsp.b00 adsp.b01 adsp.b02 adsp.b03 adsp.b04 adsp.b05 adsp.b06 adsp.b08 adsp.b09 adsp.mdt \
 	modem.b00 modem.b01 modem.b02 modem.b03 modem.b04 modem.b05 modem.b06 modem.b07 modem.b08 modem.b09 modem.b10 modem.b11 modem.b12 modem.b13 modem.b15 modem.b16 modem.b17 modem.b18 modem.b19 modem.b20 modem.mdt \
 	mba.mbn \
 	slpi.b00 slpi.b01 slpi.b02 slpi.b03 slpi.b04 slpi.b05 slpi.b06 slpi.b07 slpi.b08 slpi.b09 slpi.b10 slpi.b11 slpi.b12 slpi.b13 slpi.b14 slpi.mdt \
 	venus.b00 venus.b01 venus.b02 venus.b03 venus.b04 venus.mdt; do
-	mcopy -b -p -n -i "$workdir/NON-HLOS.bin" "::image/$item" "$workdir/$item"
+	"$mcopy_cmd" -b -p -n -i "$workdir/NON-HLOS.bin" "::image/$item" "$workdir/$item"
 done
 
 for image in adsp modem slpi venus; do
 	(
 		cd "$workdir"
-		pil-squasher "$target/$image.mbn" "$image.mdt"
+		"$pil_squasher_cmd" "$target/$image.mbn" "$image.mdt"
 	)
 done
 install -m 0644 "$workdir/mba.mbn" "$target/mba.mbn"

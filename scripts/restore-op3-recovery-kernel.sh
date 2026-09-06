@@ -12,7 +12,7 @@ Usage:
 
 The fresh repository must contain KERNEL_BASE_COMMIT from the recovery
 manifest and have no local changes. The external ath10k files are supplied by
-OP3_ATH10K_EXTFW_SOURCE.
+OP3_EXTERNAL_INPUTS (or the legacy OP3_ATH10K_EXTFW_SOURCE override).
 EOF
 }
 
@@ -70,9 +70,9 @@ git -C "$fresh_kernel" cat-file -e "$KERNEL_BASE_COMMIT^{commit}" 2>/dev/null ||
 git -C "$fresh_kernel" show-ref --verify --quiet "refs/heads/$restore_branch" &&
   die "restore branch already exists: $restore_branch"
 
-external_root="${OP3_ATH10K_EXTFW_SOURCE:-}"
+external_root="${OP3_ATH10K_EXTFW_SOURCE:-${OP3_EXTERNAL_INPUTS:-}}"
 test -n "$external_root" ||
-  die 'set OP3_ATH10K_EXTFW_SOURCE to the external ath10k input root'
+  die 'set OP3_EXTERNAL_INPUTS to the external input directory'
 firmware_source="$external_root/$ATH10K_FIRMWARE_REL"
 board_source="$external_root/$ATH10K_BOARD_REL"
 check_sha256 "$ATH10K_FIRMWARE_SHA256" "$firmware_source"

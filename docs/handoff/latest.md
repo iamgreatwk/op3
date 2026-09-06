@@ -1,5 +1,19 @@
 # Latest handoff
 
+## OP3 external input bundle (2026-09-06)
+
+All binary inputs that must survive deletion of the checkout are organized in
+`/home/kai/op3-recovery-external-inputs`. It contains the reference v100 boot
+image, ath10k files, Qualcomm `NON-HLOS.bin` and `a530_zap.elf`, A530 GPU
+firmware, CJK font/package, `mcopy`, and the pinned `pil-squasher` source and
+tools. SHA256/SHA512 manifests and a README are stored in that directory.
+
+Verify and export it before rebuilding:
+`./scripts/verify-op3-external-inputs.sh /home/kai/op3-recovery-external-inputs`.
+The rebuild scripts now consume `OP3_EXTERNAL_INPUTS` and the explicit tool
+overrides. The directory is outside GitHub and was not added to the public
+repository.
+
 ## OP3 recovery clean-rebuild provenance (2026-09-06)
 
 `docs/rebuild-recovery.md` now gives the complete current build order for

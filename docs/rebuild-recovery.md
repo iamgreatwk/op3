@@ -11,8 +11,22 @@ Buildroot commit:       679b9ead7620bbf193620d1ebf56f53c1764d37a
 The top-level GitHub repository contains the source, kernel patch archive,
 configuration, scripts and Buildroot project-owned patches. Generated
 directories (`source/`, `out/`, `artifacts/`, and `cache/`) are deliberately
-ignored. A small set of binary inputs must be kept outside GitHub and supplied
-by path; their SHA256 values are checked by the recipe.
+ignored. A small set of binary inputs must be kept outside GitHub in one
+external-input directory; its SHA256 values are checked by the recipe.
+
+Use the directory prepared for this project:
+
+```bash
+export OP3_EXTERNAL_INPUTS=/home/kai/op3-recovery-external-inputs
+./scripts/verify-op3-external-inputs.sh "$OP3_EXTERNAL_INPUTS"
+export OP3_ATH10K_EXTFW_SOURCE="$OP3_EXTERNAL_INPUTS"
+export OP3_MCOPY="$OP3_EXTERNAL_INPUTS/tools/bin/mcopy"
+export OP3_PIL_SQUASHER="$OP3_EXTERNAL_INPUTS/tools/bin/pil-squasher"
+```
+
+Its layout and retention rules are documented in
+`/home/kai/op3-recovery-external-inputs/README.md`. The directory is outside
+the checkout and must not be deleted with the GitHub working tree.
 
 ## 1. Fresh checkout
 
@@ -24,8 +38,8 @@ cd op3-rebuild
 ```
 
 The kernel source is a separate repository. Restore it from the pinned pmOS
-6.12.1 baseline and the tracked 31-patch series. `OP3_ATH10K_EXTFW_SOURCE`
-must point to an external directory containing:
+6.12.1 baseline and the tracked 31-patch series. `OP3_EXTERNAL_INPUTS`
+contains the ath10k files at:
 
 ```text
 ath10k/QCA6174/hw3.0/firmware-6.bin
@@ -41,8 +55,7 @@ git clone --branch msm8996-stable-6.12.y --single-branch \
   https://gitlab.com/msm8996-mainline/linux.git \
   source/linux-pmos-msm8996-6.12-base
 
-OP3_ATH10K_EXTFW_SOURCE=/path/to/external-inputs \
-  ./scripts/restore-op3-recovery-kernel.sh \
+./scripts/restore-op3-recovery-kernel.sh \
   source/linux-pmos-msm8996-6.12-base \
   source/linux-pmos-msm8996-6.12-recovery-audio-full \
   agent/implementation/recovery-browser-audio-full-001
@@ -99,7 +112,7 @@ Extract it with the tracked script:
 
 ```bash
 ./scripts/extract-reference-initrd.sh \
-  /path/to/boot_fa5_v100_auto.img \
+  "$OP3_EXTERNAL_INPUTS/boot/boot_fa5_v100_auto.img" \
   artifacts/reference-initrd.img
 ```
 
@@ -108,8 +121,9 @@ The extracted `artifacts/reference-initrd.img` must hash to
 
 The following two steps replace the declared Qualcomm firmware files while
 leaving the rest of the historical archive controlled and auditable. They
-require the owner-approved `mtools`, `pil-squasher`, `curl`, and `sha512sum`
-environment described in `docs/build-environment.md`:
+use `NON-HLOS.bin`, `a530_zap.elf`, `mcopy`, and `pil-squasher` from
+`$OP3_EXTERNAL_INPUTS`; `sha512sum` is the only required host utility for
+these inputs:
 
 ```bash
 ./scripts/prepare-a530-firmware.sh \
@@ -124,25 +138,21 @@ environment described in `docs/build-environment.md`:
   artifacts/initrd-op3-firmware-provenance-v2.cpio.gz
 ```
 
-`prepare-a530-firmware.sh` obtains the three Adreno files from the host
-`linux-firmware` package and verifies their hashes. The Qualcomm modem/ADSP/
-SLPI/Venus files are derived from the SHA512-pinned `NON-HLOS.bin` by the
-second script. These firmware blobs are not committed to GitHub.
+`prepare-a530-firmware.sh` uses the verified copies under
+`$OP3_EXTERNAL_INPUTS/qualcomm/a530/`. Without that directory it falls back
+to the host `linux-firmware` package. The Qualcomm modem/ADSP/SLPI/Venus
+files are derived from the SHA512-pinned
+`$OP3_EXTERNAL_INPUTS/qualcomm/NON-HLOS.bin` by the second script. These
+firmware blobs are not committed to GitHub.
 
 ## 4. Browser bundle
 
-Fetch the exact CJK font used by the tested browser image. The `.deb` is only
-a download input; the staged font must hash to the value in the manifest.
+The exact CJK font used by the tested browser image is already stored under
+`$OP3_EXTERNAL_INPUTS/fonts/`. The `.deb` is retained there as a recovery
+copy; the staged font must hash to the value in the manifest.
 
 ```bash
-mkdir -p artifacts/fonts
-cd artifacts/fonts
-apt-get download fonts-wqy-microhei=0.2.0-beta-4
-dpkg -x fonts-wqy-microhei_0.2.0-beta-4_all.deb unpacked
-install -m 0644 unpacked/usr/share/fonts/truetype/wqy/wqy-microhei.ttc \
-  wqy-microhei.ttc
-cd ../..
-sha256sum artifacts/fonts/wqy-microhei.ttc
+sha256sum "$OP3_EXTERNAL_INPUTS/fonts/wqy-microhei.ttc"
 ```
 
 After the owner Buildroot build succeeds, stage the whole self-contained
@@ -250,15 +260,14 @@ artifacts.
 
 ## What must survive outside the local checkout
 
-To delete the checkout and later rebuild it, retain an external input archive
-or storage location containing:
-
-1. the SHA256-pinned v100 boot image used by `extract-reference-initrd.sh`;
-2. the two SHA256-pinned ath10k `extfw` files;
-3. the owner-approved Qualcomm firmware tooling/input used by
-   `stage-msm8996-oneplus3-firmware.sh`;
-4. the pinned Buildroot download cache only if offline builds are required;
-5. the CJK font package or a copy of the verified `.ttc` file.
+To delete the checkout and later rebuild it, retain the complete directory
+`/home/kai/op3-recovery-external-inputs` (or move it as one unit). It contains
+the v100 boot image, ath10k files, `NON-HLOS.bin`, `a530_zap.elf`, A530 GPU
+firmware, CJK font/package, `mcopy`, and the pinned `pil-squasher` source and
+binary. The pinned Buildroot download cache is optional and is needed only
+for offline builds.
 
 `local/` contains private credentials and is intentionally excluded. It must
-not be copied into GitHub or into a public recovery bundle.
+not be copied into GitHub or into a public recovery bundle. The complete
+external-input directory is `/home/kai/op3-recovery-external-inputs`; retain
+that directory independently of the checkout.

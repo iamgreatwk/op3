@@ -27,10 +27,13 @@ set -euo pipefail
 
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 dest="${1:-$project_root/artifacts/a530-firmware}"
+# shellcheck source=/dev/null
+source "$project_root/manifests/op3-recovery-audio-full.env"
 
-A530_PM4_SHA256=6419f35956ec7307af83723fedfba752520bacd8389eda0d0120e185e4cb1d3f
-A530_PFP_SHA256=7ab3cd917e1f875f6a8387f8bc5efcf11ce9c88542ef2fc3cbda7d4b7b163286
-A530_GPMU_SHA256=3124b0c8cf84fd6db5cb063b37c51386dc64b5416c4ba2713e12106d9ffa5daf
+# If the external-input directory has been prepared, prefer its verified
+# uncompressed copies. The historical host linux-firmware fallback remains
+# available for a first-time setup.
+external_inputs="${OP3_EXTERNAL_INPUTS:-}"
 
 source_dir=/lib/firmware/qcom
 
@@ -47,7 +50,9 @@ fetch() {
   src="$source_dir/$name.zst"
   out="$dest/lib/firmware/qcom/$name"
 
-  if [ -f "$src" ]; then
+  if [ -n "$external_inputs" ] && [ -f "$external_inputs/qualcomm/a530/$name" ]; then
+    cp "$external_inputs/qualcomm/a530/$name" "$out"
+  elif [ -f "$src" ]; then
     zstd -d -c "$src" > "$out"
   elif [ -f "$source_dir/$name" ]; then
     cp "$source_dir/$name" "$out"

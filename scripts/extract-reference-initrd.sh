@@ -9,10 +9,20 @@ set -euo pipefail
 #   scripts/extract-reference-initrd.sh <boot_fa5_v100_auto.img> [output]
 
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-boot_image="${1:?usage: scripts/extract-reference-initrd.sh <boot-image> [output] }"
+# shellcheck source=/dev/null
+source "$project_root/manifests/op3-recovery-audio-full.env"
+
+if [ "$#" -ge 1 ]; then
+	boot_image="$1"
+elif [ -n "${OP3_EXTERNAL_INPUTS:-}" ]; then
+	boot_image="$OP3_EXTERNAL_INPUTS/boot/boot_fa5_v100_auto.img"
+else
+	printf 'usage: scripts/extract-reference-initrd.sh <boot-image> [output]\n' >&2
+	exit 2
+fi
 output="${2:-$project_root/artifacts/reference-initrd.img}"
-expected_boot="29ccd3eb8b093b29fc44435bd6e5f98367cf3794c117f9527a6bf3c1ebc5d781"
-expected_initrd="c3358a1cadb747996ddaa492e636827f2d72974040e8fd40d81f8a213e676366"
+expected_boot="$REFERENCE_BOOT_IMAGE_SHA256"
+expected_initrd="$REFERENCE_INITRD_SHA256"
 
 command -v abootimg >/dev/null 2>&1 || { printf 'Missing abootimg\n' >&2; exit 1; }
 command -v gzip >/dev/null 2>&1 || { printf 'Missing gzip\n' >&2; exit 1; }

@@ -66,12 +66,16 @@ install -m 0644 "$page" "$bundle/test-page.html"
 
 # CJK font (OP3-BROWSER-006): without a Chinese font every zh page renders as
 # tofu boxes; DejaVu covers Latin/Greek/Cyrillic only. The font is fetched
-# once on the host (no sudo needed) and kept under artifacts/:
-#   cd artifacts/fonts
-#   apt-get download fonts-wqy-microhei
-#   dpkg -x fonts-wqy-microhei_*.deb x
-#   find x -name 'wqy-microhei.ttc' -exec cp {} wqy-microhei.ttc \; && rm -rf x
-font="$project_root/artifacts/fonts/wqy-microhei.ttc"
+# once on the host (no sudo needed) and retained under the external-input
+# directory. OP3_EXTERNAL_INPUTS is preferred; artifacts/fonts remains a
+# backwards-compatible fallback for existing local builds.
+if [ -n "${OP3_FONT_SOURCE:-}" ]; then
+	font="$OP3_FONT_SOURCE"
+elif [ -n "${OP3_EXTERNAL_INPUTS:-}" ]; then
+	font="$OP3_EXTERNAL_INPUTS/fonts/wqy-microhei.ttc"
+else
+	font="$project_root/artifacts/fonts/wqy-microhei.ttc"
+fi
 test -f "$font" || {
 	printf 'Missing CJK font: %s\nFollow the fetch recipe in this script\n' "$font" >&2
 	exit 1
