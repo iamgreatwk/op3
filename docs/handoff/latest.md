@@ -11,8 +11,17 @@ default, allowing the display hardware to suspend when idle. The optional
 future browser experiments.
 
 This is a default initramfs userspace change only. It requires a new Buildroot
-initramfs and boot image before device testing; no new image has been built or
-flashed for this change yet.
+initramfs and boot image before device testing. The new image was built,
+flashed to the non-A/B `boot` partition, and booted successfully. Device
+evidence shows `control=auto`, `runtime_status=suspended`, and
+`cur_freq=27000000`; the A530 is now allowed to idle when recovery is not
+actively using it. The same boot retained `/dev/sda15` mounting, SSH
+`root/1234`, direct DRM display, and the OnePlus3 ALSA card.
+
+The GPU-idle initrd SHA256 is
+`4f788efb94a267130df19db23d436eb9f2546417e1c659bc777bf9ced686e93a` and the
+flashed boot image SHA256 is
+`11c376755b61300c45112fe788968c3e6dd0fc58bb6616d7877debf03734cfdf`.
 
 ## Boot partition flashed and post-flash verification (2026-09-07)
 
