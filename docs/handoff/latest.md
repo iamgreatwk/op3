@@ -1,5 +1,15 @@
 # Latest handoff
 
+## OP3 recovery Wi-Fi cold-start association checkpoint (Issue #10, 2026-09-06)
+
+Owner logs showed the QCA6174 driver initialized around 9 seconds after boot,
+while the first successful authentication/association arrived around 46
+seconds. The Wi-Fi CLI's 30-second wait therefore exited before association,
+leaving the background wpa_supplicant to connect later without running DHCP.
+The wait is now 90 seconds; no driver, firmware, regulatory, IPv4/DHCP, IPv6,
+kernel, DTS, DRM, audio, input, or browser logic changed. Owner retest is
+pending. Handoff: `docs/handoff/op3-recovery-wifi-timeout-001.md`.
+
 ## OP3 recovery IPv6 opt-in checkpoint (Issue #9, 2026-09-06)
 
 Recovery Wi-Fi now applies an IPv6-off policy before the existing automatic

@@ -28,6 +28,11 @@ policy, `wifi ipv6 on` to enable IPv6 on demand, and `wifi ipv6 off` to disable
 it again. The setting applies to current interfaces and to interfaces created
 later; it does not change the saved Wi-Fi profile or the IPv4 DHCP path.
 
+The association wait is 90 seconds by default. This covers the observed cold
+QCA6174 startup where the first successful authentication can occur more than
+30 seconds after the driver is initialized. Set `OP3_WIFI_ASSOC_TIMEOUT` only
+for a controlled diagnostic override.
+
 ## Persistent layout
 
 The owner stages `op3-wifi-bundle.tar.gz` into `/newroot`. It supplies:
