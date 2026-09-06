@@ -1,5 +1,21 @@
 # Latest handoff
 
+## OP3 recovery Wi-Fi cold association wait extension (Issue #10 follow-up, 2026-09-06)
+
+The owner ran `/newroot/opt/op3-wifi/wifi auto` with
+`OP3_WIFI_ASSOC_TIMEOUT=120`; it returned `auto-rc=0`, associated to SSID
+1106, and obtained DHCP address `192.168.1.5`. Kernel evidence shows the
+successful association only after repeated authentication attempts, at about
+171 seconds after boot. Commit `1a166c0` therefore raises the default wait to
+180 seconds. The `/newroot` paths, stale-lease cleanup, DHCP retry behavior,
+IPv6 policy, kernel, DTS, DRM, audio, input, and browser contents are
+unchanged. Replacement bundle:
+`artifacts/op3-wifi-bundle-ipv6-assoc180-clean-retry.tar.gz`, SHA256
+`3b68515b71f2226d5e82cc55a6262b64b0dfa4fd4f323456aea29ccde6247938`.
+Cold-boot validation with the new default is pending; this is not an
+Integration acceptance. Handoff:
+`docs/handoff/op3-recovery-wifi-timeout-001.md`.
+
 ## OP3 recovery Wi-Fi stale lease cleanup (Issue #11 follow-up, 2026-09-06)
 
 Owner evidence showed `wpa_state=SCANNING` and `wlan0=NO-CARRIER` while an old
