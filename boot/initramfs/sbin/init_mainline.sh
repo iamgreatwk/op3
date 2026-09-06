@@ -31,17 +31,54 @@ mount -t tmpfs tmpfs /run 2>/dev/null
 echo /sbin/mdev > /proc/sys/kernel/hotplug 2>/dev/null
 mdev -s 2>/dev/null
 
-# ---- 1.6 接入 sda15 持久 rootfs（/newroot，v98：命令/recovery 放 rootfs 而非 initramfs）----
-# sda15（UUID=feba81cd，cmdline pmos_root_uuid）= 3.18 持久 rootfs（ext4），
+# ---- 1.6 接入持久 rootfs（/newroot，v98：命令/recovery 放 rootfs 而非 initramfs）----
+# OnePlus 3 的持久 rootfs 在 sda15；该机必须通过 pmos_root_uuid 选择它。
+# /dev/disk/by-uuid 不是当前 initramfs 的必备节点，因此从所有已出现的
+# block device 读取 UUID。UFS 分区节点出现和可读之间还有短暂窗口，最多重试
+# 15 秒，避免第一次 mount 过早失败后永久降级到 initramfs。
 # 内含全部用户命令（wifi/theme/fontsize/backlight/pkg）+ recovery。
 # v96 只用 initramfs（内存系统，重启丢命令）→ v98 把 /newroot 接入 PATH + recovery。
-if ! mount | grep -q 'on /newroot'; then
-    mount -t ext4 /dev/sda15 /newroot 2>/dev/null || \
-        mount /dev/sda15 /newroot 2>/dev/null
+root_uuid=
+for arg in $(cat /proc/cmdline 2>/dev/null); do
+    case "$arg" in
+        pmos_root_uuid=*) root_uuid=${arg#pmos_root_uuid=} ;;
+    esac
+done
+
+root_dev=/dev/sda15
+if [ -n "$root_uuid" ]; then
+    root_dev=
 fi
+
+newroot_mounted() {
+    mount | grep -q 'on /newroot'
+}
+
+root_mount_try=0
+while ! newroot_mounted; do
+    if [ -n "$root_uuid" ]; then
+        for candidate in /dev/sd* /dev/mmcblk* /dev/nvme*; do
+            [ -b "$candidate" ] || continue
+            if blkid "$candidate" 2>/dev/null | grep -q "UUID=\"$root_uuid\""; then
+                root_dev=$candidate
+                break
+            fi
+        done
+    fi
+
+    if [ -n "$root_dev" ] && [ -b "$root_dev" ]; then
+        mount -t ext4 "$root_dev" /newroot 2>/dev/null || \
+            mount "$root_dev" /newroot 2>/dev/null || true
+    fi
+    newroot_mounted && break
+
+    root_mount_try=$((root_mount_try + 1))
+    [ "$root_mount_try" -ge 15 ] && break
+    sleep 1
+done
 if mount | grep -q 'on /newroot'; then
     export PATH=/newroot/usr/bin:/newroot/usr/sbin:/newroot/bin:/newroot/sbin:$PATH
-    log "newroot mounted (sda15) + PATH 接入: $(ls /newroot/usr/bin/wifi 2>/dev/null && echo 'wifi OK' || echo 'wifi 缺失')"
+    log "newroot mounted ($root_dev UUID=$root_uuid) + PATH 接入: $(ls /newroot/usr/bin/wifi 2>/dev/null && echo 'wifi OK' || echo 'wifi 缺失')"
     # ---- 1.6b 自动遍历 /newroot/usr/bin 建命令 symlink（v100：加命令零重打包）----
     # v99 用显式列表（wifi/theme/...）→ 新增命令还要改列表重打包。
     # v100 自动遍历：任何放进 /newroot/usr/bin 的可执行文件，重启自动接入。
@@ -57,7 +94,7 @@ if mount | grep -q 'on /newroot'; then
         [ -e "/usr/bin/$c" ] && log "  cmd $c: $(readlink /usr/bin/$c 2>/dev/null)"
     done
 else
-    log "WARN: sda15 挂载失败，/newroot 不可用（命令/恢复降级为 initramfs 版）"
+    log "WARN: root UUID=$root_uuid ($root_dev) 挂载失败，/newroot 不可用（命令/恢复降级为 initramfs 版）"
 fi
 
 # ---- 1.7 喂熵（v87 关键修复）----
