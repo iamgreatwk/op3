@@ -1,5 +1,15 @@
 # Latest handoff
 
+## Buildroot GNU mirror timeout (2026-09-06)
+
+After the local GNU `install` workaround, the clean Buildroot run proceeded
+through `host-libtool`. The default `ftpmirror.gnu.org` then returned HTTP 504
+for `autoconf-2.72`; Buildroot's fallback source is reachable, but using it
+only after the mirror retry makes the build unnecessarily slow. The rebuild
+guide now passes `BR2_PRIMARY_SITE=https://sources.buildroot.net`; rerunning the
+same command resumes from the existing `dl/` and output directories. No final
+Buildroot artifact exists yet.
+
 ## Buildroot host preflight workaround (2026-09-06)
 
 The clean rebuild reached Buildroot `op3_recovery_defconfig` successfully.

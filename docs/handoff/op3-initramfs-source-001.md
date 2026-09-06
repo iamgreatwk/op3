@@ -17,7 +17,7 @@ Changed files: boot/initramfs/; buildroot/package-patches/op3-initramfs/;
   manifests/op3-recovery-audio-full.env;
   boot/base-initramfs/README.md; docs/boot-image-format.md;
   docs/rebuild-recovery.md; docs/handoff/latest.md
-Checkpoint commits: cde247f, af90564, 40f8f7f, 555afc2
+Checkpoint commits: cde247f, af90564, 40f8f7f, 555afc2, 026c359
 
 Layer: initramfs source and Buildroot packaging
 Hypothesis tested: A complete OP3 recovery initramfs can be generated from
@@ -29,10 +29,11 @@ kernel source, kernel configuration, DTS, recovery application logic, and
 browser stack selection were not changed.
 
 Build run by project owner: ATTEMPTED
-Build result: Buildroot defconfig completed, then the full build stopped in
-the host dependency preflight because `/usr/bin/install` was uutils coreutils
-0.8.0. No project package was compiled and no generated initramfs or boot image
-was produced.
+Build result: Buildroot defconfig completed and the host `install` workaround
+allowed the full build to resume. `libtool-2.4.6` was downloaded successfully
+from the fallback source, but the default GNU mirror then returned HTTP 504
+while downloading `autoconf-2.72`; the build had not completed at handoff.
+No generated initramfs or boot image was produced yet.
 Artifacts and SHA256: No new Buildroot initramfs or boot image was generated.
 The expected source output is
 out/buildroot-op3-recovery/images/rootfs.cpio.gz; the manifest marks its
@@ -41,11 +42,12 @@ artifact hash OWNER_BUILD_REQUIRED until the owner performs a clean build.
 Device test run by project owner: NOT_RUN
 Device result: NOT_RUN
 Evidence links / log paths: `/tmp/buildroot-op3-recovery.log` contains the
-host preflight failure; `/home/kai/op3-rebuild-clean-20260906/host-tools/install`
-now points to `/usr/bin/gnuinstall`. No device action was taken.
+host preflight and mirror events; `/home/kai/op3-rebuild-clean-20260906/host-tools/install`
+points to `/usr/bin/gnuinstall`; `source/buildroot/dl/libtool/libtool-2.4.6.tar.xz`
+is cached. No device action was taken.
 
 Conclusion: INCONCLUSIVE
-Uncertainties: After the host `install` workaround, Buildroot package
+Uncertainties: After the download mirror workaround, Buildroot package
 ordering, static helper compilation,
 devtmpfs/inittab startup, firmware requests from the self-built CPIO, and
 recovery/Wi-Fi/audio runtime behavior require the owner build and OnePlus 3
