@@ -28,9 +28,9 @@ policy, `wifi ipv6 on` to enable IPv6 on demand, and `wifi ipv6 off` to disable
 it again. The setting applies to current interfaces and to interfaces created
 later; it does not change the saved Wi-Fi profile or the IPv4 DHCP path.
 
-The association wait is 90 seconds by default. This covers the observed cold
-QCA6174 startup where the first successful authentication can occur more than
-30 seconds after the driver is initialized. Set `OP3_WIFI_ASSOC_TIMEOUT` only
+The association wait is 180 seconds by default. This covers the observed cold
+QCA6174 startup where the first successful authentication occurred about 160
+seconds after the driver was initialized. Set `OP3_WIFI_ASSOC_TIMEOUT` only
 for a controlled diagnostic override.
 
 After association, recovery starts `udhcpc` in background retry mode and
