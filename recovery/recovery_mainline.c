@@ -29,6 +29,8 @@
 /* 控制台搜索需要读取 libtsm 自己维护的 scrollback 行；本项目将 libtsm 源码
  * 静态编进 recovery，故可安全使用同版本的内部结构。 */
 #include "libtsm-int.h"
+#define MAX_INPUT_EVENTS 64
+#define INPUT_BITS_PER_LONG (sizeof(unsigned long) * 8)
 #define SCALE 3
 /* 终端字号运行时可变（fontsize 命令）：char_w=16/20/24/32，char_h=char_w*2。
  * 用「宏转变量」技巧：CHAR_W/CHAR_H 变成 char_w/char_h 的别名，
@@ -575,45 +577,64 @@ static int rdfs(const char*p,char*b,int m){
 // 3.18 走 timed_output/leds。vibe_init 按序探测。
 static int vib_fd=-1;
 static int vib_effect=-1;
+enum { VIB_NONE=0, VIB_INPUT_FF, VIB_SYSFS };
+static int vib_backend=VIB_NONE;
 static void vibe_stop(int ms){  /* 子进程：延时后停止振动（不阻塞主循环） */
-  struct input_event ev={0};
   usleep(ms*1000);
-  if(vib_fd>=0){ev.type=EV_FF;ev.code=vib_effect;ev.value=0;
-    if(write(vib_fd,&ev,sizeof(ev))<0){}}
+  if(vib_fd>=0 && vib_backend==VIB_INPUT_FF){
+    struct input_event ev={0};ev.type=EV_FF;ev.code=vib_effect;ev.value=0;
+    if(write(vib_fd,&ev,sizeof(ev))<0){}
+  }else if(vib_fd>=0 && vib_backend==VIB_SYSFS){
+    const char*off="0\n";if(write(vib_fd,off,strlen(off))<0){}
+  }
   _exit(0);
 }
 static void vibe(int ms){
-  if(vib_fd<0)return;
-  struct input_event ev={0};
-  ev.type=EV_FF;ev.code=vib_effect;ev.value=1;
-  if(write(vib_fd,&ev,sizeof(ev))<0)return;
+  if(vib_fd<0||vib_backend==VIB_NONE)return;
+  if(vib_backend==VIB_INPUT_FF){
+    struct input_event ev={0};ev.type=EV_FF;ev.code=vib_effect;ev.value=1;
+    if(write(vib_fd,&ev,sizeof(ev))<0){fb_log("vibration: FF play failed\n");return;}
+  }else{
+    char duration[32];snprintf(duration,sizeof(duration),"%d\n",ms);
+    if(write(vib_fd,duration,strlen(duration))<0){fb_log("vibration: sysfs play failed\n");return;}
+  }
   pid_t p=fork();
   if(p==0)vibe_stop(ms);
 }
-static void vibe_init(){vib_fd=-1;vib_effect=-1;
+static void vibe_init(){vib_fd=-1;vib_effect=-1;vib_backend=VIB_NONE;
   /* 主线：找 input 设备名含 "haptics" 的，上传 FF_RUMBLE 效果 */
-  for(int e=0;e<8;e++){
-    char path[32];snprintf(path,sizeof(path),"/dev/input/event%d",e);
+  for(int e=0;e<MAX_INPUT_EVENTS;e++){
+    char path[40];snprintf(path,sizeof(path),"/dev/input/event%d",e);
     int fd=open(path,O_RDWR);if(fd<0)continue;
     char name[64]={0};
-    if(ioctl(fd,EVIOCGNAME(sizeof(name)),name)<0||!strstr(name,"haptics")){close(fd);continue;}
-    unsigned long evbits[2]={0};
-    if(ioctl(fd,EVIOCGBIT(0,sizeof(evbits)),evbits)<0||!(evbits[EV_FF/32]&(1UL<<(EV_FF%32)))){close(fd);continue;}
+    if(ioctl(fd,EVIOCGNAME(sizeof(name)-1),name)<0){close(fd);continue;}
+    for(char*c=name;*c;c++)*c=tolower((unsigned char)*c);
+    unsigned long evbits[(EV_MAX+INPUT_BITS_PER_LONG)/INPUT_BITS_PER_LONG];
+    memset(evbits,0,sizeof(evbits));
+    if(ioctl(fd,EVIOCGBIT(0,sizeof(evbits)),evbits)<0||
+       !(evbits[EV_FF/INPUT_BITS_PER_LONG]&(1UL<<(EV_FF%INPUT_BITS_PER_LONG)))||
+       !strstr(name,"haptic")){close(fd);continue;}
     struct ff_effect fx={0};
     fx.type=FF_RUMBLE;fx.id=-1;
     fx.u.rumble.strong_magnitude=0x6000;
     fx.u.rumble.weak_magnitude=0x8000;
     fx.replay.length=100;fx.replay.delay=0;
     if(ioctl(fd,EVIOCSFF,&fx)<0){close(fd);continue;}
-    vib_fd=fd;vib_effect=fx.id;
+    vib_fd=fd;vib_effect=fx.id;vib_backend=VIB_INPUT_FF;
+    fb_logf("vibration: input FF -> %s name=%s effect=%d\n",path,name,fx.id);
     break;
   }
   /* 3.18 回退：timed_output/leds */
   if(vib_fd<0){
     const char* paths[]={"/sys/class/leds/vibrator/activate",
                          "/sys/class/timed_output/vibrator/enable",NULL};
-    for(int i=0;paths[i];i++){vib_fd=open(paths[i],O_WRONLY);if(vib_fd>=0)break;}
-  }}
+    for(int i=0;paths[i];i++){
+      vib_fd=open(paths[i],O_WRONLY|O_CLOEXEC);
+      if(vib_fd>=0){vib_backend=VIB_SYSFS;fb_logf("vibration: sysfs -> %s\n",paths[i]);break;}
+    }
+  }
+  if(vib_backend==VIB_NONE)fb_log("vibration: no supported backend\n");
+}
 static void vibe_close(){if(vib_fd>=0)close(vib_fd);}
 static long long now_ms(){struct timespec t;clock_gettime(CLOCK_MONOTONIC,&t);return t.tv_sec*1000LL+t.tv_nsec/1000000;}
 
@@ -1754,8 +1775,6 @@ static void screen_toggle(){
  * standard gpio-keys driver uses its DT label as EVIOCGNAME(), so matching
  * only "gpio-keys" silently misses a correctly registered volume device.
  */
-#define MAX_INPUT_EVENTS 64
-#define INPUT_BITS_PER_LONG (sizeof(unsigned long) * 8)
 #define INPUT_KEY_BITS ((KEY_MAX + INPUT_BITS_PER_LONG) / INPUT_BITS_PER_LONG)
 
 static int input_key_present(const unsigned long *bits, int code){
