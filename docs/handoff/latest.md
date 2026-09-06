@@ -12,7 +12,10 @@ IPv6 policy, kernel, DTS, DRM, audio, input, and browser contents are
 unchanged. Replacement bundle:
 `artifacts/op3-wifi-bundle-ipv6-assoc180-clean-retry.tar.gz`, SHA256
 `3b68515b71f2226d5e82cc55a6262b64b0dfa4fd4f323456aea29ccde6247938`.
-Cold-boot validation with the new default is pending; this is not an
+Owner cold-boot evidence now shows association to SSID 1106, IPv4
+`192.168.1.5/24`, default route via `192.168.1.1`, and `ipv6=off`; the
+connected BSSID was `12:78:86:70:53:79` at approximately `-92 dBm`. This is a
+device PASS candidate for the automatic Wi-Fi/DHCP scope, but remains pending
 Integration acceptance. Handoff:
 `docs/handoff/op3-recovery-wifi-timeout-001.md`.
 
@@ -28,8 +31,9 @@ bundle:
 `2d1bbe71a56363e2b7599936971d0d57a6e2d3d0fc9e1b203c5b512cb238b5a7`.
 Owner retest still showed `wpa_state=SCANNING`, `wlan0=NO-CARRIER`, no
 `wlan0` IPv4 address, and only the USB route. The stale-address cleanup is
-therefore behaving as intended, but automatic association remains unresolved;
-this is not an Integration acceptance. Handoff:
+therefore behaving as intended. That earlier run is superseded by the later
+180-second cold-boot connection evidence; this is not an Integration
+acceptance. Handoff:
 `docs/handoff/op3-recovery-wifi-dhcp-001.md`.
 
 ## OP3 recovery Wi-Fi association timeout guard correction (Issue #10 follow-up, 2026-09-06)

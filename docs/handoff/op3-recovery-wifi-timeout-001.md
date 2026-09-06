@@ -37,8 +37,10 @@ Device test run by project owner: 2026-09-06 — direct `wifi auto` with
   `OP3_WIFI_ASSOC_TIMEOUT=120` returned 0, associated to SSID 1106, and
   obtained IPv4 `192.168.1.5` with a default route. Kernel timestamps show
   association at approximately 171 seconds after boot.
-Device result: PARTIAL — the controlled auto path passed with a 120-second
-  override; cold-boot validation of the new 180-second default is pending.
+Device result: PASS candidate — the owner cold-boot run with the 180-second
+  default associated to SSID 1106, obtained IPv4 `192.168.1.5/24`, installed
+  the default route via `192.168.1.1`, and reported `ipv6=off`. Integration
+  acceptance remains pending.
 Evidence links / log paths: `/root/boot_mainline.log`,
   `/root/dmesg_early.txt` or `/root/dmesg_rootfs.txt`, `wifi current`,
   `ip -4 addr show wlan0`, `ip -4 route`, `wifi ipv6 status`, and filtered
@@ -48,14 +50,13 @@ Evidence links / log paths: `/root/boot_mainline.log`,
 
 Conclusion: INCONCLUSIVE
 Uncertainties:
-  - The controlled auto run passed with a 120-second override, but the
-    default-180-second cold-boot run has not yet been recorded.
+  - The connection is operating at approximately `-92 dBm`, so link stability
+    under browser traffic remains to be checked.
   - Repeated roaming between the two weak same-SSID BSSes may still require a
     separate policy change.
   - DHCP will only be attempted after the association wait succeeds.
-Recommended next evidence capture: deploy the 180-second bundle, cold boot
-  without running `wifi connect`, wait at least 180 seconds, and collect
-  `wifi current`, `iw dev wlan0 link`, `ip -4 addr show wlan0`, `ip -4 route`,
-  `wifi ipv6 status`, and one harmless network request. Then record the exact
-  boot image and bundle SHA256 used for the run.
+Recommended next evidence capture: retain the exact boot image and bundle
+  SHA256, perform one harmless network request over `wlan0`, and then proceed
+  to the networked browser gate. Monitor for deauthentication because the
+  associated BSS is weak.
 ```
