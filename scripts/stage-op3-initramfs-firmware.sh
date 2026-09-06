@@ -34,7 +34,7 @@ test -d "$qcom_root/lib/firmware/qcom/msm8996/oneplus3" || \
 test ! -e "$destination" || die "refusing to overwrite: $destination"
 
 if [ -z "$ath10k_source" ] && [ -n "$external_inputs" ]; then
-	ath10k_source="$external_inputs/ath10k"
+	ath10k_source="$external_inputs"
 fi
 [ -n "$ath10k_source" ] || die 'set OP3_EXTERNAL_INPUTS or OP3_ATH10K_EXTFW_SOURCE'
 ath10k_source="$(readlink -f "$ath10k_source")"
@@ -42,8 +42,8 @@ ath10k_source="$(readlink -f "$ath10k_source")"
 ath10k_rel=ath10k/QCA6174/hw3.0
 if [ -f "$ath10k_source/$ath10k_rel/firmware-6.bin" ]; then
 	ath10k_dir="$ath10k_source/$ath10k_rel"
-elif [ -f "$ath10k_source/ath10k/$ath10k_rel/firmware-6.bin" ]; then
-	ath10k_dir="$ath10k_source/ath10k/$ath10k_rel"
+elif [ -f "$ath10k_source/${ath10k_rel#ath10k/}/firmware-6.bin" ]; then
+	ath10k_dir="$ath10k_source/${ath10k_rel#ath10k/}"
 else
 	die "missing ath10k firmware under $ath10k_source"
 fi
