@@ -457,7 +457,6 @@ int recovery_drm_activate(struct recovery_drm_display *display)
 	if (drm_call(display->fd, DRM_IOCTL_MODE_SETCRTC, &set, "SETCRTC"))
 		return -1;
 
-	display->crtc_active = 1;
 	return 0;
 }
 
@@ -477,17 +476,14 @@ int recovery_drm_present(struct recovery_drm_display *display)
 
 void recovery_drm_close(struct recovery_drm_display *display)
 {
-	struct drm_mode_crtc disable;
-
 	if (!display)
 		return;
-	if (display->fd >= 0 && display->crtc_id && display->crtc_active) {
-		memset(&disable, 0, sizeof(disable));
-		disable.crtc_id = display->crtc_id;
-		(void)drm_call(display->fd, DRM_IOCTL_MODE_SETCRTC, &disable,
-				"disable CRTC");
-		display->crtc_active = 0;
-	}
+	/* Closing the DRM fd drops recovery's DRM master. Do not issue an
+	 * explicit fb=0 SETCRTC here: on the OP3 DSI command-mode panel that
+	 * powers down the panel, and a later same-boot legacy modeset may leave it
+	 * black even though the new framebuffer and backlight are valid. The old
+	 * fbdev handoff deliberately left the active scanout in place while the
+	 * next DRM client took over. */
 	destroy_buffer(display);
 	if (display->fd >= 0)
 		close(display->fd);
