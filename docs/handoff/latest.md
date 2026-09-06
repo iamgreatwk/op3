@@ -1,5 +1,25 @@
 # Latest handoff
 
+## OP3 corrected Wi-Fi board-fallback image built (device retest pending, 2026-09-06)
+
+The owner-authorized corrected build completed successfully on the project
+branch. Kernel `Image.gz` and DTB were built from the formal integrated kernel
+worktree, and Buildroot generated a new CPIO with the Wi-Fi module closure,
+TinyALSA tools, recovery program, and QCA6174 `firmware-6.bin`, `board-2.bin`,
+and legacy `board.bin`. The new initrd passed `gzip -t`; its SHA256 is
+`315cc923a43d5caded31612cfc043285d552e339adac60b6c40c6684c09eede1`.
+
+The test boot image is
+`artifacts/boot-oneplus3-pmos612-recovery-buildroot-board-fallback.img` with
+SHA256 `9ecef144150562b6eae47b34b54df5929a34af304303af11d07e391af851a2a0`.
+Its boot command line uses the device-specific `sda15` UUID from
+`boot/oneplus3-fa5.env`. The persistent target tarball is
+`artifacts/op3-audio-rootfs-board-fallback.tar.gz` with SHA256
+`631ca41fa6ceb07c5dfa4f1e3cb182130cae985532efb12b78c90f9503e6f957`.
+The canonical manifest and previously tested artifacts remain unchanged until
+this corrected image is boot-tested. Handoff:
+`docs/handoff/op3-wifi-board-fallback-build-001.md`.
+
 ## OP3 QCA6174 board-data fallback prepared (device retest pending, 2026-09-06)
 
 ACM diagnostics isolated the Wi-Fi failure to firmware board-data selection,
