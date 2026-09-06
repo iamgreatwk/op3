@@ -101,6 +101,15 @@ static void fb_logf(const char*fmt,...){
   fb_log(buf);
 }
 
+static int activate_framebuffer(void){
+  if(recovery_drm_activate(&drm_display)<0){
+    fb_log("DRM display activate failed\n");
+    return -1;
+  }
+  fb_log("DRM display activated after first rendered frame\n");
+  return 0;
+}
+
 /* Open direct DRM/KMS. The recovery PTY/libtsm renderer writes to the mapped
  * dumb buffer and recovery_drm_present() submits the dirty frontbuffer. */
 static int open_framebuffer(void){
@@ -1564,11 +1573,12 @@ static void apply_fontsize(int fw){
  * recovery process. */
 static int restore_framebuffer(void){
   if(open_framebuffer()<0)return -1;
-  restore_backlight_after_handoff();
   fill(0,0,w,h,0xFF000000);
   draw_statusbar();
   if(cur_scr)tsm_screen_draw(cur_scr,render_cell,NULL);
   draw_kb();draw_ui_overlay();
+  if(activate_framebuffer()<0){release_framebuffer();return -1;}
+  restore_backlight_after_handoff();
   for(int i=0;i<30;i++){do_pan();usleep(20000);}
   fb_log("DRM display restored after browser\n");
   return 0;
@@ -1770,8 +1780,9 @@ int main(){
   vibe_init();vibe(500);
   unlink(BROWSER_SESSION_READY);
   if(open_framebuffer()<0)return 1;
-  /* recovery_drm_open() has already selected DSI-1's preferred mode, created
-   * the XRGB8888 dumb buffer, and performed the initial legacy KMS modeset. */
+  /* recovery_drm_open() has selected DSI-1's preferred mode and created the
+   * XRGB8888 dumb buffer. The first KMS modeset is intentionally deferred
+   * until after the recovery UI has rendered into that buffer. */
   fill(0,0,w,h,0xFF000000);
   char bat[16]={0};rdfs("/sys/class/power_supply/battery/capacity",bat,16);
   draw_statusbar();
@@ -1800,6 +1811,7 @@ int main(){
    tsm_vte_input(cur_vte,"--- ready ---\r\n",14);
   }
   tsm_screen_draw(cur_scr,render_cell,NULL);
+  if(activate_framebuffer()<0)return 1;
   /* Submit a few full frames while the DSI command-mode panel settles. */
   for(int i=0;i<3;i++){do_pan();usleep(20000);}
 

@@ -19,9 +19,11 @@ struct recovery_drm_display {
 	uint32_t height;
 	size_t map_size;
 	void *pixels;
+	int crtc_active;
 };
 
 int recovery_drm_open(struct recovery_drm_display *display);
+int recovery_drm_activate(struct recovery_drm_display *display);
 int recovery_drm_present(struct recovery_drm_display *display);
 void recovery_drm_close(struct recovery_drm_display *display);
 

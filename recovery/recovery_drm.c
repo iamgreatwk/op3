@@ -370,7 +370,6 @@ int recovery_drm_open(struct recovery_drm_display *display)
 	struct drm_mode_create_dumb create;
 	struct drm_mode_fb_cmd framebuffer;
 	struct drm_mode_map_dumb map;
-	struct drm_mode_crtc set;
 	uint32_t connector_id;
 	uint32_t crtc_id;
 	int fd;
@@ -430,21 +429,36 @@ int recovery_drm_open(struct recovery_drm_display *display)
 
 	display->connector_id = connector_id;
 	display->crtc_id = crtc_id;
-	memset(&set, 0, sizeof(set));
-	set.crtc_id = crtc_id;
-	set.fb_id = display->framebuffer_id;
-	set.set_connectors_ptr = (uintptr_t)&display->connector_id;
-	set.count_connectors = 1;
-	set.mode = display->mode;
-	set.mode_valid = 1;
-	if (drm_call(fd, DRM_IOCTL_MODE_SETCRTC, &set, "SETCRTC"))
-		goto fail;
-
+	/* Leave the CRTC untouched until the caller has rendered the first frame.
+	 * On the OP3 command-mode panel, the validated KMS probe fills the dumb
+	 * buffer before SETCRTC; modesetting an uninitialized buffer and relying on
+	 * a later DIRTYFB update can leave the panel black after a handoff. */
 	return 0;
 
 fail:
 	recovery_drm_close(display);
 	return -1;
+}
+
+int recovery_drm_activate(struct recovery_drm_display *display)
+{
+	struct drm_mode_crtc set;
+
+	if (!display || display->fd < 0 || !display->framebuffer_id)
+		return -1;
+
+	memset(&set, 0, sizeof(set));
+	set.crtc_id = display->crtc_id;
+	set.fb_id = display->framebuffer_id;
+	set.set_connectors_ptr = (uintptr_t)&display->connector_id;
+	set.count_connectors = 1;
+	set.mode = display->mode;
+	set.mode_valid = 1;
+	if (drm_call(display->fd, DRM_IOCTL_MODE_SETCRTC, &set, "SETCRTC"))
+		return -1;
+
+	display->crtc_active = 1;
+	return 0;
 }
 
 int recovery_drm_present(struct recovery_drm_display *display)
@@ -467,11 +481,12 @@ void recovery_drm_close(struct recovery_drm_display *display)
 
 	if (!display)
 		return;
-	if (display->fd >= 0 && display->crtc_id) {
+	if (display->fd >= 0 && display->crtc_id && display->crtc_active) {
 		memset(&disable, 0, sizeof(disable));
 		disable.crtc_id = display->crtc_id;
 		(void)drm_call(display->fd, DRM_IOCTL_MODE_SETCRTC, &disable,
 				"disable CRTC");
+		display->crtc_active = 0;
 	}
 	destroy_buffer(display);
 	if (display->fd >= 0)
