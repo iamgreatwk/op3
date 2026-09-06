@@ -2,22 +2,18 @@
 
 ## Clean rebuild artifact check (2026-09-06)
 
-The owner completed the kernel and Buildroot builds in
-`/home/kai/op3-rebuild-clean-20260906`. The Buildroot output generated a valid
-`rootfs.cpio.gz` (44,801,175 bytes, SHA256
-`3a704c8f64dde483204f4391997cb60230bf736478009330bf27df2085e0bf6c`) whose
-CPIO contains the project `/init`, recovery, Wi-Fi/audio helpers, firmware,
-and kernel modules. The latest targeted kernel rerun produced Image.gz SHA256
-`3175a92fa47c54ad33c131b4a353f8e425c898270cdcda53bafda9032f84bc8d`, still
-different from the locked value. Although `olddefconfig` confirmed the output
-configuration, `make -B` forced Linux's top-level `.config` error guard and
-the shell continued into later phases. A retry without `-B` then treated the
-already-normalized CPIO command as unchanged, so the old CPIO bytes remained.
-The rebuild guide now uses `set -e`, directly invokes the kernel's CPIO
-generator with the locked timestamp, normalizes the saved command record, and
-uses a tracked date wrapper for the final UTS timestamp. Re-run the kernel
-target sequence, then repack and run artifact verification. No device test was
-run.
+The owner-authorized clean rebuild in
+`/home/kai/op3-rebuild-clean-20260906` now passes source and artifact
+verification. The Buildroot recovery initramfs is 44,801,175 bytes with SHA256
+`3a704c8f64dde483204f4391997cb60230bf736478009330bf27df2085e0bf6c`. The
+reproducible kernel CPIO has SHA256
+`e15eb1c349081c2650e535ec9774c6ed0afa178226ec89af09eed62be21e14c9`, and
+`Image.gz` matches the locked SHA256
+`5c89259d9340071c9c8684d361042482ca25c8f76b2de4d33cdacf2105f78861`. The
+boot image was repacked successfully with SHA256
+`f0aed8d6e62c6702f68b28003eebc657ef0871d88d4aa3769f21a0dbd13fed46`.
+`verify-op3-recovery-manifest.sh --source` and `--artifacts` both pass. No
+device boot test has been run yet.
 
 ## Buildroot GNU mirror timeout (2026-09-06)
 
