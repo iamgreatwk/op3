@@ -70,9 +70,15 @@ wifi_on() {
 }
 
 stop_client() {
-	# Ask a live instance to exit before touching its control socket. A failed
-	# first connection can otherwise leave /run/op3-wifi/wlan0 behind and make
-	# every later wpa_supplicant invocation fail during control-interface setup.
+	# Stop the background DHCP retry before removing its PID file. Otherwise an
+	# old client can re-add a lease after a new connection attempt starts.
+	if [ -r "$STATE/udhcpc.pid" ]; then
+		pid=$(cat "$STATE/udhcpc.pid")
+		[ -n "$pid" ] && kill "$pid" 2>/dev/null || true
+	fi
+	# Ask a live wpa_supplicant to exit before touching its control socket. A
+	# failed first connection can otherwise leave /run/op3-wifi/wlan0 behind and
+	# make every later invocation fail during control-interface setup.
 	"$WPA_CLI" -p "$STATE" -i "$IFACE" terminate >/dev/null 2>&1 || true
 	if [ -r "$STATE/wpa.pid" ]; then
 		pid=$(cat "$STATE/wpa.pid")
@@ -80,6 +86,10 @@ stop_client() {
 	fi
 	sleep 1
 	rm -f "$STATE/wpa.pid" "$STATE/udhcpc.pid" "$STATE/$IFACE"
+	# Do not let a lease from the previous session make a disconnected link
+	# look usable or make the new DHCP observation return immediately.
+	ip -4 addr flush dev "$IFACE" 2>/dev/null || true
+	ip -4 route flush dev "$IFACE" 2>/dev/null || true
 }
 
 start_profile() {
