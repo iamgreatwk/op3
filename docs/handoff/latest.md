@@ -1,5 +1,20 @@
 # Latest handoff
 
+## Clean rebuild artifact check (2026-09-06)
+
+The owner completed the kernel and Buildroot builds in
+`/home/kai/op3-rebuild-clean-20260906`. The Buildroot output generated a valid
+`rootfs.cpio.gz` (44,801,175 bytes, SHA256
+`3a704c8f64dde483204f4391997cb60230bf736478009330bf27df2085e0bf6c`) whose
+CPIO contains the project `/init`, recovery, Wi-Fi/audio helpers, firmware,
+and kernel modules. A boot image was packed successfully, but artifact
+verification currently stops at `Image.gz`: its SHA256 is
+`0d51f0978efd047c4974be1d5d14ed62f1023c93218e40863f7e70a4372662e1` instead
+of the locked value because the kernel build timestamp was not fixed. The
+DTB and config match. The rebuild guide now fixes the timestamp; recompile
+`Image.gz` only, repack, and rerun artifact verification. No device test was
+run.
+
 ## Buildroot GNU mirror timeout (2026-09-06)
 
 After the local GNU `install` workaround, the clean Buildroot run proceeded

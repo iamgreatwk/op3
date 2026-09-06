@@ -29,11 +29,17 @@ kernel source, kernel configuration, DTS, recovery application logic, and
 browser stack selection were not changed.
 
 Build run by project owner: ATTEMPTED
-Build result: Buildroot defconfig completed and the host `install` workaround
-allowed the full build to resume. `libtool-2.4.6` was downloaded successfully
-from the fallback source, but the default GNU mirror then returned HTTP 504
-while downloading `autoconf-2.72`; the build had not completed at handoff.
-No generated initramfs or boot image was produced yet.
+Build result: The owner completed the kernel and Buildroot builds after the
+host `install` and download-mirror workarounds. Buildroot generated
+`rootfs.cpio.gz` with SHA256
+`3a704c8f64dde483204f4391997cb60230bf736478009330bf27df2085e0bf6c`, and the
+boot packer produced an image with SHA256
+`904fe32e7b619b9fb0008a9b87843e81326dceef07a6475c812b2cee081a00b5`.
+The artifact verifier stops because the newly built `Image.gz` has SHA256
+`0d51f0978efd047c4974be1d5d14ed62f1023c93218e40863f7e70a4372662e1`, while
+the locked value is `5c89259d9340071c9c8684d361042482ca25c8f76b2de4d33cdacf2105f78861`.
+The only observed input difference is the kernel `UTS_VERSION` build
+timestamp; the config and DTB match.
 Artifacts and SHA256: No new Buildroot initramfs or boot image was generated.
 The expected source output is
 out/buildroot-op3-recovery/images/rootfs.cpio.gz; the manifest marks its
@@ -42,20 +48,20 @@ artifact hash OWNER_BUILD_REQUIRED until the owner performs a clean build.
 Device test run by project owner: NOT_RUN
 Device result: NOT_RUN
 Evidence links / log paths: `/tmp/buildroot-op3-recovery.log` contains the
-host preflight and mirror events; `/home/kai/op3-rebuild-clean-20260906/host-tools/install`
+successful finalization and image generation; `/home/kai/op3-rebuild-clean-20260906/host-tools/install`
 points to `/usr/bin/gnuinstall`; `source/buildroot/dl/libtool/libtool-2.4.6.tar.xz`
 is cached. No device action was taken.
 
 Conclusion: INCONCLUSIVE
-Uncertainties: After the download mirror workaround, Buildroot package
+Uncertainties: After the timestamp-controlled kernel rebuild, artifact
+verification and device boot behavior remain untested. Buildroot package
 ordering, static helper compilation,
 devtmpfs/inittab startup, firmware requests from the self-built CPIO, and
 recovery/Wi-Fi/audio runtime behavior require the owner build and OnePlus 3
 boot test. Proprietary firmware remains outside GitHub and is still required.
 
-Recommended next experiment: prepend the local `host-tools` directory to
-PATH, rerun the Buildroot build from its existing recovery output directory,
-and report the first package/build failure or generated image. The owner
-should then inspect images/rootfs.cpio.gz, pack it with the pinned kernel/DTB,
-and report the first failure or device evidence.
+Recommended next experiment: rebuild the kernel `Image.gz` with the fixed
+`KBUILD_BUILD_TIMESTAMP` in `docs/rebuild-recovery.md`, repack the existing
+Buildroot initramfs with the new kernel, and rerun artifact verification before
+any device boot test.
 ~~~
