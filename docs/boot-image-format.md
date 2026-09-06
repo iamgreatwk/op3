@@ -2,8 +2,9 @@
 
 ## Reference image
 
-The profile in `boot/oneplus3-fa5.env` was extracted from the known-good local
-image `boot_fa5_v100_auto.img`.
+The profile in `boot/oneplus3-fa5.env` was extracted from the historical
+known-good v100 image. That image is provenance only; current rebuilds use the
+standalone external ramdisk and separately built kernel/DTB.
 
 | Field | Value |
 | --- | --- |
@@ -20,6 +21,17 @@ image `boot_fa5_v100_auto.img`.
 
 The extracted appended DTB identifies itself as `model = "OnePlus 3"` and is
 compatible with `oneplus,oneplus3` and `qcom,msm8996`.
+
+## What is retained from the historical image
+
+Only its gzip-compressed ramdisk is retained as the standalone external input
+`$OP3_EXTERNAL_INPUTS/initrd/reference-initrd.img`, with SHA256
+`c3358a1cadb747996ddaa492e636827f2d72974040e8fd40d81f8a213e676366`.
+The old kernel payload, appended DTB, boot header, load addresses, and old
+cmdline are not consumed by the current recovery build. The exact ramdisk
+archive is retained as a whole because it is the historical userspace
+baseline; selected Qualcomm, A530, and ath10k files are overlaid from their
+separately pinned external inputs.
 
 ## Safe reuse rules
 

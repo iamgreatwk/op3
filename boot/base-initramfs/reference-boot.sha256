@@ -1,1 +1,4 @@
-29ccd3eb8b093b29fc44435bd6e5f98367cf3794c117f9527a6bf3c1ebc5d781  boot_fa5_v100_auto.img
+# Historical provenance only; the full boot image is no longer a rebuild input.
+# Original v100 boot image SHA256:
+# 29ccd3eb8b093b29fc44435bd6e5f98367cf3794c117f9527a6bf3c1ebc5d781
+# The required standalone input is checked by reference-initrd.sha256.

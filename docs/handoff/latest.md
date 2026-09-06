@@ -1,5 +1,26 @@
 # Latest handoff
 
+## OP3 v100 boot image retired as a rebuild input (2026-09-06)
+
+The only component of the historical `boot_fa5_v100_auto.img` used by the
+current recovery rebuild was its gzip-compressed ramdisk. It was extracted
+once from the hash-verified 62,226,432-byte image and stored outside GitHub as
+`/home/kai/op3-recovery-external-inputs/initrd/reference-initrd.img`.
+The standalone file is 50,705,116 bytes, contains 653 cpio entries, and has
+SHA256 `c3358a1cadb747996ddaa492e636827f2d72974040e8fd40d81f8a213e676366`.
+It is byte-identical to the previously validated local reference artifact.
+
+The current flow no longer consumes the historical image, its kernel payload,
+appended DTB, boot header, or old cmdline, and no longer requires `abootimg`.
+The original image was moved to
+`/home/kai/op3-recovery-external-inputs/archive/` as a reversible provenance
+copy; it is excluded from `SHA256SUMS` and from the canonical rebuild input.
+The external checksum manifest now verifies the standalone initrd. The
+tracked `scripts/extract-reference-initrd.sh` name is retained for command
+compatibility, but it now verifies/copies the standalone initrd rather than
+parsing a boot image. No kernel, Buildroot, or device test was run.
+Handoff: `docs/handoff/op3-reference-initrd-001.md`.
+
 ## OP3 default Buildroot profile excludes browser (2026-09-06)
 
 The default Buildroot profile is now `buildroot/op3-recovery.defconfig` and

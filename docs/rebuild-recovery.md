@@ -131,23 +131,38 @@ normal `make`; do not copy files from an older `out/` tree.
 ## 3. Reference initrd and firmware-provenance initrd
 
 The historical pmOS ramdisk is not generated from the GitHub source tree. It
-is extracted from the known-good external v100 boot image. The source boot
-image must hash to:
+is retained as a standalone external input at
+`$OP3_EXTERNAL_INPUTS/initrd/reference-initrd.img`. Its SHA256 is:
 
 ```text
-29ccd3eb8b093b29fc44435bd6e5f98367cf3794c117f9527a6bf3c1ebc5d781
+c3358a1cadb747996ddaa492e636827f2d72974040e8fd40d81f8a213e676366
 ```
 
-Extract it with the tracked script:
+Verify and copy it into the local artifact directory with the tracked script:
 
 ```bash
 ./scripts/extract-reference-initrd.sh \
-  "$OP3_EXTERNAL_INPUTS/boot/boot_fa5_v100_auto.img" \
+  "$OP3_EXTERNAL_INPUTS/initrd/reference-initrd.img" \
   artifacts/reference-initrd.img
 ```
 
-The extracted `artifacts/reference-initrd.img` must hash to
+The staged `artifacts/reference-initrd.img` must hash to
 `c3358a1cadb747996ddaa492e636827f2d72974040e8fd40d81f8a213e676366`.
+
+The old v100 boot image was used only once to obtain this byte-preserved
+ramdisk. The current rebuild does not require that image or `abootimg`:
+
+| Former boot-image component | Current status | Current source |
+| --- | --- | --- |
+| gzip ramdisk | required | standalone `initrd/reference-initrd.img` |
+| kernel payload | not used | owner-built pinned 6.12.1 kernel |
+| appended DTB | not used | owner-built OP3 DTB |
+| boot header and old cmdline | not used | `scripts/pack-boot.sh` and selected build cmdline |
+
+The standalone ramdisk is kept as one exact archive rather than split into
+individual files: the current firmware-provenance and recovery staging steps
+depend on its complete historical baseline, while their selected firmware
+overlays are independently verified below.
 
 The following two steps replace the declared Qualcomm firmware files while
 leaving the rest of the historical archive controlled and auditable. They
