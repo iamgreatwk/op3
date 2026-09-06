@@ -3,8 +3,10 @@
 ## OP3 recovery/browser integration checkpoint (Issue #6, 2026-09-06)
 
 Branch `agent/implementation/recovery-browser-001` contains the recovery
-startup and browser-session lifecycle implementation in commits `e902c33`
-and `d18ffef`. The ported `recovery_mainline` keeps its fb0/libtsm terminal
+startup and browser-session lifecycle implementation in commits `e902c33`,
+`d18ffef`, `194ae3f`, `0e7ced3`, `9f3c465`, and `a458290`. The ported
+`recovery_mainline`
+keeps its fb0/libtsm terminal
 state alive while `/run/op3-browser.active` is present, but skips recovery
 input consumption and fb0 submissions while Weston owns DRM. The `browser`
 shell command starts a one-shot Cog/WPE or Chromium session; its supervisor

@@ -12,7 +12,7 @@ Changed files: recovery/recovery_mainline.c and bundled libtsm sources/assets;
   boot/browser-test/opt/op3-browser/run.sh;
   boot/pmos-chromium-test/opt/op3-chromium/run.sh;
   scripts/{stage-recovery-rootfs.sh,make-recovery-browser-initrd.sh}
-Commit SHA: e902c33, d18ffef
+Commit SHA: e902c33, d18ffef, 194ae3f, 0e7ced3, 9f3c465, a458290
 
 Layer: 07 browser, recovery lifecycle integration
 Hypothesis tested: A recovery-managed foreground browser session can start
@@ -25,18 +25,26 @@ Build run by project owner: NOT_RUN
 Build result: NOT_RUN
 Artifacts and SHA256: Agent-only static recovery compile passed:
   out/recovery/recovery_mainline (aarch64 static, SHA256
-  753683e0221fae4e3abb1da64c47f2941cdf27ef026712f9ec810495709384d5);
+  93064c326cc95825b58aba592bead4e3712193d9466ee96a5e82beaf30adeb4a);
   package-only validation passed:
   out/recovery/op3-recovery-browser-bundle.tar.gz
-  (735ab781b825011d716211e41b15c599b26bb14f8224cf87d1ac432f2ec5b8e6);
+  (1fcccae2244fb730f910dfec2618daa96f6e114a336b633072a3bfb762744b20);
   out/recovery/initrd-op3-recovery-browser.cpio.gz
-  (5578e9923b7db3fb7caa268aef2ca4ae70d661f8901f5b9751827a3abb86778f).
+  (af2445f01f7fe814c7e0955331dbe494af90c0e85f64e44aeb6f0fba95f931a0).
   These are local validation outputs, not owner-run device artifacts.
 
 Device test run by project owner: NOT_RUN
 Device result: NOT_RUN
 Evidence links / log paths: No device test occurred. Owner must record
   battery/charging state and boot/recovery/browser/post-exit logs.
+
+Static verification: `bash -n` passed for all recovery/browser shell entrypoints;
+`git diff --check` passed; the recovery binary is statically linked for aarch64;
+the initramfs overlay is reproducible across repeated generation;
+the staged `browser` command is a regular executable so `init_mainline.sh` can
+mirror it into the initramfs PATH (it intentionally skips symlinks). The compile
+still reports the pre-existing `draw_statusbar()` `%d` truncation warning from
+the imported reference source; no device test occurred.
 
 Conclusion: INCONCLUSIVE
 Uncertainties:
