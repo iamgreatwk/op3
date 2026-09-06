@@ -64,6 +64,10 @@ static int screen_on;   /* 前置声明（定义在电源键区域） */
 #define BROWSER_SESSION_FLAG "/run/op3-browser.active"
 #define BROWSER_SESSION_READY "/run/op3-browser.recovery-ready"
 static struct recovery_drm_display drm_display;
+static void bl_open(void);
+static int bl_read(void);
+static void save_backlight_for_handoff(void);
+static void restore_backlight_after_handoff(void);
 
 /* The recovery UI and Weston cannot own the DRM device at the same time.
  * browser-session writes its own PID before taking the Wayland path. Keep the
@@ -112,6 +116,7 @@ static int open_framebuffer(void){
  * DRM ownership. The PTY/libtsm state remains alive in this process. */
 static void release_framebuffer(void){
   dirty=0;
+  save_backlight_for_handoff();
   recovery_drm_close(&drm_display);
   fb=NULL;fb32=NULL;fb_fd=-1;
   w=0;h=0;stride=0;
@@ -1559,6 +1564,7 @@ static void apply_fontsize(int fw){
  * recovery process. */
 static int restore_framebuffer(void){
   if(open_framebuffer()<0)return -1;
+  restore_backlight_after_handoff();
   fill(0,0,w,h,0xFF000000);
   draw_statusbar();
   if(cur_scr)tsm_screen_draw(cur_scr,render_cell,NULL);
@@ -1680,6 +1686,31 @@ static int bl_read(){
   char b[16]={0};int n=read(rfd,b,15);close(rfd);
   if(n>0)return atoi(b);
   return -1;
+}
+static void save_backlight_for_handoff(){
+  if(!screen_on)return;
+  bl_open();
+  int v=bl_read();
+  if(v>0){
+    last_bl=v;
+    fb_logf("backlight saved before DRM handoff=%d\n",v);
+  }else{
+    fb_log("backlight read before DRM handoff failed\n");
+  }
+}
+static void restore_backlight_after_handoff(){
+  if(!screen_on)return;
+  bl_open();
+  if(bl_fd<0){fb_log("backlight restore skipped: no control path\n");return;}
+  int v=bl_read();
+  int target=v>0?v:(last_bl>0?last_bl:255);
+  char b[16];
+  int n=snprintf(b,sizeof(b),"%d\n",target);
+  if(write(bl_fd,b,n)!=n){
+    fb_logf("backlight restore failed: %s\n",strerror(errno));
+    return;
+  }
+  fb_logf("backlight restored after DRM handoff=%d\n",target);
 }
 static void screen_toggle(){
   bl_open();
