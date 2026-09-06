@@ -23,6 +23,11 @@ runner waits for the selected browser to exit, stops Weston, removes stale
 children, and then clears the flag. The original recovery shell prompt and
 screen are therefore restored in the same boot.
 
+The recovery initramfs launcher currently keeps the A530 GPU runtime active
+from boot because this DTB exposes dummy `vdd`/`vddcx` regulators; allowing the
+GPU to suspend before a later browser launch can make the runtime resume reset
+the SoC. This is a power trade-off until the DTB regulator fix is available.
+
 ## Owner build and staging
 
 The following commands prepare the persistent payload and derived initramfs;
