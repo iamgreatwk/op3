@@ -89,7 +89,6 @@ cp "$project/kernel/configs/oneplus3-recovery-audio-full.config" \
 # the kernel image SHA256 recorded in manifests/op3-recovery-audio-full.env.
 export KBUILD_BUILD_USER=kai
 export KBUILD_BUILD_HOST=AgentBuilder
-export KBUILD_BUILD_VERSION=1
 export KBUILD_BUILD_TIMESTAMP='Sun Sep  6 14:36:13 CST 2026'
 
 make -C "$kernel" O="$kout" ARCH=arm64 \
