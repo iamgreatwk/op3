@@ -1,6 +1,6 @@
 # Latest handoff
 
-## OP3 recovery S1302 startup retry follow-up (owner build pending, 2026-09-06)
+## OP3 recovery S1302 startup retry follow-up (registration PASS, physical test pending, 2026-09-06)
 
 The final audio-integrated image registered the audio card and `/dev/snd`
 devices, but its S1302 probe failed before input registration:
@@ -18,9 +18,13 @@ single-shot; audio, DTS wiring, recovery userspace, and key mappings are
 unchanged.  The owner must build
 `source/linux-pmos-msm8996-6.12-recovery-audio-full` on
 `agent/implementation/recovery-browser-audio-full-001`, repack the image,
-and repeat the S1302/recovery event checks.  Handoff:
+and repeat the S1302/recovery event checks.  The owner has now booted the
+retry image: the first S1302 read returned `-6`, retry 1 succeeded, dmesg
+reports `S1302 capacitive keys ready (irq=88)`, `/dev/input/event2` is
+`op3-capkey-s1302`, and recovery reports `cap=10`.  Registration is therefore
+PASS; physical left/right press and release evidence is still pending.  Handoff:
 `docs/handoff/op3-recovery-capkeys-audio-regression-001.md`.  This is
-INCONCLUSIVE pending owner build and device evidence.
+INCONCLUSIVE pending physical key evidence.
 
 ## OP3 recovery ALSA sound-card restore checkpoint (owner build passed, device test pending, 2026-09-06)
 

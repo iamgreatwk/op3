@@ -32,9 +32,15 @@ transient `-ENXIO`, `-EREMOTEIO`, and `-EIO` results up to eight times with a
 provide at most 200 ms of additional startup settling time without masking a
 runtime bus error.
 
-Owner build: pending.  The project owner must compile the assigned kernel
-worktree and repack the recovery image; the agent did not run the kernel build.
-Device test: pending for the retry commits.
+Owner build: PASS, 2026-09-06.  The project owner compiled the assigned
+kernel worktree and booted the repacked recovery image.  The agent did not run
+the kernel build or device boot.
+Device registration: PASS, 2026-09-06.  The first S1302 read returned `-6`,
+retry 1 succeeded, dmesg reported `S1302 capacitive keys ready (irq=88)`,
+`/proc/bus/input/devices` contained `op3-capkey-s1302` on `/dev/input/event2`,
+and recovery reported `cap=10`.
+Physical key test: pending.  The supplied evidence does not yet contain
+press/release events for codes 580 and 158.
 
 Required post-build evidence:
   dmesg | grep -iE 's1302|capkey|i2c|gpio|irq'
@@ -44,5 +50,5 @@ Required post-build evidence:
 Expected result: dmesg reports `S1302 capacitive keys ready`, an
 `op3-capkey-s1302` event device exists, recovery opens `cap=...`, and physical
 left/right press and release produce codes 580 and 158.  This follow-up is
-not accepted until the owner reports the post-build device result.
+not accepted until the owner reports the physical press/release result.
 ```
