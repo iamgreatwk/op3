@@ -1804,8 +1804,25 @@ int main(){
   int cap_done[2]={0,0};
   struct pollfd fds[5+MAX_TABS];
   long long last_status=now_ms();
+  int browser_was_active=0;
 
   while(1){
+    int browser_active=browser_session_active();
+    if(browser_was_active && !browser_active){
+      /* Discard touch/key events generated for the browser before handing
+       * input ownership back to recovery.  Otherwise the browser's final
+       * touch release can become a phantom recovery click. */
+      struct input_event stale;
+      while(read(ts_fd,&stale,sizeof(stale))==sizeof(stale)){}
+      while(read(pw_fd,&stale,sizeof(stale))==sizeof(stale)){}
+      while(read(tri_fd,&stale,sizeof(stale))==sizeof(stale)){}
+      while(read(vol_fd,&stale,sizeof(stale))==sizeof(stale)){}
+      while(read(cap_fd,&stale,sizeof(stale))==sizeof(stale)){}
+      pending_press=0;pending_release=0;selection_motion=0;swipe_rows=0;
+      touch_swipe=0;selecting=0;tx=ty=-1;
+      cap_press[0]=cap_press[1]=0;cap_done[0]=cap_done[1]=0;
+    }
+    browser_was_active=browser_active;
     /* 每次循环重建 poll 表：新建的标签 fd 才能被监听到（多标签关键）
      * 主线内核(6.x)适配：tri/vol/cap 的 input 设备可能不存在(fd=-1)——
      * 仍无条件加入 poll 表（poll 忽略 fd<0 的条目，revents=0），
@@ -1819,7 +1836,7 @@ int main(){
     fds[nfds].fd=cap_fd;fds[nfds].events=POLLIN;nfds++;
     for(int i=0;i<MAX_TABS;i++){if(tabs[i].fd>=0){fds[nfds].fd=tabs[i].fd;fds[nfds].events=POLLIN;nfds++;}}
     if(poll(fds,nfds,poll_timeout)>0){
-      if(!browser_session_active() && fds[0].revents&POLLIN)while(read(ts_fd,&ev,sizeof(ev))==sizeof(ev)){
+      if(!browser_active && fds[0].revents&POLLIN)while(read(ts_fd,&ev,sizeof(ev))==sizeof(ev)){
         if(!screen_on)continue;  /* 息屏：丢弃触摸事件（电源键在 fds[2] 不受影响，仍能唤醒） */
         if(ev.type==EV_ABS){
           if(ev.code==ABS_MT_POSITION_X||ev.code==ABS_X){tx=scale_x(ev.value);if(selecting)selection_motion=1;}
@@ -1974,9 +1991,9 @@ touch_press_done:
           }
         }
       }
-      if(!browser_session_active() && fds[1].revents&POLLIN){struct input_event pe;while(read(pw_fd,&pe,sizeof(pe))==sizeof(pe)){if(pe.type==EV_KEY&&pe.code==KEY_POWER&&pe.value==1)screen_toggle();}}
-      if(!browser_session_active() && fds[2].revents&POLLIN){struct input_event te;while(read(tri_fd,&te,sizeof(te))==sizeof(te)){if(te.type==EV_KEY&&te.value==1)tri_handle(te.code);}}
-      if(!browser_session_active() && vol_fd>=0&&(fds[3].revents&POLLIN)){  /* 音量键 = 光标上/下（息屏禁用，仅电源/三段式可用） */
+      if(!browser_active && fds[1].revents&POLLIN){struct input_event pe;while(read(pw_fd,&pe,sizeof(pe))==sizeof(pe)){if(pe.type==EV_KEY&&pe.code==KEY_POWER&&pe.value==1)screen_toggle();}}
+      if(!browser_active && fds[2].revents&POLLIN){struct input_event te;while(read(tri_fd,&te,sizeof(te))==sizeof(te)){if(te.type==EV_KEY&&te.value==1)tri_handle(te.code);}}
+      if(!browser_active && vol_fd>=0&&(fds[3].revents&POLLIN)){  /* 音量键 = 光标上/下（息屏禁用，仅电源/三段式可用） */
         struct input_event ve;while(read(vol_fd,&ve,sizeof(ve))==sizeof(ve)){
           if(!screen_on)continue;
           if(ve.type==EV_KEY&&ve.value==1){
@@ -1985,7 +2002,7 @@ touch_press_done:
           }
         }
       }
-      if(!browser_session_active() && cap_fd>=0&&(fds[4].revents&POLLIN)){  /* 电容键：记按下时间（长按 300ms 触发，防误触；息屏禁用） */
+      if(!browser_active && cap_fd>=0&&(fds[4].revents&POLLIN)){  /* 电容键：记按下时间（长按 300ms 触发，防误触；息屏禁用） */
         struct input_event ce;while(read(cap_fd,&ce,sizeof(ce))==sizeof(ce)){
           if(!screen_on)continue;
           if(ce.type!=EV_KEY)continue;
@@ -1999,18 +2016,18 @@ touch_press_done:
         if(tabs[i].fd<0)continue;
         if(fds[5+i].revents&POLLIN){
           char buf[512];for(;;){int n=read(tabs[i].fd,buf,sizeof(buf)-1);if(n>0){tab_vte_input(i,buf,n);}else if(n<0&&(errno==EAGAIN||errno==EWOULDBLOCK))break;else break;}
-          if(i==cur_tab && !browser_session_active()){tsm_screen_draw(tabs[i].scr,render_cell,NULL);draw_ui_overlay();do_pan();}
+          if(i==cur_tab && !browser_active){tsm_screen_draw(tabs[i].scr,render_cell,NULL);draw_ui_overlay();do_pan();}
         }
       }
     }
     /* KF_VOICE 长按 2 秒自动启动录音（防误触；松开继续录，再轻按停止+回放；息屏禁用） */
-    if(!browser_session_active() && screen_on && voice_press_start>0 && !voice_long_done && !voice_recording && now_ms()-voice_press_start>=2000){
+    if(!browser_active && screen_on && voice_press_start>0 && !voice_long_done && !voice_recording && now_ms()-voice_press_start>=2000){
       voice_toggle();
       voice_long_done=1;
     }
     /* 下巴电容键长按 300ms 防误触触发：左 APPSWITCH(580)=中英切换，右 BACK(158)=回车（息屏禁用） */
     for(int ci=0;ci<2;ci++){
-      if(browser_session_active()){cap_press[0]=cap_press[1]=0;cap_done[0]=cap_done[1]=0;break;}
+      if(browser_active){cap_press[0]=cap_press[1]=0;cap_done[0]=cap_done[1]=0;break;}
       if(!screen_on){cap_press[0]=cap_press[1]=0;cap_done[0]=cap_done[1]=0;break;}
       if(cap_press[ci]>0 && !cap_done[ci] && now_ms()-cap_press[ci]>=300){
         cap_done[ci]=1;
@@ -2023,7 +2040,7 @@ touch_press_done:
         vibe(30);
       }
     }
-    if(!browser_session_active() && screen_on&&now_ms()-last_status>5000){last_status=now_ms();
+    if(!browser_active && screen_on&&now_ms()-last_status>5000){last_status=now_ms();
       sync_time_async();  /* WLAN 就绪后后台校时；不阻塞触摸/渲染 */
       int t=read_theme_file();       /* theme 命令切主题：检测 /root/theme 变化 */
       if(t!=cur_theme)apply_theme(t);
@@ -2031,7 +2048,7 @@ touch_press_done:
       if(fw>0&&fw!=char_w)apply_fontsize(fw);
       else draw_statusbar();         /* 无变化仅刷新时间/电量 */
     }  /* 息屏不刷新状态栏（降载） */
-    if(!browser_session_active() && kb_hl>=0&&now_ms()>kb_deadline){int old=kb_hl;kb_hl=-1;draw_kb_key(old);do_pan();}
-    if(!browser_session_active())do_pan();
+    if(!browser_active && kb_hl>=0&&now_ms()>kb_deadline){int old=kb_hl;kb_hl=-1;draw_kb_key(old);do_pan();}
+    if(!browser_active)do_pan();
   }
 }
