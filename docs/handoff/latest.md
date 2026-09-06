@@ -1,5 +1,15 @@
 # Latest handoff
 
+## Buildroot host preflight workaround (2026-09-06)
+
+The clean rebuild reached Buildroot `op3_recovery_defconfig` successfully.
+The first full-build invocation stopped before compiling project packages
+because this host resolves `install` to uutils coreutils 0.8.0. A local
+`host-tools/install` symlink to `/usr/bin/gnuinstall` was prepared in the clean
+rebuild directory; the owner can resume the existing Buildroot output by
+prepending that directory to `PATH`. The workaround is now documented in
+`docs/rebuild-recovery.md`. No Buildroot artifact or device test exists yet.
+
 ## Fresh kernel reconstruction uses tree identity (2026-09-06)
 
 The clean rebuild rehearsal exposed and corrected a false failure in source
