@@ -16,14 +16,17 @@ browser chromium [URL]  # Chromium/Alpine Wayland session
 browser cog [URL]       # Cog/WPE WebKit Wayland session
 ```
 
-`browser` sets `/run/op3-browser.active` before starting Weston. Recovery keeps
-its PTY/libtsm state but releases its fb0 mapping and vsync descriptor, then
-writes `/run/op3-browser.recovery-ready`. The session supervisor waits for that
-marker before starting Weston, so the browser gets an explicit DRM handoff
-instead of racing the recovery framebuffer client. The one-shot browser runner
-waits for the selected browser to exit, stops Weston, removes stale children,
-and then clears the flag; recovery reopens fb0 and redraws the same UI on the
-same boot.
+`browser` sets `/run/op3-browser.active` before starting Weston. Recovery owns
+`/dev/dri/card0` directly through its KMS backend, keeps its PTY/libtsm state,
+closes its DRM framebuffer and card fd, then writes
+`/run/op3-browser.recovery-ready`. The session supervisor waits for that marker
+before starting Weston, so the browser gets an explicit DRM-master handoff.
+The one-shot browser runner waits for the selected browser to exit, stops
+Weston, removes stale children, and then clears the flag; recovery reacquires
+card0, re-modesets, and redraws the same UI on the same boot.
+
+The direct DRM recovery backend is tracked independently in Issue #7. This
+browser session remains unvalidated until the DRM-only recovery gate passes.
 
 The recovery initramfs launcher currently keeps the A530 GPU runtime active
 from boot because this DTB exposes dummy `vdd`/`vddcx` regulators; allowing the

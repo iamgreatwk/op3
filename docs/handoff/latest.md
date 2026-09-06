@@ -1,5 +1,24 @@
 # Latest handoff
 
+## OP3 recovery direct DRM checkpoint (Issue #7, 2026-09-06)
+
+The unified recovery branch `agent/implementation/recovery-browser-001` now
+contains commit `a58f166`, which replaces recovery's `/dev/fb0` + `FBIOPAN`
+display path with a small raw `/dev/dri/card0` KMS backend. It selects the
+connected DSI connector/CRTC/preferred mode, creates an XRGB8888 dumb buffer,
+uses `DRM_IOCTL_MODE_DIRTYFB` for full-frame submissions, and destroys the
+KMS objects before a later compositor handoff. Recovery can reopen card0 and
+redraw its existing PTY/libtsm UI after the other DRM client exits.
+
+Agent static aarch64 compilation and bundle staging pass. Current recovery
+binary SHA256 is
+`891b025bf6dbe810a8b5dba797c7592e440a66800ac77c93ad493fdbe3c28fdd`; the
+current persistent bundle SHA256 is
+`3c851b7bf9a3bce275d8ecdbb8c28c97238ec974bb616348d700a8c5f69ce8fa`.
+Owner-run direct DRM recovery testing is pending. Issue #7 handoff:
+`docs/handoff/op3-recovery-drm-001.md`. Browser testing remains paused until
+this DRM-only gate has evidence.
+
 ## OP3 recovery/browser integration checkpoint (Issue #6, 2026-09-06)
 
 Branch `agent/implementation/recovery-browser-001` contains the recovery

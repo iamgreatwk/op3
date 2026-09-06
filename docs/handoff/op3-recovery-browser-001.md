@@ -68,11 +68,10 @@ Uncertainties:
     the later Cog launch still hard-reset the phone. Commit `3234d5d` moves
     `control=on` to the recovery initramfs entrypoint, before runtime suspend.
   - Before `5a73922`, recovery and the PTY shell could retain fb0 references
-    while Weston started. The active flag only paused recovery I/O; it did not
-    prove that the DRM/fb0 client had been released. `5a73922` adds
-    `O_CLOEXEC`, closes fb0/vsync/mmap on activation, waits for a ready marker,
-    and reopens/redraws after cleanup. This is the next falsifiable handoff
-    experiment and has not yet been run on the phone.
+    while Weston started. Issue #7 commit `a58f166` replaces the recovery
+    display path with direct `/dev/dri/card0` KMS and makes the browser handoff
+    close the DRM framebuffer/card before Weston. This direct DRM gate has not
+    yet been run on the phone.
   - Normal browser exit and cleanup are implemented for both runners; a
     SIGKILL that leaves a child compositor outside the supervisor remains an
     operational failure path to observe.
