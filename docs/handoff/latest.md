@@ -1,5 +1,27 @@
 # Latest handoff
 
+## OP3 recovery S1302 startup retry follow-up (owner build pending, 2026-09-06)
+
+The final audio-integrated image registered the audio card and `/dev/snd`
+devices, but its S1302 probe failed before input registration:
+`op3-capkey-s1302 3-0020: error -ENXIO: failed to read initial key state`.
+The DTB still contains the expected `75b6000.i2c/capkey@20` node, and the
+driver object is identical to the earlier standalone capkey image that passed
+physical testing.  This isolates the current regression to the integrated
+image's S1302 power/reset startup timing; recovery is not receiving the chin
+keys because no S1302 input device exists.
+
+Kernel commits `c15090406a2a` and `4a486e2ea7e4` add bounded retries only to
+the initial S1302 I2C read: up to eight retries at 25 ms for transient
+`-ENXIO`, `-EREMOTEIO`, or `-EIO` results.  Runtime IRQ reads remain
+single-shot; audio, DTS wiring, recovery userspace, and key mappings are
+unchanged.  The owner must build
+`source/linux-pmos-msm8996-6.12-recovery-audio-full` on
+`agent/implementation/recovery-browser-audio-full-001`, repack the image,
+and repeat the S1302/recovery event checks.  Handoff:
+`docs/handoff/op3-recovery-capkeys-audio-regression-001.md`.  This is
+INCONCLUSIVE pending owner build and device evidence.
+
 ## OP3 recovery ALSA sound-card restore checkpoint (owner build passed, device test pending, 2026-09-06)
 
 The current device image has the recovery audio tools, but no ALSA card:

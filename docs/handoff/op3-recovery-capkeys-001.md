@@ -33,7 +33,10 @@ contains `op3-capkey-s1302` on `event1`, dmesg reports
 codes=580,158,-1` plus `cap=7`. Physical testing then produced
 `capacitive code=580 value=1/0` and `capacitive code=158 value=1/0`.
 
-Conclusion: INCONCLUSIVE (device scope supported; Integration acceptance pending)
+Conclusion: PASS for the standalone capkey image; the later audio-integrated
+image exposed a startup regression and is tracked separately in
+`docs/handoff/op3-recovery-capkeys-audio-regression-001.md`.  Integration
+acceptance of the combined image remains pending.
 Uncertainties:
   - The driver/protocol and GPIO wiring are based on historical OP3 evidence
     and must be validated on the formal 6.12 kernel and the physical device.
