@@ -10,9 +10,10 @@ connection or from making the DHCP observation return early. Replacement
 bundle:
 `artifacts/op3-wifi-bundle-ipv6-assoc90-clean-retry.tar.gz`, SHA256
 `2d1bbe71a56363e2b7599936971d0d57a6e2d3d0fc9e1b203c5b512cb238b5a7`.
-The previous automatic-connection observation is inconclusive because it did
-not establish carrier state. Owner retest is pending; this is not an
-Integration acceptance. Handoff:
+Owner retest still showed `wpa_state=SCANNING`, `wlan0=NO-CARRIER`, no
+`wlan0` IPv4 address, and only the USB route. The stale-address cleanup is
+therefore behaving as intended, but automatic association remains unresolved;
+this is not an Integration acceptance. Handoff:
 `docs/handoff/op3-recovery-wifi-dhcp-001.md`.
 
 ## OP3 recovery Wi-Fi association timeout guard correction (Issue #10 follow-up, 2026-09-06)

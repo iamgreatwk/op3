@@ -31,11 +31,12 @@ Artifacts and SHA256: `artifacts/op3-wifi-bundle-ipv6-dhcp-retry.tar.gz`
   `2d1bbe71a56363e2b7599936971d0d57a6e2d3d0fc9e1b203c5b512cb238b5a7`, which
   also includes the stale-lease cleanup.
 
-Device test run by project owner: 2026-09-06 — owner observed
-  `wpa_state=SCANNING` and `NO-CARRIER` with a retained IPv4 address and
-  default route during the previous bundle test.
-Device result: INCONCLUSIVE — the retained address/route invalidated that
-  connection-state observation; cleanup bundle retest is pending.
+Device test run by project owner: 2026-09-06 — the cleanup-bundle retest
+  showed `wpa_state=SCANNING`, `NO-CARRIER`, no `wlan0` IPv4 address, and only
+  the USB route. This is a real association failure, not a stale-lease result.
+Device result: FAIL for automatic association in this run; stale lease
+  cleanup behaved as intended. Full dmesg and elapsed-time evidence are still
+  needed to distinguish an association timeout from an in-progress scan.
 Evidence links / log paths: `/root/boot_mainline.log`,
   `/root/dmesg_early.txt` or `/root/dmesg_rootfs.txt`, `wifi current`,
   `ip -4 addr show wlan0`, `ip -4 route`, `wifi ipv6 status`, and the
@@ -46,6 +47,8 @@ Uncertainties:
   - The phone currently sees the same SSID on two very weak BSSes and the
     association may still roam or drop; persistent DHCP retry cannot repair a
     link that remains disconnected.
+  - The initramfs hook suppresses the automatic CLI output, so the exact
+    association return code and elapsed time are not yet recorded.
   - The background client remains available after the 30-second observation
     window, so a delayed lease may appear after the command returns nonzero.
 Recommended next experiment: deploy the cleanup bundle to sda15, boot the
