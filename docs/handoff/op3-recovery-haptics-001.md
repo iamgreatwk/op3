@@ -21,10 +21,10 @@ Artifacts and SHA256: `out/recovery/recovery_mainline`, SHA256
 `7bb7eeb1b980e1b92b54e6b450922ebfcb7544778fbedc70a945d15db44cc724`
 
 Device test run by project owner: 2026-09-06
-Device result: FAIL for kernel haptics exposure. The device input inventory
-contains only `pm8941_pwrkey` and the Synaptics touchscreen; no input device
-advertising EV_FF is present, so the recovery backend cannot drive hardware
-vibration.
+Device result: PASS for recovery backend selection and FAIL for kernel haptics
+exposure. After restart, `/tmp/fb.log` reports
+`vibration: no supported backend`; the input inventory contains only
+`pm8941_pwrkey` and the Synaptics touchscreen, with no EV_FF device.
 Evidence links / log paths: owner SSH output from `/proc/bus/input/devices`
 and `/tmp/fb.log`.
 

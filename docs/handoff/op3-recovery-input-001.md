@@ -21,10 +21,12 @@ Artifacts and SHA256: `out/recovery/recovery_mainline`, SHA256
 `ed63e3374c1001cd88f4f5a0c81e0b64409fcfa52bcf31d973a495428d689c06`
 
 Device test run by project owner: 2026-09-06
-Device result: FAIL for volume-key device exposure; existing power-key and
-touchscreen devices are present. `/proc/bus/input/devices` contains only
-`pm8941_pwrkey` on `event0` and `Synaptics S350815811` on `event1`; no
-`gpio-keys` device or volume key capabilities are present.
+Device result: PASS for recovery userspace discovery and FAIL for volume-key
+device exposure. After replacing the binary and terminating the old process,
+the supervisor started a new process whose `/proc/$pid/exe` is
+`/newroot/sbin/recovery_mainline` (not `(deleted)`). `/tmp/fb.log` reports
+Synaptics touch on `event1`, PM8941 power key on `event0`, and capability-based
+absence of tri-state, volume, and capacitive-key devices.
 Evidence links / log paths: owner SSH output and `/tmp/fb.log`.
 
 Conclusion: INCONCLUSIVE
