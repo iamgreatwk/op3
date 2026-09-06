@@ -5,12 +5,20 @@ This series targets the formal pmOS MSM8996 Linux 6.12.1 baseline at
 implementation branch because the formal kernel checkout is assigned to a
 different agent; do not apply it directly to that agent's working tree.
 
-Apply the patches in lexical order in a private kernel worktree:
+Apply the patches in lexical order from a private/assigned formal 6.12 kernel
+worktree. Do not run these commands from the recovery project root, and do not
+use the kernel checkout assigned to another agent:
 
 ```sh
-git am --3way patches/pmos612-op3-capkeys/0001-*.patch \
-  patches/pmos612-op3-capkeys/0002-*.patch
+git am \
+  /home/kai/src/oneplus3-mainline/patches/pmos612-op3-capkeys/0001-*.patch \
+  /home/kai/src/oneplus3-mainline/patches/pmos612-op3-capkeys/0002-*.patch
 ```
+
+The patches intentionally omit fabricated blob hashes, so use plain `git am`
+instead of `git am --3way`. They are checked to apply cleanly to the formal
+baseline; if the assigned kernel branch has overlapping changes, resolve those
+in that kernel branch and keep the resulting commit separate from recovery.
 
 Merge the configuration fragment into the owner's existing 6.12 config:
 
