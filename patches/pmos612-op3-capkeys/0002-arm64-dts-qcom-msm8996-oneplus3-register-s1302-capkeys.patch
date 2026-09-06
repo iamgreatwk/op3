@@ -1,0 +1,65 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Agent OS <agent-os@example.invalid>
+Date: Sun, 6 Sep 2026 02:05:00 +0800
+Subject: [PATCH 2/2] arm64: dts: qcom: msm8996-oneplus3: register S1302
+ capacitive keys
+
+The OnePlus 3 S1302 controller is on BLSP2 QUP2 (the legacy downstream
+BLSP2 I2C8 bus).  Describe its low-level interrupt, reset GPIO, pinctrl and
+regulator supplies so the S1302 input driver can register the chin keys.
+
+Signed-off-by: Agent OS <agent-os@example.invalid>
+---
+ arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi | 31 +++++++++++++++++++++++
+ 1 file changed, 31 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi b/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi
+--- a/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi
++++ b/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi
+@@ -132,6 +132,23 @@ &blsp2_i2c1 {
+ 	status = "okay";
+ };
+ 
++&blsp2_i2c2 {
++	status = "okay";
++
++	capkey@20 {
++		compatible = "oneplus,s1302-capkey";
++		reg = <0x20>;
++		interrupt-parent = <&tlmm>;
++		interrupts = <132 IRQ_TYPE_LEVEL_LOW>;
++		reset-gpios = <&tlmm 76 GPIO_ACTIVE_LOW>;
++		pinctrl-names = "default", "sleep";
++		pinctrl-0 = <&capkey_default>;
++		pinctrl-1 = <&capkey_suspend>;
++		vdd-supply = <&vreg_l13a_2p95>;
++		vio-supply = <&vreg_s4a_1p8>;
++	};
++};
++
+ &blsp2_i2c6 {
+ 	status = "okay";
+ 
+@@ -837,6 +854,20 @@ &tlmm {
+ 		drive-strength = <2>;
+ 		bias-disable;
+ 	};
++
++	capkey_default: capkey-default-state {
++		pins = "gpio132", "gpio76";
++		function = "gpio";
++		drive-strength = <16>;
++		bias-pull-up;
++	};
++
++	capkey_suspend: capkey-suspend-state {
++		pins = "gpio132", "gpio76";
++		function = "gpio";
++		drive-strength = <2>;
++		bias-disable;
++	};
+ };
+ 
+ &ufsphy {
+--
+2.53.0

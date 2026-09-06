@@ -1,0 +1,3 @@
+# OnePlus 3 Synaptics S1302 capacitive chin keys.
+CONFIG_INPUT_MISC=y
+CONFIG_INPUT_OP3_S1302_CAPKEY=y
