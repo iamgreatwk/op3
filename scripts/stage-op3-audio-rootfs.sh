@@ -32,6 +32,33 @@ ls "$target"/usr/lib/libtinyalsa.so.* >/dev/null 2>&1 || {
 	exit 1
 }
 
+for input in \
+	"$target/opt/op3-wifi/wifi" \
+	"$target/opt/op3-wifi/wifi-start" \
+	"$target/usr/bin/wifi" \
+	"$target/usr/sbin/wpa_supplicant" \
+	"$target/usr/sbin/wpa_cli" \
+	"$target/usr/sbin/iw"; do
+	test -x "$input" || {
+		printf 'Missing integrated Wi-Fi input: %s; rebuild the recovery Buildroot target with OP3_WIFI_MODULES_ROOT.\n' \
+			"$input" >&2
+		exit 1
+	}
+done
+module_releases=("$target"/lib/modules/*)
+test "${#module_releases[@]}" = 1 || {
+	printf 'Expected one integrated Wi-Fi kernel module release under %s/lib/modules\n' "$target" >&2
+	exit 1
+}
+test -f "${module_releases[0]}/modules.dep" || {
+	printf 'Missing integrated Wi-Fi modules.dep: %s\n' "${module_releases[0]}/modules.dep" >&2
+	exit 1
+}
+test -f "${module_releases[0]}/kernel/drivers/net/wireless/ath/ath10k/ath10k_pci.ko" || {
+	printf 'Missing integrated ath10k_pci module in %s\n' "${module_releases[0]}" >&2
+	exit 1
+}
+
 tmpdir="$(mktemp -d "${TMPDIR:-/tmp}/op3-audio-rootfs.XXXXXX")"
 trap 'rm -rf "$tmpdir"' EXIT
 stage="$tmpdir/root"

@@ -4,13 +4,29 @@
 
 The default Buildroot profile is now `buildroot/op3-recovery.defconfig` and
 is installed as `op3_recovery_defconfig`. It keeps TinyALSA and the recovery
-diagnostic tools, but does not select Mesa/Freedreno EGL/GLES, Weston DRM, WPE
-WebKit, Cog, or WPEWebDriver. The existing `buildroot/op3-browser.defconfig`
-remains an explicit opt-in profile; use
+diagnostic tools, and now integrates the Wi-Fi userspace and matching kernel
+module closure through the recovery post-build hook. It does not select
+Mesa/Freedreno EGL/GLES, Weston DRM, WPE WebKit, Cog, or WPEWebDriver. The
+existing `buildroot/op3-browser.defconfig` remains an explicit opt-in profile; use
 `scripts/prepare-op3-buildroot.sh source/buildroot-browser browser` with a
 separate Buildroot source/output tree when browser testing is needed. No
-kernel, recovery runtime, or device behavior changed. Handoff:
+kernel, recovery runtime, or device behavior changed by the browser profile.
+Handoff:
 `docs/handoff/op3-recovery-default-profile-001.md`.
+
+## OP3 Wi-Fi integrated into default Buildroot target (2026-09-06)
+
+The canonical recovery build no longer requires a separate Wi-Fi bundle. The
+default `op3_recovery_defconfig` enables Buildroot `wpa_supplicant`/`wpa_cli`,
+`iw`, and the wireless regulatory database. A tracked post-build hook copies
+the Wi-Fi CLI/scripts and the dependency closure for the owner-built kernel's
+`cfg80211`, `rfkill`, `mac80211`, `ath`, and `ath10k` modules into the same
+Buildroot target that is later staged with the audio/recovery payload. The
+intermediate `artifacts/op3-wifi-modules-root` is still required after the
+kernel `modules_install` step, but `scripts/stage-op3-wifi-rootfs.sh` is kept
+only for compatibility with older images. No browser packages were enabled in
+the default profile. Handoff:
+`docs/handoff/op3-wifi-buildroot-001.md`.
 
 ## OP3 external input bundle (2026-09-06)
 

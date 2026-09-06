@@ -2,12 +2,15 @@
 
 This directory replaces the legacy 6.3.1 Wi-Fi module path with the exact
 modules produced for the pinned pmOS 6.12.1 kernel. The QCA6174 firmware
-already belongs in the baseline initramfs; this task keeps it there and loads
-the matching modules only after `/newroot` is mounted.
+already belongs in the baseline initramfs; Buildroot's recovery post-build
+hook installs the matching module closure and these scripts into the
+persistent recovery target. The initramfs loads the modules only after
+`/newroot` is mounted.
 
 The initramfs BusyBox `modprobe` has no `-d` option, so `wifi-start` uses
-absolute `insmod` paths in the dependency order recorded by this bundle. This
-does not rely on the stale `/lib/modules/6.18.7` tree in the initramfs.
+absolute `insmod` paths in the dependency order installed by the Buildroot
+post-build hook. This does not rely on the stale `/lib/modules/6.18.7` tree in
+the initramfs.
 
 The CLI writes a quoted WPA passphrase directly into the device-local profile;
 `wpa_supplicant` derives the PSK. It deliberately does not invoke
@@ -18,10 +21,12 @@ Before every connection attempt, the CLI terminates any earlier instance and
 removes its own stale `/run/op3-wifi/wlan0` socket. This makes a failed first
 association retryable without manual socket cleanup.
 
-The CLI invokes the static initramfs `/usr/sbin/wpa_supplicant` and
-`/usr/sbin/wpa_cli` explicitly. `wpa_cli` is also given the matching custom
-control socket directory `/run/op3-wifi`; otherwise it looks in its default
-directory and cannot observe an already-completed association.
+The CLI prefers the Buildroot `/newroot/usr/sbin/wpa_supplicant` and
+`/newroot/usr/sbin/wpa_cli`, invoking them through the Buildroot dynamic loader;
+older images fall back to the static initramfs copies. `wpa_cli` is also given
+the matching custom control socket directory `/run/op3-wifi`; otherwise it
+looks in its default directory and cannot observe an already-completed
+association.
 
 Recovery keeps IPv6 disabled by default. Use `wifi ipv6 status` to inspect the
 policy, `wifi ipv6 on` to enable IPv6 on demand, and `wifi ipv6 off` to disable
@@ -40,13 +45,17 @@ behavior when the AP is associated before its first DHCP exchange succeeds;
 
 ## Persistent layout
 
-The owner stages `op3-wifi-bundle.tar.gz` into `/newroot`. It supplies:
+The default recovery Buildroot target supplies:
 
 ```text
 /newroot/opt/op3-wifi/wifi
 /newroot/opt/op3-wifi/wifi-start
 /newroot/lib/modules/$(uname -r)/...
 /newroot/usr/bin/wifi -> /opt/op3-wifi/wifi
+/newroot/usr/sbin/wpa_supplicant
+/newroot/usr/sbin/wpa_cli
+/newroot/usr/sbin/iw
+/newroot/lib/firmware/regulatory.db
 ```
 
 The initramfs overlay only replaces `/usr/bin/wifi_auto.sh`. The established
@@ -77,20 +86,28 @@ Passwords are intentionally never displayed.
    This is owner-only because it requires a kernel build:
 
    ```sh
-   make -C source/linux-pmos-msm8996-6.12 O="$PWD/out/pmos-msm8996-6.12-rpm-glink-own-dtb" \
+   make -C source/linux-pmos-msm8996-6.12-recovery-audio-full \
+     O="$PWD/out/pmos-msm8996-6.12-recovery-audio-full-s1302-retry" \
      ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 modules
-   make -C source/linux-pmos-msm8996-6.12 O="$PWD/out/pmos-msm8996-6.12-rpm-glink-own-dtb" \
+   make -C source/linux-pmos-msm8996-6.12-recovery-audio-full \
+     O="$PWD/out/pmos-msm8996-6.12-recovery-audio-full-s1302-retry" \
      ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
      INSTALL_MOD_PATH="$PWD/artifacts/op3-wifi-modules-root" modules_install
    ```
 
-2. Generate and deploy the bundle (no credential is included):
+2. Build the recovery Buildroot target with Wi-Fi integrated (no credential is
+   included):
 
    ```sh
-   scripts/stage-op3-wifi-rootfs.sh artifacts/op3-wifi-modules-root artifacts/op3-wifi-bundle.tar.gz
-   scp artifacts/op3-wifi-bundle.tar.gz root@172.16.42.1:/newroot/tmp/
-   ssh root@172.16.42.1 'tar -xzf /newroot/tmp/op3-wifi-bundle.tar.gz -C /newroot'
+   OP3_WIFI_MODULES_ROOT="$PWD/artifacts/op3-wifi-modules-root" \
+     make -C source/buildroot O="$PWD/out/buildroot-op3-recovery" \
+     BR2_JLEVEL=3
    ```
+
+   `scripts/stage-op3-audio-rootfs.sh` then packages the same Buildroot
+   target; it checks that the Wi-Fi userspace and ath10k module are present, so
+   the resulting persistent recovery payload contains both Wi-Fi and audio.
+   `scripts/stage-op3-wifi-rootfs.sh` is retained only for older images.
 
 3. Generate the small Wi-Fi overlay archive, pack it with the fixed
    OP3-BOOT-044 Image.gz, DTB, cmdline, and boot profile, then perform the

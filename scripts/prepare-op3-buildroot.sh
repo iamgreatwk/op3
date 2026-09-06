@@ -14,6 +14,8 @@ source "$project_root/manifests/op3-recovery-audio-full.env"
 buildroot_dir="${1:-$project_root/$BUILDROOT_SOURCE_DIR}"
 buildroot_dir="$(readlink -m "$buildroot_dir")"
 patch_dir="$project_root/$BUILDROOT_COG_PATCH_SOURCE_DIR"
+recovery_postbuild="$project_root/buildroot/op3-recovery-post-build.sh"
+wifi_source="$project_root/boot/wifi"
 profile="${2:-recovery}"
 
 case "$profile" in
@@ -52,6 +54,8 @@ config_hash="$(sha256sum "$config_source" | awk '{print $1}')"
 }
 
 if [ "$profile" = recovery ]; then
+	test -f "$recovery_postbuild" || die "missing recovery post-build hook: $recovery_postbuild"
+	test -d "$wifi_source" || die "missing Wi-Fi sources: $wifi_source"
 	for symbol in \
 		BR2_PACKAGE_MESA3D \
 		BR2_PACKAGE_WESTON \
@@ -83,6 +87,14 @@ git -C "$buildroot_dir" checkout --detach "$BUILDROOT_COMMIT"
 install -m 0644 "$config_source" \
 	"$buildroot_dir/configs/$config_name"
 
+if [ "$profile" = recovery ]; then
+	recovery_board="$buildroot_dir/board/oneplus3/recovery"
+	install -D -m 0755 "$recovery_postbuild" \
+		"$recovery_board/post-build.sh"
+	mkdir -p "$recovery_board/wifi"
+	cp -a "$wifi_source/." "$recovery_board/wifi/"
+fi
+
 if [ "$install_browser_patches" -eq 1 ]; then
 	for patch in \
 		0001-op3-default-window-1080x1920.patch \
@@ -108,7 +120,16 @@ else
 	printf 'Browser stack: disabled in the recovery profile\n'
 fi
 printf '\nOwner build commands (not run by this script):\n'
-printf '  make -C %q O=%q %s\n' \
-	"$buildroot_dir" "$buildroot_output" "$config_name"
-printf '  make -C %q O=%q BR2_JLEVEL=3\n' \
-	"$buildroot_dir" "$buildroot_output"
+if [ "$profile" = recovery ]; then
+	printf '  OP3_WIFI_MODULES_ROOT=%q make -C %q O=%q %s\n' \
+		"$project_root/$BUILDROOT_WIFI_MODULES_ROOT" \
+		"$buildroot_dir" "$buildroot_output" "$config_name"
+	printf '  OP3_WIFI_MODULES_ROOT=%q make -C %q O=%q BR2_JLEVEL=3\n' \
+		"$project_root/$BUILDROOT_WIFI_MODULES_ROOT" \
+		"$buildroot_dir" "$buildroot_output"
+else
+	printf '  make -C %q O=%q %s\n' \
+		"$buildroot_dir" "$buildroot_output" "$config_name"
+	printf '  make -C %q O=%q BR2_JLEVEL=3\n' \
+		"$buildroot_dir" "$buildroot_output"
+fi

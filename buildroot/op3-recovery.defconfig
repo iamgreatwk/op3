@@ -14,6 +14,15 @@ BR2_TARGET_ROOTFS_TAR=y
 BR2_PACKAGE_TINYALSA=y
 BR2_PACKAGE_TINYALSA_TOOLS=y
 
+# Wi-Fi userspace is built into the recovery target. The post-build hook also
+# copies the matching kernel module closure from OP3_WIFI_MODULES_ROOT.
+BR2_PACKAGE_WPA_SUPPLICANT=y
+BR2_PACKAGE_WPA_SUPPLICANT_NL80211=y
+BR2_PACKAGE_WPA_SUPPLICANT_CLI=y
+BR2_PACKAGE_IW=y
+BR2_PACKAGE_WIRELESS_REGDB=y
+BR2_ROOTFS_POST_BUILD_SCRIPT="board/oneplus3/recovery/post-build.sh"
+
 # Small helpers for device-side diagnostics.
 BR2_PACKAGE_DROPBEAR=y
 BR2_PACKAGE_STRACE=y

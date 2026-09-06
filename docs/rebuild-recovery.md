@@ -69,9 +69,9 @@ object. It does not compile the kernel.
 Run this against a fresh Buildroot checkout. It pins commit
 `679b9ead7620bbf193620d1ebf56f53c1764d37a` and installs the selected tracked
 profile. The default `recovery` profile does not select Mesa/Freedreno
-EGL/GLES, Weston DRM, WPE WebKit, Cog, or WPEWebDriver. It installs only the
-TinyALSA tools needed by recovery audio plus small diagnostics. This script
-does not build anything.
+EGL/GLES, Weston DRM, WPE WebKit, Cog, or WPEWebDriver. It installs the
+TinyALSA tools needed by recovery audio, the Buildroot Wi-Fi userspace, and
+small diagnostics. This script does not build anything.
 
 ```bash
 ./scripts/prepare-op3-buildroot.sh source/buildroot
@@ -85,8 +85,10 @@ The owner then performs the large Buildroot build:
 
 ```bash
 mkdir -p out/buildroot-op3-recovery
+OP3_WIFI_MODULES_ROOT="$PWD/artifacts/op3-wifi-modules-root" \
 make -C source/buildroot O="$PWD/out/buildroot-op3-recovery" \
   op3_recovery_defconfig
+OP3_WIFI_MODULES_ROOT="$PWD/artifacts/op3-wifi-modules-root" \
 make -C source/buildroot O="$PWD/out/buildroot-op3-recovery" \
   BR2_JLEVEL=3 2>&1 | tee /tmp/buildroot-op3-recovery.log
 ```
@@ -189,11 +191,12 @@ This creates an archive whose device path is `/newroot/opt/op3-browser`.
 It includes the Buildroot runtime libraries, Cog/WPE/WebKit, Weston, Mesa,
 font data, the tracked browser runner and the local test page.
 
-## 5. Wi-Fi bundle
+## 5. Wi-Fi in the recovery Buildroot target
 
-The Wi-Fi bundle is made from the modules installed by the same final 6.12.1
-kernel build. The kernel owner must first build and install modules into a
-new, empty staging directory:
+Wi-Fi is integrated into the default recovery Buildroot target. The kernel
+owner must first build and install modules into a new, empty staging directory;
+the Buildroot post-build hook then selects the matching ath10k dependency
+closure and installs it together with the Wi-Fi CLI and `wpa_supplicant`:
 
 ```bash
 kernel=source/linux-pmos-msm8996-6.12-recovery-audio-full
@@ -207,19 +210,25 @@ make -C "$kernel" O="$PWD/$kout" ARCH=arm64 \
   INSTALL_MOD_PATH="$PWD/$wifi_mods" modules_install
 ```
 
-Then stage only the matching module dependency closure and the tracked Wi-Fi
-CLI:
+Build the default recovery target with the modules root exported:
 
 ```bash
-./scripts/stage-op3-wifi-rootfs.sh \
-  artifacts/op3-wifi-modules-root \
-  artifacts/op3-wifi-bundle.tar.gz
+OP3_WIFI_MODULES_ROOT="$PWD/artifacts/op3-wifi-modules-root" \
+make -C source/buildroot \
+  O="$PWD/out/buildroot-op3-recovery" \
+  BR2_JLEVEL=3 2>&1 | tee /tmp/buildroot-op3-recovery.log
 ```
 
-The Wi-Fi bundle does not contain credentials or ath10k firmware. Credentials
-are entered on the device with `wifi connect`; the QCA6174 firmware remains
-in the verified initrd. IPv6 is disabled by the initramfs hook and can be
-enabled later with `wifi ipv6 on`.
+The resulting `out/buildroot-op3-recovery/target` contains
+`/opt/op3-wifi`, `/usr/bin/wifi`, `/usr/sbin/wpa_supplicant`, `/usr/sbin/wpa_cli`,
+`iw`, the regulatory database, and the matching `/lib/modules/<release>`
+closure. `scripts/stage-op3-wifi-rootfs.sh` remains only as a compatibility
+stager for older images; it is no longer part of the default build.
+
+The Buildroot target does not contain credentials or ath10k firmware.
+Credentials are entered on the device with `wifi connect`; QCA6174 firmware
+remains in the verified initrd. IPv6 is disabled by the initramfs hook and can
+be enabled later with `wifi ipv6 on`.
 
 ## 6. Recovery and audio bundles
 
