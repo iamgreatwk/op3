@@ -40,15 +40,11 @@ sync_log(){
 
 log "recovery launcher start pid=$$"
 
-# MSM8996's GPU node currently has dummy vdd/vddcx regulators.  If runtime PM
-# suspends the GPU before a later browser launch, changing control=auto to
-# control=on can resume it without a real power sequence and hard-reset the
-# SoC.  Keep the GPU awake from recovery startup so the browser handoff is an
-# idempotent control write instead of the first runtime resume.  Restore to
-# auto only after the DTB regulator fix is available.
+# The default profile does not start a browser. Leave the GPU runtime-PM
+# policy at the kernel default so the display path can suspend when idle.
+# The optional browser-test launcher retains its separate GPU handoff policy.
 if [ -f "$GPU_POWER" ]; then
-	echo on > "$GPU_POWER" 2>/dev/null
-	log "GPU runtime PM disabled before recovery: control=$(cat "$GPU_POWER" 2>/dev/null)"
+	log "GPU runtime PM unchanged for recovery: control=$(cat "$GPU_POWER" 2>/dev/null)"
 else
 	log "GPU runtime PM: $GPU_POWER not found"
 fi

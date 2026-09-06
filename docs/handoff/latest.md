@@ -1,5 +1,19 @@
 # Latest handoff
 
+## Default recovery leaves GPU runtime-PM unchanged (2026-09-07)
+
+The default `boot/initramfs/sbin/run_recovery.sh` no longer writes `on` to
+`/sys/bus/platform/devices/b00000.gpu/power/control`. The standard recovery
+profile does not launch a browser, so forcing the A530 runtime active only
+adds heat. Recovery now logs the current policy and leaves it at the kernel
+default, allowing the display hardware to suspend when idle. The optional
+`boot/recovery-browser-test` launcher keeps its separate GPU-on workaround for
+future browser experiments.
+
+This is a default initramfs userspace change only. It requires a new Buildroot
+initramfs and boot image before device testing; no new image has been built or
+flashed for this change yet.
+
 ## Boot partition flashed and post-flash verification (2026-09-07)
 
 The owner-authorized image
