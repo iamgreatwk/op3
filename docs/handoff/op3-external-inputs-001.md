@@ -13,7 +13,7 @@ Changed files: manifests/op3-recovery-audio-full.env;
   scripts/stage-browser-rootfs.sh;
   scripts/verify-op3-external-inputs.sh;
   docs/rebuild-recovery.md; docs/handoff/latest.md
-Commit SHA: pending
+Commit SHA: 2a49235
 
 Layer: external input and build provenance
 Hypothesis tested: A single directory outside the checkout can hold every
