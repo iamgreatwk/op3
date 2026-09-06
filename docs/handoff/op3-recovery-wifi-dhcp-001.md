@@ -7,7 +7,7 @@ Baseline commit: 1fb9bdc
 Working branch: agent/implementation/recovery-browser-001
 Changed files: boot/wifi/opt/op3-wifi/wifi; boot/wifi/README.md;
   docs/handoff/latest.md; docs/handoff/op3-recovery-wifi-dhcp-001.md
-Commit SHA: pending implementation commit
+Commit SHA: 8a25bbc
 
 Layer: 02 recovery network userspace / DHCP client lifecycle
 Previous evidence: Issue #10 increased association wait; owner logs showed
@@ -22,9 +22,11 @@ Only variable changed: DHCP client lifecycle. The ath10k modules, firmware,
   kernel, DTS, DRM/GPU, audio, input, browser, and credentials are unchanged.
 
 Build run by project owner: NOT_RUN
-Build result: Agent shell/static checks pending final checkpoint; owner
-  boot-image repack NOT_RUN
-Artifacts and SHA256: Replacement no-credential bundle pending generation.
+Build result: Agent shell/static checks PASS; owner boot-image repack NOT_RUN
+Artifacts and SHA256: `artifacts/op3-wifi-bundle-ipv6-dhcp-retry.tar.gz`
+  `435b0a06826c1f9e6352698af6bbbcf2dcb90349271da8153c868d1f3d44d075`.
+  The bundle contains the validated modules and the updated persistent CLI;
+  no credentials are packaged.
 
 Device test run by project owner: NOT_RUN
 Device result: NOT_RUN
