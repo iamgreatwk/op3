@@ -42,7 +42,7 @@ done
 
 mkdir -p "$(dirname "$output")"
 "$cc" \
-	-static -O2 -pipe -D_GNU_SOURCE -Wno-unused-result \
+	-static -O2 -pipe -Wno-unused-result \
 	-I"$tsm/src/tsm" \
 	-I"$tsm/src/shared" \
 	-I"$tsm/external" \

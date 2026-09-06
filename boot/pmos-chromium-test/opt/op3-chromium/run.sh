@@ -243,7 +243,8 @@ ip link set lo up
 sysctl -w net.ipv6.conf.all.disable_ipv6=1 >/dev/null 2>&1
 sysctl -w net.ipv6.conf.default.disable_ipv6=1 >/dev/null 2>&1
 
-URL=$(head -n 1 "$CHR/homepage" 2>/dev/null)
+URL=${OP3_CHROMIUM_URL:-}
+[ -n "$URL" ] || URL=$(head -n 1 "$CHR/homepage" 2>/dev/null)
 [ -n "$URL" ] || URL="https://jw.jnu.edu.cn/jwapp/sys/pkgl/*default/index.do"
 log "homepage: $URL"
 

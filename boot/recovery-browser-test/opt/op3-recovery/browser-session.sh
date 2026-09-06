@@ -37,20 +37,20 @@ case "$engine" in
 		;;
 	*)
 		printf 'usage: browser [cog|chromium] [url]\n' >&2
-		return 2 2>/dev/null || exit 2
+		exit 2
 		;;
 esac
 
 if [ ! -x "$runner" ]; then
 	log "FATAL: $runner is missing; stage the Issue #6 recovery bundle"
-	return 1 2>/dev/null || exit 1
+	exit 1
 fi
 
 if [ -e "$FLAG" ]; then
 	old_pid=$(head -n 1 "$FLAG" 2>/dev/null)
 	if [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null; then
 		log "browser session already active pid=$old_pid"
-		return 1 2>/dev/null || exit 1
+		exit 1
 	fi
 	rm -f "$FLAG"
 fi
