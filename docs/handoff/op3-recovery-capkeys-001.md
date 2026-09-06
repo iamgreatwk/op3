@@ -24,9 +24,14 @@ Artifacts and SHA256:
   - boot image: 9b7f25f549f69e2398516e46504c143eba7c3e2a3d62a2c9e9f0c16aa886e044
     (`artifacts/boot-oneplus3-pmos612-capkey.img`)
 
-Device test run by project owner: NOT_RUN
-Device result: NOT_RUN
-Evidence links / log paths: boot image is prepared; no device evidence yet
+Device test run by project owner: 2026-09-06
+Device result: PASS for kernel registration and recovery discovery; physical
+actuation still pending
+Evidence links / log paths: owner SSH output; `/proc/bus/input/devices`
+contains `op3-capkey-s1302` on `event1`, dmesg reports
+`S1302 capacitive keys ready (irq=86)`, and `/tmp/fb.log` reports
+`input: capacitive-keys -> /dev/input/event1 name=op3-capkey-s1302
+codes=580,158,-1` plus `cap=7`.
 
 Conclusion: INCONCLUSIVE
 Uncertainties:
@@ -56,7 +61,7 @@ generated paths first; do not run a broad clean on a shared kernel checkout.
   evtest /dev/input/eventN
 
 Expected kernel evidence is an `op3-capkey-s1302` device and EV_KEY events
-for codes 580 and 158. Recovery should then log
-`input: capacitive-keys -> ...`; the owner must report the physical key test
-before this can be promoted beyond INCONCLUSIVE.
+for codes 580 and 158. Kernel registration and recovery discovery are now
+observed; the owner must still report physical left/right key press and
+release events before this can be promoted beyond INCONCLUSIVE.
 ```
