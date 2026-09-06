@@ -87,10 +87,9 @@ cp "$project/kernel/configs/oneplus3-recovery-audio-full.config" \
 
 # Keep the final version string reproducible across build hosts. Linux builds
 # init/version.o once with a temporary UTS_VERSION and adds the final timestamp
-# through init/version-timestamp.o at the link step. Build the temporary object
-# with the normal empty build-number/timestamp fields first; the second command
-# updates only the final timestamp object while keeping that temporary header
-# old, matching the locked Image.gz.
+# through init/version-timestamp.o at the link step. KBUILD_BUILD_TIMESTAMP
+# affects both stages, so leave it unset and provide the locked value only to
+# Kbuild's final `date` lookup through the tracked wrapper below.
 export KBUILD_BUILD_USER=kai
 export KBUILD_BUILD_HOST=AgentBuilder
 unset KBUILD_BUILD_VERSION KBUILD_BUILD_TIMESTAMP
@@ -101,18 +100,17 @@ make -C "$kernel" O="$kout" ARCH=arm64 \
   CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
   -j"$(nproc)" Image.gz dtbs modules
 
-# Re-link with the locked final timestamp without rebuilding init/version.o.
-# The output counter must start at zero so the final generated UTS_VERSION is
-# #1, while the temporary init/utsversion-tmp.h remains # SMP PREEMPT.
+# Re-link with the locked final timestamp. The output counter must start at
+# zero so the final generated UTS_VERSION is #1. Because KBUILD_BUILD_TIMESTAMP
+# remains unset, init/utsversion-tmp.h stays at the normal # SMP PREEMPT value.
 printf '0\n' > "$kout/.version"
-unset KBUILD_BUILD_VERSION KBUILD_BUILD_TIMESTAMP
+date_bin="$(mktemp -d /tmp/op3-repro-date.XXXXXX)"
+ln -s "$project/scripts/op3-repro-date.sh" "$date_bin/date"
+export OP3_REPRO_BUILD_TIMESTAMP='Sun Sep  6 14:36:13 CST 2026'
+PATH="$date_bin:$PATH" \
 make -C "$kernel" O="$kout" ARCH=arm64 \
   CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
-  init/version.o
-export KBUILD_BUILD_TIMESTAMP='Sun Sep  6 14:36:13 CST 2026'
-make -C "$kernel" O="$kout" ARCH=arm64 \
-  CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
-  -o init/utsversion-tmp.h Image.gz
+  Image.gz
 
 test ! -e "$wifi_mods/lib/modules"
 mkdir -p "$wifi_mods"
