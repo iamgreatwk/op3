@@ -3,8 +3,9 @@
 This overlay restores the persistent `recovery_mainline` program as the
 inittab foreground application on the pmOS MSM8996 Linux 6.12.1 line. The
 recovery binary and the browser runners stay on sda15; the small
-`sbin/run_recovery.sh` selector and the three A530 GPU firmware files needed
-during early kernel probe are appended to the initramfs.
+`sbin/run_recovery.sh` selector, the validated post-`/newroot` Wi-Fi
+auto-start hook, and the three A530 GPU firmware files needed during early
+kernel probe are appended to the initramfs.
 
 The owner-supplied `recovery_mainline.c` was ported into `recovery/` with the
 matching libtsm sources under `third_party/libtsm/`. Its normal PTY shell gets
@@ -27,6 +28,13 @@ card0, re-modesets, and redraws the same UI on the same boot.
 
 The direct DRM recovery backend is tracked independently in Issue #7. This
 browser session remains unvalidated until the DRM-only recovery gate passes.
+
+The recovery initramfs launcher now includes the validated
+`/usr/bin/wifi_auto.sh` hook from OP3-WIFI-001. After `/newroot` is mounted by
+the established initramfs flow, it calls `/newroot/opt/op3-wifi/wifi auto`;
+the matching modules/firmware, persistent CLI, and default profile must be
+staged on sda15 as described in `boot/wifi/README.md`. No credentials are
+included in this initrd.
 
 The recovery initramfs launcher currently keeps the A530 GPU runtime active
 from boot because this DTB exposes dummy `vdd`/`vddcx` regulators; allowing the
@@ -57,8 +65,9 @@ script stages `a530_pm4.fw`, `a530_pfp.fw`, and `a530v3_gpmu.fw2` under
 
 ## Scope and evidence
 
-This change does not alter the kernel, DTS, GPU/DRM driver, Wi-Fi, or
-Buildroot browser contents. It is not a device PASS until the owner records a
-boot with recovery visible, one Cog or Chromium session, a normal browser
-exit, a returned recovery prompt, and a second start/exit cycle with battery
-or charging state.
+Issue #8 only integrates the validated Wi-Fi auto-start hook into the recovery
+initramfs; it does not alter the Wi-Fi CLI, modules, firmware, kernel, DTS,
+GPU/DRM driver, audio, input, or Buildroot browser contents. It is not a
+device PASS until the owner records automatic association/DHCP, a visible
+recovery GUI, and the existing RNDIS/ACM/SSH services on the same boot. A real
+Cog or Chromium session remains a separate Issue #6 test.

@@ -1,5 +1,21 @@
 # Latest handoff
 
+## OP3 recovery Wi-Fi integration checkpoint (Issue #8, 2026-09-06)
+
+The recovery initramfs recipe now appends the already validated
+`/usr/bin/wifi_auto.sh` hook from OP3-WIFI-001. Once the established initramfs
+has mounted `/newroot`, the hook invokes the persistent
+`/newroot/opt/op3-wifi/wifi auto` command before the recovery launcher. The
+Wi-Fi CLI, matching ath10k modules/firmware, credentials, kernel, DTS, DRM,
+audio, input, and browser contents are unchanged.
+
+Agent packaging verification passed. The generated recovery initramfs is
+`artifacts/initrd-op3-recovery-browser.cpio.gz` with SHA256
+`8516cdf2e53e8926191cdd25f43f911abb433356aac005454256efa7c5e54bf1`.
+Owner boot-image repack and device validation are pending. Handoff:
+`docs/handoff/op3-recovery-wifi-001.md`. Browser testing remains paused until
+the recovery foundation issues are complete.
+
 ## OP3 recovery direct DRM checkpoint (Issue #7, 2026-09-06)
 
 The unified recovery branch `agent/implementation/recovery-browser-001` now
