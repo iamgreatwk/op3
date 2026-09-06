@@ -49,7 +49,16 @@ The base configuration above has SHA256
 `2ebb875b6ed1694e91f51d078f6cb8d17e7c8a23850bc0252d74526de01e45b3`.
 The source-tree `.config` generated accidentally from the host configuration
 should not be used for a device build; it can be removed after confirming it
-contains no owner changes.
+contains no owner changes. If the failed in-tree `olddefconfig` also created
+the standard generated directories, remove only those generated paths before
+the external-output command:
+
+```sh
+rm -f "$kernel/.config"
+rm -rf "$kernel/include/config" \
+  "$kernel/include/generated" \
+  "$kernel/arch/arm64/include/generated"
+```
 
 The hardware mapping comes from the historical OnePlus 3 DTS: S1302 is on
 BLSP2 QUP2 (`blsp_i2c8`), IRQ is TLMM GPIO 132, reset is TLMM GPIO 76, and
