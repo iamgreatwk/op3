@@ -3,7 +3,7 @@
 ## OP3 recovery direct DRM checkpoint (Issue #7, 2026-09-06)
 
 The unified recovery branch `agent/implementation/recovery-browser-001` now
-contains commits `a58f166` and `398ec3a`; they replace recovery's `/dev/fb0` + `FBIOPAN`
+contains commits `a58f166`, `398ec3a`, and `071cc75`; they replace recovery's `/dev/fb0` + `FBIOPAN`
 display path with a small raw `/dev/dri/card0` KMS backend. It selects the
 connected DSI connector/CRTC/preferred mode, creates an XRGB8888 dumb buffer,
 uses `DRM_IOCTL_MODE_DIRTYFB` for full-frame submissions, and destroys the
@@ -12,9 +12,9 @@ redraw its existing PTY/libtsm UI after the other DRM client exits.
 
 Agent static aarch64 compilation and bundle staging pass. Current recovery
 binary SHA256 is
-`242721ba77e89ccc929b094d7e486639063b7ba064810be82f980dcea321b85d`; the
+`75eba8d23d433c24c7ff6b7092ac2941fed35c851070665dd7bf6ab8db7f0a8c`; the
 current persistent bundle SHA256 is
-`c9d4ffe48f409d111679b76a9bafff7e5065ff5f2981bd4fbe0632fa18b5dcd1`.
+`5c9af5001601cf5b64d8ebdf583a25670bf01aef7b4c9137cdbe3f0a6bd04bf4`.
 Owner DRM-only boot evidence is now a successful smoke test: recovery opened
 `/dev/dri/card0` (connector 33, CRTC 106, 1080x1920, pitch 4352), and its
 process held no `/dev/fb0` descriptor; A530 PM4/PFP/GPMU firmware also
@@ -23,9 +23,11 @@ reopen, and display restore; both session markers cleared and recovery PID
 388 remained alive. The captured `pp done time out, lm=2` occurred at dmesg
 2.097s, before the recovery launcher marker at 9.809s, so it is classified as
 a pre-recovery boot warning. The DRM-only result is not yet an Integration
-acceptance because the owner reported no visible restored UI. Commit `398ec3a`
-now saves and restores the panel backlight around the DRM handoff; this fix
-is awaiting device retest. Issue #7 handoff:
+acceptance because the owner reported no visible restored UI even though the
+backlight restored to 255. Commit `398ec3a` preserves that brightness, and
+`071cc75` now defers `SETCRTC` until the first recovery frame is rendered,
+matching the validated standalone KMS probe. This sequencing fix is awaiting
+device retest. Issue #7 handoff:
 `docs/handoff/op3-recovery-drm-001.md`. Browser testing remains paused until
 this DRM-only gate has evidence.
 
