@@ -7,7 +7,7 @@ Baseline commit: 8373e11
 Working branch: agent/implementation/recovery-browser-001
 Changed files: boot/wifi/opt/op3-wifi/wifi; boot/wifi/README.md;
   docs/handoff/latest.md; docs/handoff/op3-recovery-wifi-timeout-001.md
-Commit SHA: pending implementation commit
+Commit SHA: 604fad0
 
 Layer: 02 recovery network userspace / association timeout
 Previous PASS milestone: Issue #9 manual IPv4 connection and IPv6-off policy
@@ -21,10 +21,11 @@ Only variable changed: association wait timeout. The ath10k modules,
   unchanged.
 
 Build run by project owner: NOT_RUN
-Build result: Agent shell/static checks pending final checkpoint; owner
-  boot-image repack NOT_RUN
-Artifacts and SHA256: A replacement no-credential Wi-Fi bundle must be
-  generated from this CLI change; SHA256 pending.
+Build result: Agent shell/static checks PASS; owner boot-image repack NOT_RUN
+Artifacts and SHA256: `artifacts/op3-wifi-bundle-ipv6-assoc90.tar.gz`
+  `0e4f74b4f575c3339b13681da4c578256aac999d5c42212d67557909d5904c52`.
+  The bundle contains the validated modules and the updated persistent CLI;
+  no credentials are packaged.
 
 Device test run by project owner: NOT_RUN
 Device result: NOT_RUN
