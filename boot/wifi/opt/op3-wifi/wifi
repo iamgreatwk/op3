@@ -101,7 +101,7 @@ start_profile() {
 		sleep 1
 		i=$((i + 1))
 	done
-	[ "$i" -lt 30 ] || die "association timed out"
+	[ "$i" -lt "$ASSOC_TIMEOUT" ] || die "association timed out"
 
 	# Keep the DHCP client alive while a weak or roaming AP link settles. The
 	# historical recovery script used -b -q for this reason; -n made the
