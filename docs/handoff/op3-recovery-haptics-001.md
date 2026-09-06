@@ -20,9 +20,13 @@ Build result: PASS (agent-only recovery userspace compile; owner kernel build no
 Artifacts and SHA256: `out/recovery/recovery_mainline`, SHA256
 `7bb7eeb1b980e1b92b54e6b450922ebfcb7544778fbedc70a945d15db44cc724`
 
-Device test run by project owner: NOT_RUN
-Device result: NOT_RUN
-Evidence links / log paths: none
+Device test run by project owner: 2026-09-06
+Device result: FAIL for kernel haptics exposure. The device input inventory
+contains only `pm8941_pwrkey` and the Synaptics touchscreen; no input device
+advertising EV_FF is present, so the recovery backend cannot drive hardware
+vibration.
+Evidence links / log paths: owner SSH output from `/proc/bus/input/devices`
+and `/tmp/fb.log`.
 
 Conclusion: INCONCLUSIVE
 Uncertainties:
@@ -37,7 +41,9 @@ Static verification: `git diff --check` passed and the recovery program built
 as a statically linked AArch64 executable. The existing unrelated
 `draw_statusbar()` format-truncation warning remains.
 
-Recommended next experiment: build/boot a kernel image whose assigned kernel
+Recommended next experiment: restart the recovery process with the committed
+binary and confirm `/tmp/fb.log` contains either the selected backend or the
+explicit `vibration: no supported backend` line. Then build/boot a kernel image whose assigned kernel
 Issue registers the OnePlus 3 haptics device, then inspect `/tmp/fb.log` for
 `vibration: input FF -> ...` and verify a short startup/touch vibration. If no
 EV_FF device exists, inspect the same log for `vibration: no supported

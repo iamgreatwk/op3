@@ -20,9 +20,12 @@ Build result: PASS (agent-only recovery userspace compile; owner kernel build no
 Artifacts and SHA256: `out/recovery/recovery_mainline`, SHA256
 `ed63e3374c1001cd88f4f5a0c81e0b64409fcfa52bcf31d973a495428d689c06`
 
-Device test run by project owner: NOT_RUN
-Device result: NOT_RUN
-Evidence links / log paths: none
+Device test run by project owner: 2026-09-06
+Device result: FAIL for volume-key device exposure; existing power-key and
+touchscreen devices are present. `/proc/bus/input/devices` contains only
+`pm8941_pwrkey` on `event0` and `Synaptics S350815811` on `event1`; no
+`gpio-keys` device or volume key capabilities are present.
+Evidence links / log paths: owner SSH output and `/tmp/fb.log`.
 
 Conclusion: INCONCLUSIVE
 Uncertainties:
@@ -40,7 +43,9 @@ Static verification: `git diff --check` passed and the recovery program built
 as a statically linked AArch64 executable. The existing unrelated
 `draw_statusbar()` format-truncation warning remains.
 
-Recommended next experiment: owner/integration assigns a kernel DTS issue to
+Recommended next experiment: restart the recovery process with the committed
+binary and confirm `/tmp/fb.log` contains the input-fd summary. Then
+owner/integration assigns a kernel DTS issue to
 register the OnePlus 3 volume GPIOs as a standard gpio-keys device, builds the
 resulting 6.12 kernel/DTB, and boots it with this recovery binary. Verify
 `/tmp/fb.log` reports `input: volume -> ...` and then verify both keys produce
