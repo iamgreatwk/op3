@@ -1,28 +1,28 @@
-# pmOS 6.12 OnePlus 3 q6asm sound-card registration patch
+# pmOS 6.12 OnePlus 3 audio-card registration handoff
 
-This patch targets the formal pmOS MSM8996 Linux 6.12.1 baseline at
-`67b0bbc3cbf46bae712a2606a43361756fcbd829`. It is source preparation on the
-recovery implementation branch; apply it in the assigned/private formal
-kernel worktree, not in this recovery checkout and not in another agent's
-kernel worktree.
+The previously generated q6asm-enumeration patch in this directory was
+rejected and has been removed. Linux 6.12 exposes only the valid q6asm
+frontend sessions, so adding child nodes for IDs 8 through 15 makes q6asm
+DAI registration fail and leaves the phone with no ALSA card.
 
-Apply it from the formal kernel worktree:
+Use the already validated audio branch as the kernel base, then add the
+physical-key and haptics commits in the separate prepared worktree:
 
-```sh
-git am \
-  /home/kai/src/oneplus3-mainline/patches/pmos612-op3-audio-card/0001-*.patch
+```text
+Kernel worktree:
+/home/kai/src/oneplus3-mainline/source/linux-pmos-msm8996-6.12-recovery-audio-full
+Kernel branch:
+agent/implementation/recovery-browser-audio-full-001
+Kernel HEAD:
+aa2eafa8c662
 ```
 
-The existing OP3 DTS declares `MultiMedia1` through `MultiMedia16` in the
-`qcom,apq8096-sndcard`, while `&q6asmdai` only declares frontend IDs 0, 1,
-and 2. Linux 6.12's q6asm driver registers only child DAIs declared in DT.
-As a result, the card parser fails at `MultiMedia4` with `-EINVAL` before
-registering any ALSA card. The patch enables IDs 3 through 15, matching all
-existing links and leaving their routes unchanged.
+The audio branch already contains the required OP3 audio-card fixes,
+including valid MM1--MM3 q6asm registration, disabling unavailable MM4--MM16
+links, WCD9335 AMIC4 capture setup, and the previously device-validated
+capture accounting changes. The prepared branch also contains the S1302
+capacitive-key, volume/tri-state-key, and PM8994 haptics commits.
 
-This patch is intentionally limited to sound-card DAI enumeration. It does
-not change the recovery userspace, codec controls, microphone routing,
-speaker routing, Wi-Fi, DRM, or input/haptics patches. The expected first
-device evidence is a registered ALSA card under `/proc/asound/cards` and
-`/dev/snd/pcm*`; only after that should recovery `tinycap` and `tinyplay`
-be tested.
+The owner should compile this worktree and collect `/proc/asound/cards`,
+`/proc/asound/pcm`, `/dev/snd`, and audio dmesg before testing recovery
+`tinycap`/`tinyplay`.

@@ -1,18 +1,24 @@
 # Latest handoff
 
-## OP3 recovery ALSA sound-card registration checkpoint (owner build/test pending, 2026-09-06)
+## OP3 recovery ALSA sound-card restore checkpoint (owner build/test pending, 2026-09-06)
 
 The current device image has the recovery audio tools, but no ALSA card:
 `/dev/snd` contains only `timer`, `/proc/asound/cards` reports
 `--- no soundcards ---`, and `msm-snd-apq8096` aborts while parsing
-`MultiMedia4` with `-EINVAL` because the OP3 DTS declares `MultiMedia1..16`
-links while `&q6asmdai` declares only frontend IDs 0..2. Commit `228b319`
-prepares a single formal 6.12.1 DTS patch enabling q6asm IDs 3..15, leaving
-the existing codec and capture/speaker routes unchanged. The patch passes
-baseline and active-checkout `git apply --check`; no kernel build or post-patch
-device test has run. Handoff:
-`docs/handoff/op3-recovery-audio-card-001.md`. This kernel checkpoint is
-INCONCLUSIVE pending owner build and ALSA enumeration evidence.
+`MultiMedia4`. The first attempted fix (`228b319`) was rejected: adding
+q6asm child IDs 3--15 produced repeated `valid dai id not found:0`, DAI
+registration `-12`, and still no ALSA card. That patch has been removed from
+the active preparation path.
+
+The prepared kernel worktree
+`source/linux-pmos-msm8996-6.12-recovery-audio-full` is based on the already
+validated `agent/implementation/op3-audio-mic-001` branch, which keeps valid
+q6asm MM1--MM3 sessions and disables unavailable MM4--MM16 links. It then
+adds the validated S1302, volume/tri-state, and PM8994 haptics commits. Kernel
+branch: `agent/implementation/recovery-browser-audio-full-001`, HEAD
+`aa2eafa8c662`. The worktree is clean; no kernel build or post-boot test has
+run. Handoff: `docs/handoff/op3-recovery-audio-card-001.md`. This checkpoint
+is INCONCLUSIVE pending owner build and ALSA enumeration evidence.
 
 ## OP3 recovery voice capture/playback userspace preparation (owner test pending, 2026-09-06)
 
