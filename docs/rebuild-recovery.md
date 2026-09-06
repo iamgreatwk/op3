@@ -291,7 +291,7 @@ sha256sum artifacts/initrd-op3-recovery-buildroot.cpio.gz
 ~~~bash
 ./scripts/stage-op3-audio-rootfs.sh \
   out/buildroot-op3-recovery/target \
-  artifacts/op3-recovery-audio-rootfs.tar.gz
+  artifacts/op3-audio-rootfs.tar.gz
 ~~~
 
 这个 tar 包不是 initramfs；它是可选的 /newroot 持久化内容。Wi-Fi 凭据
