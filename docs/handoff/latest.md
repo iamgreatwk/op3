@@ -16,7 +16,11 @@ no-credential bundle is available at
 `artifacts/op3-wifi-bundle-ipv6.tar.gz` with SHA256
 `eeabbb20f0f8331fb220252c77acf52f1b0fabe2919dc5197c45690421994654`.
 Handoff: `docs/handoff/op3-recovery-ipv6-001.md`. This is a separate
-network-policy checkpoint on the same recovery implementation branch.
+network-policy checkpoint on the same recovery implementation branch. After
+the replacement bundle was deployed, manual `wifi connect` passed with
+`wpa_state=COMPLETED`, IPv4 `192.168.1.5/24`, default route via
+`192.168.1.1`, and `ipv6=off all=1 default=1 wlan0=1`; automatic post-reboot
+validation remains pending.
 
 ## OP3 recovery Wi-Fi integration checkpoint (Issue #8, 2026-09-06)
 
