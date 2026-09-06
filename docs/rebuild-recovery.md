@@ -133,6 +133,19 @@ artifacts/op3-initramfs-firmware/lib/firmware/
 recovery、TinyALSA、Wi-Fi 工具和诊断工具；Mesa/Freedreno、Weston、
 WPE WebKit、Cog、WPEWebDriver 均不启用。
 
+如果主机的 `install --version` 显示 `uutils coreutils 0.8.0`，Buildroot
+会主动停止。Ubuntu 当前可使用本地 GNU 工具优先路径，不必修改系统：
+
+~~~bash
+mkdir -p "$PWD/host-tools"
+ln -sfn /usr/bin/gnuinstall "$PWD/host-tools/install"
+export PATH="$PWD/host-tools:$PATH"
+install --version | head -1
+~~~
+
+如果主机没有 `/usr/bin/gnuinstall`，先安装 GNU coreutils，或按 Buildroot
+提示配置系统 alternatives。
+
 ~~~bash
 mkdir -p out/buildroot-op3-recovery
 
