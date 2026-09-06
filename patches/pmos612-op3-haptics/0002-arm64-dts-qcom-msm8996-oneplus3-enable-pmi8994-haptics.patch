@@ -1,0 +1,40 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Agent OS <agent-os@example.invalid>
+Date: Sun, 6 Sep 2026 03:21:00 +0800
+Subject: [PATCH 2/2] arm64: dts: qcom: msm8996-oneplus3: enable PM8994 haptics
+
+The OnePlus 3's vibration motor is attached to the PM8994 SPMI haptics
+peripheral.  Enable the already-described peripheral and select its ERM
+actuator mode.  A 5 ms buffer sample period is within the mainline driver's
+supported range and is used by other MSM8996 boards.
+
+Signed-off-by: Agent OS <agent-os@example.invalid>
+---
+ arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi b/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi
+--- a/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi
++++ b/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi
+@@ -7,5 +7,6 @@
+ #include "pmi8996.dtsi"
+ #include <dt-bindings/gpio/gpio.h>
++#include <dt-bindings/input/qcom,spmi-haptics.h>
+ #include <dt-bindings/pinctrl/qcom,pmic-gpio.h>
+ #include <dt-bindings/sound/qcom,q6afe.h>
+ #include <dt-bindings/sound/qcom,q6asm.h>
+@@ -370,6 +371,12 @@
+ 	status = "okay";
+ };
+ 
++&pmi8994_haptics {
++	status = "okay";
++	qcom,actuator-type = <HAP_TYPE_ERM>;
++	qcom,wave-play-rate-us = <5000>;
++};
++
+ &q6asmdai {
+ 	#address-cells = <1>;
+ 	#size-cells = <0>;
+-- 
+2.53.0
