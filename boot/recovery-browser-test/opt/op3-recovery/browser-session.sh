@@ -1,10 +1,9 @@
 #!/bin/sh
 # Run one foreground Wayland browser session from the recovery PTY.
 #
-# Recovery keeps its framebuffer and input descriptors open, so the shared
-# flag tells recovery_mainline to stop consuming input and submitting fb0
-# frames while Weston owns DRM.  The flag contains this supervisor PID; the
-# recovery program can clear an orphaned flag after a killed session.
+# The shared flag tells recovery_mainline to release fb0 before Weston owns
+# DRM.  The flag contains this supervisor PID; recovery can clear an orphaned
+# flag after a killed session. READY is written only after the release.
 
 FLAG=/run/op3-browser.active
 READY=/run/op3-browser.recovery-ready

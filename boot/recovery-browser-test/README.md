@@ -16,12 +16,14 @@ browser chromium [URL]  # Chromium/Alpine Wayland session
 browser cog [URL]       # Cog/WPE WebKit Wayland session
 ```
 
-`browser` sets `/run/op3-browser.active` before starting Weston. While this
-flag is live, recovery keeps its framebuffer mapping, PTY, and libtsm state but
-does not consume input events or submit fb0 frames. The one-shot browser
-runner waits for the selected browser to exit, stops Weston, removes stale
-children, and then clears the flag. The original recovery shell prompt and
-screen are therefore restored in the same boot.
+`browser` sets `/run/op3-browser.active` before starting Weston. Recovery keeps
+its PTY/libtsm state but releases its fb0 mapping and vsync descriptor, then
+writes `/run/op3-browser.recovery-ready`. The session supervisor waits for that
+marker before starting Weston, so the browser gets an explicit DRM handoff
+instead of racing the recovery framebuffer client. The one-shot browser runner
+waits for the selected browser to exit, stops Weston, removes stale children,
+and then clears the flag; recovery reopens fb0 and redraws the same UI on the
+same boot.
 
 The recovery initramfs launcher currently keeps the A530 GPU runtime active
 from boot because this DTB exposes dummy `vdd`/`vddcx` regulators; allowing the

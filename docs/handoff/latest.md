@@ -4,22 +4,23 @@
 
 Branch `agent/implementation/recovery-browser-001` contains the recovery
 startup and browser-session lifecycle implementation in commits `e902c33`,
-`d18ffef`, `194ae3f`, `0e7ced3`, `9f3c465`, `a458290`, `d4f9923`, and
-`3234d5d`. The ported
+`d18ffef`, `194ae3f`, `0e7ced3`, `9f3c465`, `a458290`, `d4f9923`,
+`3234d5d`, and `5a73922`. The ported
 `recovery_mainline`
-keeps its fb0/libtsm terminal
-state alive while `/run/op3-browser.active` is present, but skips recovery
-input consumption and fb0 submissions while Weston owns DRM. The `browser`
-shell command starts a one-shot Cog/WPE or Chromium session; its supervisor
-cleans up the browser and Weston before clearing the flag so the recovery
-prompt can redraw on the same boot.
+keeps its PTY/libtsm terminal state alive while `/run/op3-browser.active` is
+present, but now closes its fb0 mapping, vsync fd, and inherited-on-exec path
+before Weston owns DRM. The browser supervisor waits for
+`/run/op3-browser.recovery-ready`; after browser cleanup, recovery reopens fb0
+and redraws the same prompt on the same boot.
 
 The agent's static compile, shell checks, rootfs packaging, and initramfs
 overlay checks pass. The first device run lacked early A530 firmware; the
-corrected initrd loaded it, but a later Cog launch hard-reset the phone during
-GPU runtime resume. Commit `3234d5d` moves GPU activation into the recovery
-entrypoint before suspend. Validation of this new image is pending; this is
-**INCONCLUSIVE**, not an accepted milestone. Full handoff:
+corrected initrd loaded it, but later Cog launches still hard-reset the phone.
+The latest device log confirms the GPU workaround is active (`control=on`,
+`runtime_status=active`) and all A530 firmware is loaded, so the remaining
+recovery-specific hypothesis is the fb0/DRM handoff. Commit `5a73922` adds an
+explicit close-on-exec plus release/ready/reopen handshake. It is not device
+validated and remains **INCONCLUSIVE**, not an accepted milestone. Full handoff:
 `docs/handoff/op3-recovery-browser-001.md`.
 
 ```text

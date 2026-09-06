@@ -13,7 +13,7 @@ Changed files: recovery/recovery_mainline.c and bundled libtsm sources/assets;
   boot/pmos-chromium-test/opt/op3-chromium/run.sh;
   scripts/{stage-recovery-rootfs.sh,make-recovery-browser-initrd.sh}
 Commit SHA: e902c33, d18ffef, 194ae3f, 0e7ced3, 9f3c465, a458290, d4f9923,
- 3234d5d
+ 3234d5d, 5a73922
 
 Layer: 07 browser, recovery lifecycle integration
 Hypothesis tested: A recovery-managed foreground browser session can start
@@ -26,10 +26,10 @@ Build run by project owner: NOT_RUN
 Build result: NOT_RUN
 Artifacts and SHA256: Agent-only static recovery compile passed:
   out/recovery/recovery_mainline (aarch64 static, SHA256
-  93064c326cc95825b58aba592bead4e3712193d9466ee96a5e82beaf30adeb4a);
-  package-only validation passed:
-  out/recovery/op3-recovery-browser-bundle.tar.gz
-  (1fcccae2244fb730f910dfec2618daa96f6e114a336b633072a3bfb762744b20);
+  6c833a1cc1408dfc9670e5bc258fcb3f77dd75834791f81afaaed3ffe7a519ac);
+  package-only validation passed for the current source:
+  artifacts/op3-recovery-browser-bundle.tar.gz
+  (07a234bcc6a3e18b2e390d098ddfb96e6dab838abe9124e680d90803f14d6b5a);
   out/recovery/initrd-op3-recovery-browser.cpio.gz
   (4741472de06303c37cda67ea48e74c723dab2c9f6f0ff5e8ba144732a2f05de3).
   The packed corrected image is
@@ -38,20 +38,19 @@ Artifacts and SHA256: Agent-only static recovery compile passed:
   These are local validation outputs, not owner-run device artifacts.
 
 Device test run by project owner: 2026-09-06
-Device result: FAIL for Cog rendering in both attempts. Attempt 1 used the
-  first recovery initrd and recovery returned normally after the browser
-  runner exited with rc=1. Attempt 2 used the corrected initrd: all three A530
-  firmware files loaded, but the phone hard-reset during the Cog startup path.
+Device result: FAIL for Cog rendering in the latest recovery image. Attempt 1
+used the first recovery initrd and recovery returned normally after the
+browser runner exited with rc=1. The corrected-initrd attempts loaded all
+three A530 firmware files but hard-reset during the Cog startup path; the
+latest attempt used the early GPU `control=on` workaround and still reset.
 Evidence links / log paths: `/newroot/var/log/op3-recovery.log`,
   `/newroot/var/log/op3-browser-session.log`, `/run/op3-weston/weston.log`,
-  and `dmesg` captured over SSH from `root@172.16.42.1`. Attempt 1 Weston reported
-  `failed to initialize egl` / `fatal: failed to create compositor backend`;
-  the kernel reported `Direct firmware load for qcom/a530_pm4.fw failed with
-  error -2`. Attempt 2's post-reboot dmesg reports successful loading of
-  `a530_pm4.fw`, `a530_pfp.fw`, and `a530v3_gpmu.fw2`, then no pstore record is
-  present; the new boot shows `control=auto` and `runtime_status=suspended`.
-  This matches the known dummy-regulator runtime-PM hard-reset signature.
-  Battery/charging state was not recorded in these runs.
+  and `dmesg` captured over SSH from `root@172.16.42.1`. The latest log has a
+  persisted `session start` but no runner exit/cleanup. The latest dmesg reports
+  successful loading of `a530_pm4.fw`, `a530_pfp.fw`, and `a530v3_gpmu.fw2`,
+  `control=on`, and `runtime_status=active`; it has no kernel panic/fault
+  record and pstore is empty. Battery state was 91%, charger online/full, so
+  low battery is not supported as the cause of this reset.
 
 Static verification: `bash -n` passed for all recovery/browser shell entrypoints;
 `git diff --check` passed; the recovery binary is statically linked for aarch64;
@@ -68,19 +67,25 @@ Uncertainties:
   - The corrected initrd loaded all three files, but GPU runtime resume during
     the later Cog launch still hard-reset the phone. Commit `3234d5d` moves
     `control=on` to the recovery initramfs entrypoint, before runtime suspend.
-  - The recovery program and Weston both retain display/input descriptors;
-    the new /run/op3-browser.active guard prevents recovery-side reads and
-    fb0 commits, but the successful DRM/EGL handoff is not device-proven.
+  - Before `5a73922`, recovery and the PTY shell could retain fb0 references
+    while Weston started. The active flag only paused recovery I/O; it did not
+    prove that the DRM/fb0 client had been released. `5a73922` adds
+    `O_CLOEXEC`, closes fb0/vsync/mmap on activation, waits for a ready marker,
+    and reopens/redraws after cleanup. This is the next falsifiable handoff
+    experiment and has not yet been run on the phone.
   - Normal browser exit and cleanup are implemented for both runners; a
     SIGKILL that leaves a child compositor outside the supervisor remains an
     operational failure path to observe.
   - Chromium requires the existing Alpine/pmOS chroot at /newroot/pmos;
     Cog requires the existing Buildroot bundle at /newroot/opt/op3-browser.
 
-Recommended next experiment: with the phone charged or on a charger, owner
-  boots the image containing `3234d5d`, confirms the early recovery log says
-  `GPU runtime PM disabled before recovery: control=on`, and only then runs
-  one Cog session. If stable, repeat with Chromium, then test browser exit,
-  recovery return, and a second start/exit cycle. Record battery/charging
-  state and all persistent logs; do not leave the GPU-on session unattended.
+Recommended next experiment: owner builds/repackages the current commit,
+deploys the current recovery bundle, and boots the image containing `5a73922`
+with the phone charged or on a charger. Before launching Cog, verify the early
+recovery log says `GPU runtime PM disabled before recovery: control=on`. On
+`browser cog`, verify the session log records
+`recovery framebuffer released after ...` before any Weston log is inspected.
+If stable, verify normal Cog exit returns to the same recovery prompt, then
+repeat the cycle and test Chromium. Record battery/charging state and all
+persistent logs; do not leave the GPU-on session unattended.
 ```
