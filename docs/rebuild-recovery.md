@@ -47,7 +47,56 @@ export OP3_MCOPY="$OP3_EXTERNAL_INPUTS/tools/bin/mcopy"
 export OP3_PIL_SQUASHER="$OP3_EXTERNAL_INPUTS/tools/bin/pil-squasher"
 ~~~
 
-## 2. 获取 GitHub 源码和 6.12.1 内核
+## 2. 获取本机 sda15 的 rootfs UUID
+
+当前 OnePlus 3 将持久化 Buildroot rootfs 放在 `/dev/sda15`。UUID 属于
+文件系统本身：格式化分区时会生成，之后也可以随时从已有文件系统读取。
+它不是内核或 Buildroot 的固定值，换手机或重新格式化后必须重新获取。
+
+在手机已经启动并可通过 USB 网络或 Wi-Fi SSH 访问时，先确认目标分区，
+再读取 UUID：
+
+~~~bash
+ssh root@172.16.42.1 '
+set -e
+part=/dev/sda15
+test -b "$part"
+test "$(cat /sys/class/block/${part##*/}/partition)" = 15
+blkid "$part"
+blkid -s UUID -o value "$part"
+'
+~~~
+
+最后一行输出就是需要写入启动参数的值。也可以在手机串口 shell 中直接
+执行：
+
+~~~bash
+blkid -s UUID -o value /dev/sda15
+~~~
+
+如果刚刚按授权重新格式化了 sda15，格式化命令完成后立即读取新 UUID：
+
+~~~bash
+mkfs.ext4 -F /dev/sda15       # 会删除 sda15 原有内容；仅在明确确认后执行
+blkid -s UUID -o value /dev/sda15
+~~~
+
+把读取到的 UUID 写入项目的启动 profile。下面的命令只替换
+`pmos_root_uuid=` 的值，不改变其它启动参数：
+
+~~~bash
+uuid=feba81cd-3eee-4971-a703-a7d80dd04b5a   # 替换成上一步实际输出
+sed -i -E "s#pmos_root_uuid=[^ ]+#pmos_root_uuid=$uuid#" \
+  boot/oneplus3-fa5.env
+grep -n 'BOOT_CMDLINE' boot/oneplus3-fa5.env
+~~~
+
+之后重新打包 boot image；`boot/oneplus3-fa5.env` 会自动把该 UUID 放进
+initramfs 的 `pmos_root_uuid` 参数，启动脚本会等待并挂载对应分区。若只
+想临时测试，也可以使用打包脚本支持的 `BOOT_CMDLINE_OVERRIDE`，无需修改
+profile；正式重建前仍应把实际 UUID 记录回 profile 并提交。
+
+## 3. 获取 GitHub 源码和 6.12.1 内核
 
 ~~~bash
 mkdir -p /home/kai/op3-rebuild
@@ -73,7 +122,7 @@ git clone --branch msm8996-stable-6.12.y --single-branch \
 提交者时间，新机器恢复后的提交 SHA 可能不同；脚本和校验器锁定的是
 基线、补丁数量以及最终 tree hash，而不是不可重建的旧提交时间。
 
-## 3. 内核编译（项目所有者执行）
+## 4. 内核编译（项目所有者执行）
 
 ~~~bash
 set -e
@@ -148,7 +197,7 @@ make -C "$kernel" O="$kout" ARCH=arm64 \
   INSTALL_MOD_PATH="$wifi_mods" modules_install
 ~~~
 
-## 4. 暂存启动固件
+## 5. 暂存启动固件
 
 这些命令只生成经过哈希校验的固件目录，不生成 initramfs：
 
@@ -171,7 +220,7 @@ artifacts/op3-initramfs-firmware/lib/firmware/
 └── qcom/msm8996/oneplus3/{adsp.mbn,modem.mbn,slpi.mbn,venus.mbn,mba.mbn,a530_zap.mbn}
 ~~~
 
-## 5. 准备并编译默认 recovery Buildroot
+## 6. 准备并编译默认 recovery Buildroot
 
 准备脚本必须对全新的、干净的 Buildroot 源树运行：
 
@@ -248,7 +297,7 @@ sha256sum artifacts/initrd-op3-recovery-buildroot.cpio.gz
 这个 tar 包不是 initramfs；它是可选的 /newroot 持久化内容。Wi-Fi 凭据
 仍需在设备上通过 wifi connect 写入，默认 IPv6 关闭。
 
-## 6. 打包 boot image
+## 7. 打包 boot image
 
 ~~~bash
 kout=out/pmos-msm8996-6.12-recovery-audio-full-s1302-retry
@@ -264,7 +313,7 @@ kout=out/pmos-msm8996-6.12-recovery-audio-full-s1302-retry
 主机需要 mkbootimg 和 abootimg；后者这里只用于检查新生成的 Android
 boot image。
 
-## 7. 校验和设备测试
+## 8. 校验和设备测试
 
 ~~~bash
 ./scripts/verify-op3-recovery-manifest.sh --source
@@ -287,7 +336,7 @@ cat /proc/asound/cards
 cat /proc/bus/input/devices
 ~~~
 
-## 8. 可选浏览器 bundle
+## 9. 可选浏览器 bundle
 
 浏览器不进入默认 recovery initramfs。需要测试 Cog/WPE 时使用独立的
 Buildroot 源树和输出目录：
@@ -306,7 +355,7 @@ make -C source/buildroot-browser O="$PWD/out/buildroot-op3-egl" \
 浏览器 bundle 使用外部 CJK 字体，部署到设备后才由 recovery 的 browser
 命令调用；它不改变默认 initramfs。
 
-## 9. 删除本地文件后的恢复
+## 10. 删除本地文件后的恢复
 
 可以删除 checkout、source/、out/ 和 artifacts/。以后只需重新 clone 本文
 第 2 节的 GitHub 分支，再保留并校验完整的：
