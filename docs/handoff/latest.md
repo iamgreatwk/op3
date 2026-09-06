@@ -1,5 +1,22 @@
 # Latest handoff
 
+## OP3 recovery kernel haptics preparation (pending owner test, 2026-09-06)
+
+Commit `d31f471` prepares a separate formal pmOS MSM8996 Linux 6.12.1 patch
+series for the missing OnePlus 3 vibration device. Patch 1 allows the
+existing `qcom-spmi-haptics` driver to accept the ERM actuator type; patch 2
+enables the existing `pmi8994_haptics` peripheral in the OP3 DTS and sets a
+5 ms wave-play rate. The validated OP3 configuration already has
+`CONFIG_INPUT_QCOM_SPMI_HAPTICS=y`, so no Kconfig change is included. Static
+patch checks pass against the formal baseline and the active kernel checkout;
+no kernel build or device test was run. Historical downstream data suggests
+an ERM motor around 2700 mV, but the current driver does not implement the
+old `qcom,vmax-mv` property, so voltage policy remains an explicit follow-up
+if registration succeeds but the motor is silent. Handoff:
+`docs/handoff/op3-recovery-haptics-kernel-001.md`. This is independent of the
+volume/tri-state physical-key patch and remains **INCONCLUSIVE** pending the
+owner's kernel build and OnePlus 3 test.
+
 ## OP3 recovery volume and tri-state physical-key preparation (pending owner test, 2026-09-06)
 
 Commit `6f58544` prepares a formal pmOS MSM8996 Linux 6.12.1 DTS patch for
