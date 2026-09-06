@@ -33,6 +33,11 @@ QCA6174 startup where the first successful authentication can occur more than
 30 seconds after the driver is initialized. Set `OP3_WIFI_ASSOC_TIMEOUT` only
 for a controlled diagnostic override.
 
+After association, recovery starts `udhcpc` in background retry mode and
+observes the interface for 30 seconds. This preserves the historical recovery
+behavior when the AP is associated before its first DHCP exchange succeeds;
+`OP3_WIFI_DHCP_WAIT` is available only for controlled diagnostics.
+
 ## Persistent layout
 
 The owner stages `op3-wifi-bundle.tar.gz` into `/newroot`. It supplies:

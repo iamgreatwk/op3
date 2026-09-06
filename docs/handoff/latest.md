@@ -1,5 +1,17 @@
 # Latest handoff
 
+## OP3 recovery Wi-Fi DHCP retry checkpoint (Issue #11, 2026-09-06)
+
+Historical 6.3.1 recovery used background `udhcpc -b -q`, while the current
+6.12.1 CLI used fail-fast `udhcpc -n -q`. Owner logs show WPA association can
+complete while IPv4 is still absent. The current CLI now keeps DHCP running
+in background retry mode and observes the interface for a lease before
+returning. Only the DHCP client lifecycle changed; modules, firmware,
+regulatory data, WPA profile, association timeout, IPv6 policy, kernel, DTS,
+DRM, audio, input, and browser are unchanged. Owner bundle deployment and
+device retest are pending. Handoff:
+`docs/handoff/op3-recovery-wifi-dhcp-001.md`.
+
 ## OP3 recovery Wi-Fi cold-start association checkpoint (Issue #10, 2026-09-06)
 
 Owner logs showed the QCA6174 driver initialized around 9 seconds after boot,

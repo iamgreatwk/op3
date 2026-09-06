@@ -19,6 +19,7 @@ WPA_SUPPLICANT=/usr/sbin/wpa_supplicant
 WPA_CLI=/usr/sbin/wpa_cli
 UDHCPC=/sbin/udhcpc
 ASSOC_TIMEOUT=${OP3_WIFI_ASSOC_TIMEOUT:-90}
+DHCP_WAIT=${OP3_WIFI_DHCP_WAIT:-30}
 
 log() {
 	printf '%s\n' "op3-wifi: $*" >&2
@@ -102,8 +103,22 @@ start_profile() {
 	done
 	[ "$i" -lt 30 ] || die "association timed out"
 
-	"$UDHCPC" -i "$IFACE" -n -q -p "$STATE/udhcpc.pid" || die "DHCP failed"
-	printf 'nameserver 223.5.5.5\n' > /etc/resolv.conf
+	# Keep the DHCP client alive while a weak or roaming AP link settles. The
+	# historical recovery script used -b -q for this reason; -n made the
+	# 6.12 path give up after one unanswered exchange.
+	if ! "$UDHCPC" -i "$IFACE" -b -q -p "$STATE/udhcpc.pid"; then
+		die "DHCP client failed to start"
+	fi
+	i=0
+	while [ "$i" -lt "$DHCP_WAIT" ]; do
+		if ip -4 addr show dev "$IFACE" | grep -q 'inet '; then
+			printf 'nameserver 223.5.5.5\n' > /etc/resolv.conf
+			return 0
+		fi
+		sleep 1
+		i=$((i + 1))
+	done
+	die "DHCP lease not observed after ${DHCP_WAIT}s"
 }
 
 connect() {
