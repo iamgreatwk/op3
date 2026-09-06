@@ -157,8 +157,13 @@ make -C source/buildroot O="$PWD/out/buildroot-op3-recovery" \
 OP3_WIFI_MODULES_ROOT="$PWD/artifacts/op3-wifi-modules-root" \
 OP3_INITRAMFS_FIRMWARE_ROOT="$PWD/artifacts/op3-initramfs-firmware" \
 make -C source/buildroot O="$PWD/out/buildroot-op3-recovery" \
+  BR2_PRIMARY_SITE=https://sources.buildroot.net \
   BR2_JLEVEL=3 2>&1 | tee /tmp/buildroot-op3-recovery.log
 ~~~
+
+`BR2_PRIMARY_SITE` 只改变下载候选顺序，Buildroot 仍会在该源缺少文件时
+继续尝试包自身的上游地址；它不改变源码版本或校验值。构建中断后重新
+执行同一命令即可从已有的 `dl/` 和 `output/` 继续。
 
 Buildroot 输出有两个用途：
 
