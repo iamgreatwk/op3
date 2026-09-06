@@ -16,13 +16,16 @@ disables unavailable OP3 MM4--MM16 links; no new q6asm child IDs are added.
 Only variable changed: kernel branch composition; recovery userspace,
 Wi-Fi, DRM, and browser contents are unchanged.
 
-Build run by project owner: NOT_RUN
-Build result: NOT_RUN
-Artifacts and SHA256: No kernel artifact was built. Prepared kernel worktree
-is clean and contains the validated audio branch plus the physical input and
-haptics commits.
+Build run by project owner: YES
+Build result: PASS
+Artifacts and SHA256: output directory
+`out/pmos-msm8996-6.12-recovery-audio-full-retry`; `.config`
+`c3da142eb257c5b0b501f24b91b74c0dba58a16ac6af252f054a4f14540baeb3`,
+`Image.gz` `504ca5bc1623dd038cb3a9c9d36b7e77d45a3c28e34f7c86e1cff1a05f3347bd`,
+and `msm8996-oneplus3.dtb`
+`264f981678c1dd8d1d9a52f2db6e2130a0ebccbb9f4485ab8740784f73806db7`.
 
-Device test run by project owner: NOT_RUN for the prepared integration branch
+Device test run by project owner: NOT_RUN for the final integration branch
 Device result: NOT_RUN
 Evidence links / log paths: Pre-patch device evidence from
 root@172.16.42.1 shows `/dev/snd` contains only `timer`,
@@ -39,7 +42,7 @@ lacked the later validated audio-branch DTS fixes.
 
 Conclusion: INCONCLUSIVE
 Uncertainties:
-  - The final integration branch still requires the owner to rebuild and boot it.
+  - The final integration branch still requires the owner to boot the new image.
   - Sound-card registration does not prove that the ADSP, WCD9335 codec,
     AMIC4 capture route, QUAT MI2S speaker route, or external amplifier are
     electrically functional.
@@ -49,7 +52,8 @@ Uncertainties:
 Static verification: after correcting the first DTC syntax failure, the
 final kernel integration worktree is clean; its OP3 DTS
 contains only q6asm `dai@0`--`dai@2` and disables MM4--MM16 in the board DTS.
-No kernel build or post-patch device test was run by this agent.
+The owner completed the kernel build successfully; no post-build device test
+has run yet.
 
 The owner build first failed at DTC line 91 of
 `msm8996-oneplus-common.dtsi` because the conflict resolution omitted the
