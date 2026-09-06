@@ -85,17 +85,34 @@ mkdir -p "$kout"
 cp "$project/kernel/configs/oneplus3-recovery-audio-full.config" \
   "$kout/.config"
 
-# Keep the locked Image.gz reproducible across build hosts. These values match
-# the kernel image SHA256 recorded in manifests/op3-recovery-audio-full.env.
+# Keep the final version string reproducible across build hosts. Linux builds
+# init/version.o once with a temporary UTS_VERSION and adds the final timestamp
+# through init/version-timestamp.o at the link step. Build the temporary object
+# with the normal empty build-number/timestamp fields first; the second command
+# updates only the final timestamp object while keeping that temporary header
+# old, matching the locked Image.gz.
 export KBUILD_BUILD_USER=kai
 export KBUILD_BUILD_HOST=AgentBuilder
-export KBUILD_BUILD_TIMESTAMP='Sun Sep  6 14:36:13 CST 2026'
+unset KBUILD_BUILD_VERSION KBUILD_BUILD_TIMESTAMP
 
 make -C "$kernel" O="$kout" ARCH=arm64 \
   CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 olddefconfig
 make -C "$kernel" O="$kout" ARCH=arm64 \
   CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
   -j"$(nproc)" Image.gz dtbs modules
+
+# Re-link with the locked final timestamp without rebuilding init/version.o.
+# The output counter must start at zero so the final generated UTS_VERSION is
+# #1, while the temporary init/utsversion-tmp.h remains # SMP PREEMPT.
+printf '0\n' > "$kout/.version"
+unset KBUILD_BUILD_VERSION KBUILD_BUILD_TIMESTAMP
+make -C "$kernel" O="$kout" ARCH=arm64 \
+  CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
+  init/version.o
+export KBUILD_BUILD_TIMESTAMP='Sun Sep  6 14:36:13 CST 2026'
+make -C "$kernel" O="$kout" ARCH=arm64 \
+  CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
+  -o init/utsversion-tmp.h Image.gz
 
 test ! -e "$wifi_mods/lib/modules"
 mkdir -p "$wifi_mods"
