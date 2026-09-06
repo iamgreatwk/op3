@@ -10,12 +10,13 @@ q6asm child IDs 3--15 produced repeated `valid dai id not found:0`, DAI
 registration `-12`, and still no ALSA card. That patch has been removed from
 the active preparation path.
 
-The prepared kernel worktree
+The final kernel integration worktree
 `source/linux-pmos-msm8996-6.12-recovery-audio-full` is based on the already
 validated `agent/implementation/op3-audio-mic-001` branch, which keeps valid
 q6asm MM1--MM3 sessions and disables unavailable MM4--MM16 links. It then
-adds the validated S1302, volume/tri-state, and PM8994 haptics commits. Kernel
-branch: `agent/implementation/recovery-browser-audio-full-001`, HEAD
+adds the validated S1302, volume/tri-state, and PM8994 haptics commits. This
+is the final kernel integration branch; no additional feature branch should be
+selected. Kernel branch: `agent/implementation/recovery-browser-audio-full-001`, HEAD
 `9491be0d6460`. The first owner build exposed and the agent fixed a missing
 DTS closing brace (`9f81c0cd4289`, `9491be0d6460`); the worktree is now clean.
 No successful kernel build or post-boot test has run. Handoff:

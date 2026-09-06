@@ -4,9 +4,9 @@
 Task / GitHub Issue: recovery kernel audio-card restore
 Role: Implementation
 Baseline commit: 67b0bbc3cbf46bae712a2606a43361756fcbd829
-Working branch: agent/implementation/recovery-browser-audio-full-001
-Changed files: separate kernel worktree, based on agent/implementation/op3-audio-mic-001;
-  physical-key and haptics commits were cherry-picked on top
+Working branch: agent/implementation/recovery-browser-audio-full-001 (final kernel integration)
+Changed files: final kernel integration worktree, based on agent/implementation/op3-audio-mic-001;
+  physical-key and haptics commits are included on top
 Commit SHA: 9491be0d6460 (kernel); recovery preparation docs: be89bec
 
 Layer: Linux 6.12 OnePlus 3 audio DTS DAI enumeration
@@ -39,7 +39,7 @@ lacked the later validated audio-branch DTS fixes.
 
 Conclusion: INCONCLUSIVE
 Uncertainties:
-  - The prepared branch still requires the owner to rebuild and boot it.
+  - The final integration branch still requires the owner to rebuild and boot it.
   - Sound-card registration does not prove that the ADSP, WCD9335 codec,
     AMIC4 capture route, QUAT MI2S speaker route, or external amplifier are
     electrically functional.
@@ -47,7 +47,7 @@ Uncertainties:
     only after `/proc/asound/cards` and `/dev/snd/pcm*` appear.
 
 Static verification: after correcting the first DTC syntax failure, the
-prepared kernel worktree is clean; its OP3 DTS
+final kernel integration worktree is clean; its OP3 DTS
 contains only q6asm `dai@0`--`dai@2` and disables MM4--MM16 in the board DTS.
 No kernel build or post-patch device test was run by this agent.
 
@@ -57,7 +57,7 @@ closing brace for `&soc`. Commit `9f81c0cd4289` adds the missing brace and
 `9491be0d6460` restores the affected indentation. The current worktree is
 clean and ready for a new owner build.
 
-Recommended next experiment: the owner should compile the prepared worktree,
+Recommended next experiment: the owner should compile the final integration worktree,
 pack and boot the resulting image, then collect `/proc/asound/cards`,
 `/proc/asound/pcm`, `/dev/snd`, and audio dmesg. If an ALSA card appears,
 test `tinycap` first and then `tinyplay`; only after those pass should the
