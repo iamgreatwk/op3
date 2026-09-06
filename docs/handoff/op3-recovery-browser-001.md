@@ -12,7 +12,7 @@ Changed files: recovery/recovery_mainline.c and bundled libtsm sources/assets;
   boot/browser-test/opt/op3-browser/run.sh;
   boot/pmos-chromium-test/opt/op3-chromium/run.sh;
   scripts/{stage-recovery-rootfs.sh,make-recovery-browser-initrd.sh}
-Commit SHA: e902c33, d18ffef, 194ae3f, 0e7ced3, 9f3c465, a458290
+Commit SHA: e902c33, d18ffef, 194ae3f, 0e7ced3, 9f3c465, a458290, d4f9923
 
 Layer: 07 browser, recovery lifecycle integration
 Hypothesis tested: A recovery-managed foreground browser session can start
@@ -30,13 +30,19 @@ Artifacts and SHA256: Agent-only static recovery compile passed:
   out/recovery/op3-recovery-browser-bundle.tar.gz
   (1fcccae2244fb730f910dfec2618daa96f6e114a336b633072a3bfb762744b20);
   out/recovery/initrd-op3-recovery-browser.cpio.gz
-  (af2445f01f7fe814c7e0955331dbe494af90c0e85f64e44aeb6f0fba95f931a0).
+  (01c1b34484e14764d0ef9c7459ece62a69b8e6f96d4bc831da8cce5384918e94).
   These are local validation outputs, not owner-run device artifacts.
 
-Device test run by project owner: NOT_RUN
-Device result: NOT_RUN
-Evidence links / log paths: No device test occurred. Owner must record
-  battery/charging state and boot/recovery/browser/post-exit logs.
+Device test run by project owner: 2026-09-06
+Device result: FAIL for Cog rendering with the first recovery initrd; recovery
+  returned normally after the browser runner exited with rc=1.
+Evidence links / log paths: `/newroot/var/log/op3-recovery.log`,
+  `/newroot/var/log/op3-browser-session.log`, `/run/op3-weston/weston.log`,
+  and `dmesg` captured over SSH from `root@172.16.42.1`. Weston reported
+  `failed to initialize egl` / `fatal: failed to create compositor backend`;
+  the kernel reported `Direct firmware load for qcom/a530_pm4.fw failed with
+  error -2`. The tested initrd had `a530_zap.mbn` but not the three early A530
+  GPU firmware files. Battery/charging state was not recorded in this run.
 
 Static verification: `bash -n` passed for all recovery/browser shell entrypoints;
 `git diff --check` passed; the recovery binary is statically linked for aarch64;
@@ -48,18 +54,22 @@ the imported reference source; no device test occurred.
 
 Conclusion: INCONCLUSIVE
 Uncertainties:
+  - The first device initrd omitted `a530_pm4.fw`, `a530_pfp.fw`, and
+    `a530v3_gpmu.fw2`; commit `d4f9923` adds them to the recovery initrd. The
+    corrected initrd still needs a device run.
   - The recovery program and Weston both retain display/input descriptors;
     the new /run/op3-browser.active guard prevents recovery-side reads and
-    fb0 commits, but the DRM handoff is not device-proven.
+    fb0 commits, but the successful DRM/EGL handoff is not device-proven.
   - Normal browser exit and cleanup are implemented for both runners; a
     SIGKILL that leaves a child compositor outside the supervisor remains an
     operational failure path to observe.
   - Chromium requires the existing Alpine/pmOS chroot at /newroot/pmos;
     Cog requires the existing Buildroot bundle at /newroot/opt/op3-browser.
 
-Recommended next experiment: owner builds/packs the 6.12.1 image with
-  out/recovery/initrd-op3-recovery-browser.cpio.gz, stages the recovery
-  bundle on sda15, then validates recovery startup, one Cog session and one
-  Chromium session, normal exit back to the recovery prompt, and a second
-  start/exit cycle. Record battery/charging state and all persistent logs.
+Recommended next experiment: owner regenerates the corrected initrd, packs the
+  6.12.1 image, stages the recovery bundle on sda15, then validates that dmesg
+  reports the three A530 firmware files loaded, followed by one Cog session
+  and one Chromium session, normal exit back to the recovery prompt, and a
+  second start/exit cycle. Record battery/charging state and all persistent
+  logs.
 ```

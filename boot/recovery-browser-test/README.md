@@ -2,8 +2,9 @@
 
 This overlay restores the persistent `recovery_mainline` program as the
 inittab foreground application on the pmOS MSM8996 Linux 6.12.1 line. The
-recovery binary and the browser runners stay on sda15; only the small
-`sbin/run_recovery.sh` selector is appended to the initramfs.
+recovery binary and the browser runners stay on sda15; the small
+`sbin/run_recovery.sh` selector and the three A530 GPU firmware files needed
+during early kernel probe are appended to the initramfs.
 
 The owner-supplied `recovery_mainline.c` was ported into `recovery/` with the
 matching libtsm sources under `third_party/libtsm/`. Its normal PTY shell gets
@@ -40,6 +41,9 @@ BusyBox-compatible extraction path, then pack the owner-approved boot image
 with `artifacts/initrd-op3-recovery-browser.cpio.gz`. Existing sda15 browser
 bundles must be present at `/newroot/opt/op3-browser` and, for Chromium, at
 `/newroot/opt/pmos` or `/newroot/pmos` as used by the current Chromium runner.
+The host checkout must also contain `artifacts/a530-firmware/`; the initrd
+script stages `a530_pm4.fw`, `a530_pfp.fw`, and `a530v3_gpmu.fw2` under
+`lib/firmware/qcom/`.
 
 ## Scope and evidence
 

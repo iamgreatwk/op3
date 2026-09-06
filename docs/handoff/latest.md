@@ -4,7 +4,7 @@
 
 Branch `agent/implementation/recovery-browser-001` contains the recovery
 startup and browser-session lifecycle implementation in commits `e902c33`,
-`d18ffef`, `194ae3f`, `0e7ced3`, `9f3c465`, and `a458290`. The ported
+`d18ffef`, `194ae3f`, `0e7ced3`, `9f3c465`, `a458290`, and `d4f9923`. The ported
 `recovery_mainline`
 keeps its fb0/libtsm terminal
 state alive while `/run/op3-browser.active` is present, but skips recovery
@@ -14,8 +14,10 @@ cleans up the browser and Weston before clearing the flag so the recovery
 prompt can redraw on the same boot.
 
 The agent's static compile, shell checks, rootfs packaging, and initramfs
-overlay checks pass. Owner Buildroot/device validation is **NOT_RUN**; this
-is **INCONCLUSIVE**, not an accepted milestone. Full handoff:
+overlay checks pass. The first device run reached recovery but Cog failed
+because the tested initrd lacked the early A530 GPU firmware; the corrected
+initrd now includes it. Owner validation of the corrected initrd is pending;
+this is **INCONCLUSIVE**, not an accepted milestone. Full handoff:
 `docs/handoff/op3-recovery-browser-001.md`.
 
 ```text
