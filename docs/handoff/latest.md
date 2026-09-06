@@ -1,5 +1,21 @@
 # Latest handoff
 
+## OP3 recovery/browser integration checkpoint (Issue #6, 2026-09-06)
+
+Branch `agent/implementation/recovery-browser-001` contains the recovery
+startup and browser-session lifecycle implementation in commits `e902c33`
+and `d18ffef`. The ported `recovery_mainline` keeps its fb0/libtsm terminal
+state alive while `/run/op3-browser.active` is present, but skips recovery
+input consumption and fb0 submissions while Weston owns DRM. The `browser`
+shell command starts a one-shot Cog/WPE or Chromium session; its supervisor
+cleans up the browser and Weston before clearing the flag so the recovery
+prompt can redraw on the same boot.
+
+The agent's static compile, shell checks, rootfs packaging, and initramfs
+overlay checks pass. Owner Buildroot/device validation is **NOT_RUN**; this
+is **INCONCLUSIVE**, not an accepted milestone. Full handoff:
+`docs/handoff/op3-recovery-browser-001.md`.
+
 ```text
 PROJECT MODE: PRODUCT BASELINE
 TARGET KERNEL: pmOS MSM8996 Linux 6.12.1 LTS
@@ -471,4 +487,3 @@ host-side code/debug cycles and cooked the phone. RULES:
   log / stop). Full-flow retest pending device cool-down + charge: deploy ->
   restart-session -> collect -> owner slides slider on the (now correctly
   oriented) touchscreen -> script fills/clicks -> collection -> feishu.
-
