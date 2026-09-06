@@ -60,14 +60,15 @@ devtmpfs/inittab startup, firmware requests from the self-built CPIO, and
 recovery/Wi-Fi/audio runtime behavior require the owner build and OnePlus 3
 boot test. Proprietary firmware remains outside GitHub and is still required.
 
-Follow-up check: the two timestamp-controlled attempts produced Image.gz
-hashes `10aea4f8…` and `92ab271e…` because `KBUILD_BUILD_TIMESTAMP` also
-changes the temporary `init/utsversion-tmp.h` used for `init/version.o`.
-The locked image was produced with the normal temporary value `# SMP PREEMPT`,
-while only the final `include/generated/utsversion.h` carries the fixed
-timestamp. An external-O= `-o init/utsversion-tmp.h` attempt did not suppress
-that regeneration. The rebuild instructions now leave the Kbuild variable
-unset and provide the fixed timestamp through the tracked `date` wrapper only
-for the final generated header. The owner should rerun that targeted sequence
-and verify the temporary and final headers before artifact verification.
+Follow-up check: three timestamp-controlled attempts produced Image.gz hashes
+`10aea4f8…`, `92ab271e…`, and `815b5235…`. The first two used a timestamp in
+the temporary `init/utsversion-tmp.h`; the third corrected that header but
+still regenerated the empty default initramfs with the current clock. The
+locked image contains the default CPIO directory mtime `2026-09-06 14:32:51`,
+while its final `include/generated/utsversion.h` timestamp is
+`2026-09-06 14:36:13`. The rebuild instructions now lock the CPIO timestamp,
+compile `init/version.o` with the normal temporary value, and use inherited
+`GNUMAKEFLAGS` to keep both intermediate targets unchanged during the final
+link. The owner should rerun that targeted sequence and verify the image hash
+before artifact verification.
 ~~~

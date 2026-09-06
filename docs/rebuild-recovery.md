@@ -85,11 +85,9 @@ mkdir -p "$kout"
 cp "$project/kernel/configs/oneplus3-recovery-audio-full.config" \
   "$kout/.config"
 
-# Keep the final version string reproducible across build hosts. Linux builds
-# init/version.o once with a temporary UTS_VERSION and adds the final timestamp
-# through init/version-timestamp.o at the link step. KBUILD_BUILD_TIMESTAMP
-# affects both stages, so leave it unset and provide the locked value only to
-# Kbuild's final `date` lookup through the tracked wrapper below.
+# Keep the locked Image.gz reproducible across build hosts. Linux uses one
+# timestamp for the empty default initramfs and a separate final UTS_VERSION.
+# These are two intermediate values from the archived locked image.
 export KBUILD_BUILD_USER=kai
 export KBUILD_BUILD_HOST=AgentBuilder
 unset KBUILD_BUILD_VERSION KBUILD_BUILD_TIMESTAMP
@@ -100,17 +98,27 @@ make -C "$kernel" O="$kout" ARCH=arm64 \
   CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
   -j"$(nproc)" Image.gz dtbs modules
 
-# Re-link with the locked final timestamp. The output counter must start at
-# zero so the final generated UTS_VERSION is #1. Because KBUILD_BUILD_TIMESTAMP
-# remains unset, init/utsversion-tmp.h stays at the normal # SMP PREEMPT value.
+# Recreate the empty default initramfs with its locked directory mtime.
+export KBUILD_BUILD_TIMESTAMP='Sun Sep  6 14:32:51 CST 2026'
+make -C "$kernel" O="$kout" ARCH=arm64 \
+  CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
+  usr/initramfs_data.cpio
+
+# Build init/version.o with Linux's normal temporary UTS_VERSION. The final
+# version string is added later by init/version-timestamp.o.
 printf '0\n' > "$kout/.version"
-date_bin="$(mktemp -d /tmp/op3-repro-date.XXXXXX)"
-ln -s "$project/scripts/op3-repro-date.sh" "$date_bin/date"
-export OP3_REPRO_BUILD_TIMESTAMP='Sun Sep  6 14:36:13 CST 2026'
-PATH="$date_bin:$PATH" \
+unset KBUILD_BUILD_VERSION KBUILD_BUILD_TIMESTAMP
+make -C "$kernel" O="$kout" ARCH=arm64 \
+  CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
+  init/version.o
+
+# Final link: keep both intermediate targets unchanged in all recursive makes.
+export KBUILD_BUILD_TIMESTAMP='Sun Sep  6 14:36:13 CST 2026'
+export GNUMAKEFLAGS='-o init/utsversion-tmp.h -o usr/initramfs_data.cpio'
 make -C "$kernel" O="$kout" ARCH=arm64 \
   CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
   Image.gz
+unset GNUMAKEFLAGS KBUILD_BUILD_TIMESTAMP
 
 test ! -e "$wifi_mods/lib/modules"
 mkdir -p "$wifi_mods"
