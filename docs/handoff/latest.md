@@ -1,5 +1,21 @@
 # Latest handoff
 
+## Boot partition flashed and post-flash verification (2026-09-07)
+
+The owner-authorized image
+`artifacts/boot-oneplus3-pmos612-recovery-buildroot-board-fallback-passwd.img`
+was written only to the non-A/B `boot` partition. Fastboot reported both
+`Sending 'boot' OKAY` and `Writing 'boot' OKAY`; no other partition was
+modified. The image is 54 MiB and fits the verified 64 MiB boot partition.
+
+After `fastboot reboot`, the flashed image accepted SSH login as `root` with
+password `1234`, mounted `/dev/sda15` using UUID
+`feba81cd-3eee-4971-a703-a7d80dd04b5a`, and exposed the persistent recovery
+rootfs. `wifi_auto` loaded the ath10k module closure and `wlan0` appeared. In
+the limited post-flash wait, the driver performed authentication attempts but
+the state was still scanning; automatic Wi-Fi association is therefore left
+INCONCLUSIVE for this run. Manual `wifi reconnect 1106` is the next test.
+
 ## Password-enabled Buildroot recovery boot and persistent rootfs replacement (2026-09-07)
 
 The recovery Buildroot defconfig was corrected and rebuilt after the first
