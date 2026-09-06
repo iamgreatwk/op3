@@ -16,9 +16,11 @@ validated `agent/implementation/op3-audio-mic-001` branch, which keeps valid
 q6asm MM1--MM3 sessions and disables unavailable MM4--MM16 links. It then
 adds the validated S1302, volume/tri-state, and PM8994 haptics commits. Kernel
 branch: `agent/implementation/recovery-browser-audio-full-001`, HEAD
-`aa2eafa8c662`. The worktree is clean; no kernel build or post-boot test has
-run. Handoff: `docs/handoff/op3-recovery-audio-card-001.md`. This checkpoint
-is INCONCLUSIVE pending owner build and ALSA enumeration evidence.
+`9491be0d6460`. The first owner build exposed and the agent fixed a missing
+DTS closing brace (`9f81c0cd4289`, `9491be0d6460`); the worktree is now clean.
+No successful kernel build or post-boot test has run. Handoff:
+`docs/handoff/op3-recovery-audio-card-001.md`. This checkpoint is
+INCONCLUSIVE pending owner build and ALSA enumeration evidence.
 
 ## OP3 recovery voice capture/playback userspace preparation (owner test pending, 2026-09-06)
 

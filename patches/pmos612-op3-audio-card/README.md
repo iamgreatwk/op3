@@ -14,7 +14,7 @@ Kernel worktree:
 Kernel branch:
 agent/implementation/recovery-browser-audio-full-001
 Kernel HEAD:
-aa2eafa8c662
+9491be0d6460
 ```
 
 The audio branch already contains the required OP3 audio-card fixes,
@@ -26,3 +26,8 @@ capacitive-key, volume/tri-state-key, and PM8994 haptics commits.
 The owner should compile this worktree and collect `/proc/asound/cards`,
 `/proc/asound/pcm`, `/dev/snd`, and audio dmesg before testing recovery
 `tinycap`/`tinyplay`.
+
+The first owner build stopped in DTC because the physical-key merge was
+missing the closing brace for the audio `&soc` node. Commits `9f81c0cd4289`
+and `9491be0d6460` repair that nesting and indentation; compile the current
+HEAD.

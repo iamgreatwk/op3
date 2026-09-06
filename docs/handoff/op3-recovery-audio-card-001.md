@@ -7,7 +7,7 @@ Baseline commit: 67b0bbc3cbf46bae712a2606a43361756fcbd829
 Working branch: agent/implementation/recovery-browser-audio-full-001
 Changed files: separate kernel worktree, based on agent/implementation/op3-audio-mic-001;
   physical-key and haptics commits were cherry-picked on top
-Commit SHA: aa2eafa8c662 (kernel); recovery preparation docs: pending
+Commit SHA: 9491be0d6460 (kernel); recovery preparation docs: be89bec
 
 Layer: Linux 6.12 OnePlus 3 audio DTS DAI enumeration
 Hypothesis tested: the previously observed no-card state is fixed by using
@@ -46,9 +46,16 @@ Uncertainties:
   - The recovery userspace audio commit remains separate and is meaningful
     only after `/proc/asound/cards` and `/dev/snd/pcm*` appear.
 
-Static verification: the prepared kernel worktree is clean; its OP3 DTS
+Static verification: after correcting the first DTC syntax failure, the
+prepared kernel worktree is clean; its OP3 DTS
 contains only q6asm `dai@0`--`dai@2` and disables MM4--MM16 in the board DTS.
 No kernel build or post-patch device test was run by this agent.
+
+The owner build first failed at DTC line 91 of
+`msm8996-oneplus-common.dtsi` because the conflict resolution omitted the
+closing brace for `&soc`. Commit `9f81c0cd4289` adds the missing brace and
+`9491be0d6460` restores the affected indentation. The current worktree is
+clean and ready for a new owner build.
 
 Recommended next experiment: the owner should compile the prepared worktree,
 pack and boot the resulting image, then collect `/proc/asound/cards`,
