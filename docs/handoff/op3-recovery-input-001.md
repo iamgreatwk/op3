@@ -6,7 +6,7 @@ Role: Implementation
 Baseline commit: fced25f
 Working branch: agent/implementation/recovery-browser-001
 Changed files: recovery/recovery_mainline.c
-Commit SHA: pending
+Commit SHA: 4c4dd4a
 
 Layer: recovery userspace input routing
 Hypothesis tested: Recovery can reliably attach to the physical input devices
@@ -16,8 +16,9 @@ Only variable changed: recovery input-device discovery and event diagnostics;
 no kernel, DTS, audio, haptics, Wi-Fi, DRM, or browser changes.
 
 Build run by project owner: NOT_RUN
-Build result: NOT_RUN
-Artifacts and SHA256: none
+Build result: PASS (agent-only recovery userspace compile; owner kernel build not run)
+Artifacts and SHA256: `out/recovery/recovery_mainline`, SHA256
+`ed63e3374c1001cd88f4f5a0c81e0b64409fcfa52bcf31d973a495428d689c06`
 
 Device test run by project owner: NOT_RUN
 Device result: NOT_RUN
@@ -34,6 +35,10 @@ Uncertainties:
   - The historical tri-state and S1302 capacitive-key devices are downstream
     drivers and are not present in the formal 6.12 source. This recovery change
     only consumes their standard EV_KEY events if a kernel driver provides them.
+
+Static verification: `git diff --check` passed and the recovery program built
+as a statically linked AArch64 executable. The existing unrelated
+`draw_statusbar()` format-truncation warning remains.
 
 Recommended next experiment: owner/integration assigns a kernel DTS issue to
 register the OnePlus 3 volume GPIOs as a standard gpio-keys device, builds the
