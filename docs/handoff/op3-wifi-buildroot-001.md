@@ -10,7 +10,7 @@ Changed files: buildroot/op3-recovery.defconfig;
   scripts/prepare-op3-buildroot.sh; scripts/stage-op3-audio-rootfs.sh;
   manifests/op3-recovery-audio-full.env; boot/wifi/README.md;
   docs/rebuild-recovery.md; docs/handoff/latest.md
-Commit SHA: pending
+Commit SHA: 9428d9f
 
 Layer: Buildroot recovery userspace and Wi-Fi payload packaging
 Hypothesis tested: The default recovery Buildroot target can own the Wi-Fi
