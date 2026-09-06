@@ -10,7 +10,7 @@ Changed files: buildroot/op3-recovery.defconfig;
   scripts/prepare-op3-buildroot.sh; scripts/stage-browser-rootfs.sh;
   scripts/stage-op3-audio-rootfs.sh; docs/rebuild-recovery.md;
   docs/handoff/latest.md
-Commit SHA: pending
+Commit SHA: 80faba3
 
 Layer: Buildroot profile selection
 Hypothesis tested: The final recovery default can omit the browser graphics
