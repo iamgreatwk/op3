@@ -76,13 +76,15 @@ git clone --branch msm8996-stable-6.12.y --single-branch \
 ## 3. 内核编译（项目所有者执行）
 
 ~~~bash
-project=/home/kai/op3-rebuild
+project=/home/kai/op3-rebuild-clean-20260906
+cd "$project"
 kernel="$project/source/linux-pmos-msm8996-6.12-recovery-audio-full"
 kout="$project/out/pmos-msm8996-6.12-recovery-audio-full-s1302-retry"
 wifi_mods="$project/artifacts/op3-wifi-modules-root"
 
 mkdir -p "$kout"
-cp "$project/kernel/configs/oneplus3-recovery-audio-full.config" \
+test -r "$kout/.config" || cp \
+  "$project/kernel/configs/oneplus3-recovery-audio-full.config" \
   "$kout/.config"
 
 # Keep the locked Image.gz reproducible across build hosts. Linux uses one
@@ -106,6 +108,12 @@ make -B -C "$kernel" O="$kout" ARCH=arm64 \
   CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
   usr/initramfs_data.cpio
 
+# The final link must leave this CPIO untouched while Kbuild regenerates the
+# timestamped version object. Remove only the timestamp option from the saved
+# output command; the CPIO bytes and its locked mtime remain unchanged.
+sed -i -E 's/[[:space:]]+-d "[^"]*"//' \
+  "$kout/usr/.initramfs_data.cpio.cmd"
+
 # Build init/version.o with Linux's normal temporary UTS_VERSION. The final
 # version string is added later by init/version-timestamp.o.
 printf '0\n' > "$kout/.version"
@@ -114,13 +122,18 @@ make -C "$kernel" O="$kout" ARCH=arm64 \
   CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
   init/version.o
 
-# Final link: keep both intermediate targets unchanged in all recursive makes.
-export KBUILD_BUILD_TIMESTAMP='Sun Sep  6 14:36:13 CST 2026'
-export MAKEFLAGS='-o init/utsversion-tmp.h -o usr/initramfs_data.cpio'
-make -C "$kernel" O="$kout" ARCH=arm64 \
+# Final link: leave KBUILD_BUILD_TIMESTAMP unset so the temporary version
+# header stays the normal untimestamped value. Kbuild's date call is wrapped
+# only for the final timestamp object, and the saved CPIO command above now
+# matches the no-timestamp final invocation.
+date_bin="$(mktemp -d /tmp/op3-repro-date.XXXXXX)"
+ln -s "$project/scripts/op3-repro-date.sh" "$date_bin/date"
+export OP3_REPRO_BUILD_TIMESTAMP='Sun Sep  6 14:36:13 CST 2026'
+unset KBUILD_BUILD_TIMESTAMP MAKEFLAGS
+PATH="$date_bin:$PATH" make -C "$kernel" O="$kout" ARCH=arm64 \
   CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
   Image.gz
-unset MAKEFLAGS KBUILD_BUILD_TIMESTAMP
+unset OP3_REPRO_BUILD_TIMESTAMP
 
 test ! -e "$wifi_mods/lib/modules"
 mkdir -p "$wifi_mods"

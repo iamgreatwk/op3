@@ -60,14 +60,21 @@ devtmpfs/inittab startup, firmware requests from the self-built CPIO, and
 recovery/Wi-Fi/audio runtime behavior require the owner build and OnePlus 3
 boot test. Proprietary firmware remains outside GitHub and is still required.
 
-Follow-up check: timestamp-controlled attempts produced Image.gz hashes
-`10aea4f8…`, `92ab271e…`, `815b5235…`, and `92ab271e…` again. The remaining
-difference is the empty default initramfs: its archived directory mtime is
-`2026-09-06 14:32:51 +0800`, but GNU date interprets the literal `CST` in the
-Kbuild value as US Central time. Also, `GNUMAKEFLAGS` did not propagate the
-old-file exceptions to Kbuild's recursive makes. The rebuild instructions
-now generate the CPIO with numeric `+0800`, compile `init/version.o` with the
-normal temporary value, and use inherited `MAKEFLAGS` to keep both
-intermediate targets unchanged during the final link. The owner should rerun
-that targeted sequence and verify the image hash before artifact verification.
+Follow-up check: the latest owner run produced Image.gz SHA256
+`92ab271e191ab64841d281f3fe34a57ccdf3d12dcfa50dfe81bdbf574d2a3a8c`, still
+different from the locked `5c89259d9340071c9c8684d361042482ca25c8f76b2de4d33cdacf2105f78861`.
+Its first phase also stopped because the output directory did not contain
+`.config`; the command had combined `project=...` and `cd "$project"` on one
+line. The corrected guide uses separate assignment and `cd` commands and
+explicitly restores the tracked full configuration when it is absent.
+
+The remaining reproducibility issue is the empty default initramfs: its
+archived directory mtime is `2026-09-06 14:32:51 +0800`, while GNU date
+interprets literal `CST` as US Central time. The corrected sequence generates
+the CPIO with numeric `+0800`, removes only the timestamp option from its
+saved `.cmd` record, compiles `init/version.o` with the normal temporary
+value, and uses the tracked `scripts/op3-repro-date.sh` wrapper to fix only the
+final UTS timestamp. This avoids relying on recursive `MAKEFLAGS` old-file
+exceptions. The owner should rerun that targeted kernel sequence and verify
+the locked hash before artifact verification.
 ~~~

@@ -7,13 +7,14 @@ The owner completed the kernel and Buildroot builds in
 `rootfs.cpio.gz` (44,801,175 bytes, SHA256
 `3a704c8f64dde483204f4391997cb60230bf736478009330bf27df2085e0bf6c`) whose
 CPIO contains the project `/init`, recovery, Wi-Fi/audio helpers, firmware,
-and kernel modules. A boot image was packed successfully, but artifact
-verification currently stops at `Image.gz`: its SHA256 is
-`0d51f0978efd047c4974be1d5d14ed62f1023c93218e40863f7e70a4372662e1` instead
-of the locked value because the kernel build timestamp was not fixed. The
-DTB and config match. The rebuild guide now fixes the timestamp; recompile
-`Image.gz` only, repack, and rerun artifact verification. No device test was
-run.
+and kernel modules. The latest targeted kernel rerun produced Image.gz SHA256
+`92ab271e191ab64841d281f3fe34a57ccdf3d12dcfa50dfe81bdbf574d2a3a8c`, still
+different from the locked value. Its first CPIO phase stopped because the
+output `.config` was absent; the later phases succeeded only because the
+output was then populated. The rebuild guide now restores `.config`
+explicitly, locks the CPIO command record, and uses a tracked date wrapper
+for the final UTS timestamp. Re-run the kernel target sequence, then repack
+and run artifact verification. No device test was run.
 
 ## Buildroot GNU mirror timeout (2026-09-06)
 
