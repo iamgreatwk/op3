@@ -17,7 +17,7 @@ Changed files: boot/initramfs/; buildroot/package-patches/op3-initramfs/;
   manifests/op3-recovery-audio-full.env;
   boot/base-initramfs/README.md; docs/boot-image-format.md;
   docs/rebuild-recovery.md; docs/handoff/latest.md
-Commit SHA: pending checkpoint commit
+Commit SHA: cde247f
 
 Layer: initramfs source and Buildroot packaging
 Hypothesis tested: A complete OP3 recovery initramfs can be generated from
