@@ -36,9 +36,12 @@ Uncertainties:
 Recommended next experiment: in a private worktree of the assigned formal
 6.12 kernel, apply
 `patches/pmos612-op3-capkeys/0001-*.patch` and
-`patches/pmos612-op3-capkeys/0002-*.patch`, merge
-`kernel/configs/oneplus3-s1302-capkey.fragment`, and run the owner-authorized
-kernel build. After booting the resulting image, verify:
+`patches/pmos612-op3-capkeys/0002-*.patch`. Do not create an in-tree `.config`
+from the host `/boot/config`; copy the validated OP3 base config from
+`out/pmos-msm8996-6.12-rpm-glink-own-dtb/.config` to a new external output
+directory, merge `kernel/configs/oneplus3-s1302-capkey.fragment` with
+`merge_config.sh -O`, and run the owner-authorized kernel build. After booting
+the resulting image, verify:
 
   cat /proc/bus/input/devices
   dmesg | grep -iE 's1302|capkey|i2c|gpio|irq'

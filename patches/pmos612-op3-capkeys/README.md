@@ -20,13 +20,36 @@ instead of `git am --3way`. They are checked to apply cleanly to the formal
 baseline; if the assigned kernel branch has overlapping changes, resolve those
 in that kernel branch and keep the resulting commit separate from recovery.
 
-Merge the configuration fragment into the owner's existing 6.12 config:
+Do not run `merge_config.sh` or `make olddefconfig` against the source-tree
+`.config`. If no source-tree `.config` exists, Kconfig may silently fall back
+to the host `/boot/config`, which is not an OP3 kernel configuration. Use an
+external output directory and the previously validated OP3 6.12 configuration
+as the base:
 
 ```sh
-scripts/kconfig/merge_config.sh -m .config \
-  /home/kai/src/oneplus3-mainline/kernel/configs/oneplus3-s1302-capkey.fragment
-make olddefconfig
+project=/home/kai/src/oneplus3-mainline
+kernel=$project/source/linux-pmos-msm8996-6.12
+output=$project/out/pmos-msm8996-6.12-capkey
+base=$project/out/pmos-msm8996-6.12-rpm-glink-own-dtb/.config
+
+test -r "$base"
+mkdir -p "$output"
+cp "$base" "$output/.config"
+
+"$kernel/scripts/kconfig/merge_config.sh" -m -O "$output" \
+  "$output/.config" \
+  "$project/kernel/configs/oneplus3-s1302-capkey.fragment"
+
+make -C "$kernel" O="$output" ARCH=arm64 \
+  CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
+  olddefconfig
 ```
+
+The base configuration above has SHA256
+`2ebb875b6ed1694e91f51d078f6cb8d17e7c8a23850bc0252d74526de01e45b3`.
+The source-tree `.config` generated accidentally from the host configuration
+should not be used for a device build; it can be removed after confirming it
+contains no owner changes.
 
 The hardware mapping comes from the historical OnePlus 3 DTS: S1302 is on
 BLSP2 QUP2 (`blsp_i2c8`), IRQ is TLMM GPIO 132, reset is TLMM GPIO 76, and

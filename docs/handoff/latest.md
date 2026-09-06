@@ -10,10 +10,13 @@ the L13/S4 supplies. The driver reports the two physical chin keys as
 center fingerprint/home button remains a separate device. Recovery already
 discovers codes 580/158 by capability, so no recovery userspace change is
 needed for this exposure. `git apply --check` against baseline commit
-`67b0bbc3cbf46bae712a2606a43361756fcbd829` and `git diff --check` pass. No
-kernel build or device test was run by the agent. Owner must apply/build/boot
-and verify `/proc/bus/input/devices`, S1302 logs, and both EV_KEY events before
-acceptance. Handoff: `docs/handoff/op3-recovery-capkeys-001.md`.
+`67b0bbc3cbf46bae712a2606a43361756fcbd829` and `git diff --check` pass. The
+configuration must be merged in an external output directory using the
+previously validated OP3 base config, not a source-tree config generated from
+the host `/boot/config`. No kernel build or device test was run by the agent.
+Owner must apply/build/boot and verify `/proc/bus/input/devices`, S1302 logs,
+and both EV_KEY events before acceptance. Handoff:
+`docs/handoff/op3-recovery-capkeys-001.md`.
 
 ## OP3 recovery Wi-Fi cold association wait extension (Issue #10 follow-up, 2026-09-06)
 
