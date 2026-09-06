@@ -15,7 +15,13 @@ binary SHA256 is
 `891b025bf6dbe810a8b5dba797c7592e440a66800ac77c93ad493fdbe3c28fdd`; the
 current persistent bundle SHA256 is
 `3c851b7bf9a3bce275d8ecdbb8c28c97238ec974bb616348d700a8c5f69ce8fa`.
-Owner-run direct DRM recovery testing is pending. Issue #7 handoff:
+Owner DRM-only boot evidence is partial: recovery opened `/dev/dri/card0`
+(connector 33, CRTC 106, 1080x1920, pitch 4352), and its process held no
+`/dev/fb0` descriptor; A530 PM4/PFP/GPMU firmware also loaded. The captured
+`pp done time out, lm=2` occurred at dmesg 2.097s, before the recovery launcher
+marker at 9.809s, so it is currently classified as a pre-recovery boot
+warning rather than a failure of the new backend. Recovery dmesg phase
+boundaries and release/reopen evidence are still pending. Issue #7 handoff:
 `docs/handoff/op3-recovery-drm-001.md`. Browser testing remains paused until
 this DRM-only gate has evidence.
 
