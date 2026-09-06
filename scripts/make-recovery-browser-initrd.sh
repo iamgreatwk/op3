@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Append the Issue #6 recovery selector to an already validated initramfs.
-# The kernel unpacks concatenated gzip cpio members in order, so only the
-# inittab respawn entry changes; firmware and every other baseline entry stay
-# byte-identical.
+# Append the Issue #6 recovery selector and A530 GPU firmware to an already
+# validated initramfs. The kernel unpacks concatenated gzip cpio members in
+# order, so the inittab respawn entry and early-probe firmware are overlaid;
+# every other baseline entry stays byte-identical.
 #
 # Usage:
 #   scripts/make-recovery-browser-initrd.sh [reference-initrd] [output]
@@ -13,8 +13,11 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 reference="${1:-$project_root/artifacts/initrd-op3-firmware-provenance-v2.cpio.gz}"
 output="${2:-$project_root/artifacts/initrd-op3-recovery-browser.cpio.gz}"
 overlay_source="$project_root/boot/recovery-browser-test"
+firmware_source="$project_root/artifacts/a530-firmware/lib/firmware/qcom"
 
-for input in "$reference" "$overlay_source/sbin/run_recovery.sh"; do
+for input in "$reference" "$overlay_source/sbin/run_recovery.sh" \
+	"$firmware_source/a530_pm4.fw" "$firmware_source/a530_pfp.fw" \
+	"$firmware_source/a530v3_gpmu.fw2"; do
 	test -f "$input" || { printf 'Missing input: %s\n' "$input" >&2; exit 1; }
 done
 command -v cpio >/dev/null 2>&1
@@ -24,9 +27,14 @@ tmpdir="$(mktemp -d)"
 trap 'rm -rf "$tmpdir"' EXIT
 stage="$tmpdir/stage"
 epoch="${SOURCE_DATE_EPOCH:-0}"
-mkdir -p "$stage/sbin"
+mkdir -p "$stage/sbin" "$stage/lib/firmware/qcom"
 install -m 0755 "$overlay_source/sbin/run_recovery.sh" "$stage/sbin/run_recovery.sh"
-touch -d "@$epoch" "$stage/sbin" "$stage/sbin/run_recovery.sh"
+install -m 0644 \
+	"$firmware_source/a530_pm4.fw" \
+	"$firmware_source/a530_pfp.fw" \
+	"$firmware_source/a530v3_gpmu.fw2" \
+	"$stage/lib/firmware/qcom/"
+find "$stage" -exec touch -d "@$epoch" {} +
 
 ( cd "$stage" && find . -mindepth 1 -printf '%P\n' | LC_ALL=C sort |
 	cpio -o -H newc --owner=0:0 --reproducible --quiet ) > "$tmpdir/overlay.cpio"
