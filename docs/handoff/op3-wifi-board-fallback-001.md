@@ -22,10 +22,10 @@ Build run by project owner: NOT_RUN
 Build result: NOT_RUN
 Artifacts and SHA256: Existing locked artifacts do not contain `board.bin`; a new kernel/Buildroot/image build is required.
 
-Device test run by project owner: NOT_RUN
-Device result: FAIL before change (`wlan0` did not appear); retest pending with the rebuilt image.
-Evidence links / log paths: ACM diagnostic transcript; device `dmesg` contains the board-data `-2` failure described above.
+Device test run by project owner: NOT_RUN (live ACM diagnostic performed under owner authorization)
+Device result: PASS for the isolated fallback; formal rebuilt-image test pending.
+Evidence links / log paths: ACM diagnostic transcript; after copying the hash-verified fallback to both firmware roots and rebinding `0000:01:00.0`, `wlan0` appeared and dmesg reported `board_file api 1`, `htt-ver 3.87`; `wifi reconnect 1106` obtained the DHCP lease `192.168.1.5` with IPv6 off.
 
 Conclusion: INCONCLUSIVE
-Uncertainties: The fallback board file is now sourced and hash-locked, but the rebuilt kernel/initramfs has not yet been boot-tested.
+Uncertainties: The fallback board file is now sourced and hash-locked, but the rebuilt kernel/initramfs has not yet been boot-tested. The ACM copy was temporary and will not survive reboot.
 Recommended next experiment: restore/stage the new external input, rebuild the pinned kernel with `CONFIG_EXTRA_FIRMWARE` including `board.bin`, rebuild Buildroot/initramfs, package a new test image, and verify `wlan0` plus `wifi connect`.

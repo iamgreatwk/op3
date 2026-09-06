@@ -14,7 +14,10 @@ the external-input SHA256 manifest with hash
 `1a8d225818b46986fc4f615594fbe448fa820618590d6902c8f844bb37cda667`. Kernel
 `CONFIG_EXTRA_FIRMWARE`, kernel restoration, initramfs firmware staging, and
 Buildroot post-build validation all require and carry both `board-2.bin` and
-`board.bin`. No rebuilt kernel or device retest has been run yet. Handoff:
+`board.bin`. A temporary ACM copy followed by PCI unbind/bind made `wlan0`
+appear; `wifi reconnect 1106` then obtained DHCP address `192.168.1.5` with
+IPv6 disabled. This proves the isolated firmware fix, but the copy is not
+persistent and no rebuilt kernel/initramfs has been boot-tested yet. Handoff:
 `docs/handoff/op3-wifi-board-fallback-001.md`.
 
 ## Clean rebuild artifact check (2026-09-06)
