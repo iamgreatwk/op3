@@ -1,5 +1,41 @@
 # Latest handoff
 
+## Password-enabled Buildroot recovery boot and persistent rootfs replacement (2026-09-07)
+
+The recovery Buildroot defconfig was corrected and rebuilt after the first
+incremental build was found to still use the stale generated
+`source/buildroot/configs/op3_recovery_defconfig`. The project-owned template
+and the generated defconfig now both set `BR2_TARGET_ENABLE_ROOT_LOGIN=y` and
+the SHA-512 crypt hash for the lab password `1234`. The generated target
+contains the expected non-empty `/etc/shadow` root entry.
+
+The owner-authorized test image was booted successfully with `fastboot boot`.
+SSH login as `root` with password `1234` passed. The booted initramfs exposed
+`wlan0`, the OnePlus3 ALSA card, and `/newroot` mounted from `/dev/sda15`.
+The exact partition guard passed for UUID
+`feba81cd-3eee-4971-a703-a7d80dd04b5a` before modifying the filesystem.
+
+The persistent rootfs on `/dev/sda15` was cleared and replaced from
+`artifacts/op3-audio-rootfs-board-fallback-passwd.tar.gz`. Post-extraction
+checks passed for the root password hash, `/newroot/sbin/recovery_mainline`,
+the QCA6174 `board.bin`, `/newroot/opt/op3-wifi/wifi`, and TinyALSA tools.
+The current session remains in the temporary `fastboot boot` recovery; no
+reboot-to-persistent-image test has been performed yet.
+
+Build outputs and hashes:
+
+- kernel commit `4a486e2ea7e46622d68ae039a2ccf2db909ab99d`, `Image.gz`
+  `835480696c9318e7c8d4895dcba15363ecd2b8b6463c870f750c0134cc8b8d3d`
+- DTB `264f981678c1dd8d1d9a52f2db6e2130a0ebccbb9f4485ab8740784f73806db7`
+- initrd `087f6a56b6a3c010cc219894f1f41ed23ffabba1d0c58203d710092aca92ba76`
+- persistent rootfs TAR `27aebfc29509e1b1618cdd7c53a0c490e5b4126256168f092146f3bb2ee41807`
+- boot image `c39acb3cd79421523f25c45d939d4b173fe3ca2d71b0ca3957ceb798236d354c`
+
+Wi-Fi credentials remain device-local by design and are not included in the
+rootfs artifact. The clean replacement therefore has no saved profile under
+`/newroot/etc/op3-wifi/profiles`; run `wifi connect` on the device once after
+boot if automatic Wi-Fi association is required.
+
 ## OP3 corrected Wi-Fi board-fallback image built (device retest pending, 2026-09-06)
 
 The owner-authorized corrected build completed successfully on the project
