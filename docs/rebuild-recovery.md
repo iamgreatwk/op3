@@ -98,9 +98,11 @@ make -C "$kernel" O="$kout" ARCH=arm64 \
   CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
   -j"$(nproc)" Image.gz dtbs modules
 
-# Recreate the empty default initramfs with its locked directory mtime.
-export KBUILD_BUILD_TIMESTAMP='Sun Sep  6 14:32:51 CST 2026'
-make -C "$kernel" O="$kout" ARCH=arm64 \
+# Recreate the empty default initramfs with its locked directory mtime. Use a
+# numeric timezone: GNU date interprets the literal abbreviation CST as US
+# Central time, while the archived mtime is 14:32:51 China Standard Time.
+export KBUILD_BUILD_TIMESTAMP='Sun Sep  6 14:32:51 +0800 2026'
+make -B -C "$kernel" O="$kout" ARCH=arm64 \
   CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
   usr/initramfs_data.cpio
 
@@ -114,11 +116,11 @@ make -C "$kernel" O="$kout" ARCH=arm64 \
 
 # Final link: keep both intermediate targets unchanged in all recursive makes.
 export KBUILD_BUILD_TIMESTAMP='Sun Sep  6 14:36:13 CST 2026'
-export GNUMAKEFLAGS='-o init/utsversion-tmp.h -o usr/initramfs_data.cpio'
+export MAKEFLAGS='-o init/utsversion-tmp.h -o usr/initramfs_data.cpio'
 make -C "$kernel" O="$kout" ARCH=arm64 \
   CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
   Image.gz
-unset GNUMAKEFLAGS KBUILD_BUILD_TIMESTAMP
+unset MAKEFLAGS KBUILD_BUILD_TIMESTAMP
 
 test ! -e "$wifi_mods/lib/modules"
 mkdir -p "$wifi_mods"
