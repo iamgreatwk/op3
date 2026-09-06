@@ -6,7 +6,7 @@ Role: Implementation
 Baseline commit: 4c4dd4a
 Working branch: agent/implementation/recovery-browser-001
 Changed files: recovery/recovery_mainline.c
-Commit SHA: pending
+Commit SHA: d4c1e37
 
 Layer: recovery userspace haptics backend
 Hypothesis tested: Recovery can drive either a mainline EV_FF haptics input
@@ -16,8 +16,9 @@ Only variable changed: haptics backend selection and write format; no kernel,
 DTS, audio, input-key routing, Wi-Fi, DRM, or browser changes.
 
 Build run by project owner: NOT_RUN
-Build result: NOT_RUN
-Artifacts and SHA256: none
+Build result: PASS (agent-only recovery userspace compile; owner kernel build not run)
+Artifacts and SHA256: `out/recovery/recovery_mainline`, SHA256
+`7bb7eeb1b980e1b92b54e6b450922ebfcb7544778fbedc70a945d15db44cc724`
 
 Device test run by project owner: NOT_RUN
 Device result: NOT_RUN
@@ -31,6 +32,10 @@ Uncertainties:
   - If the kernel exposes a haptics input device, it must advertise both an
     haptic name and EV_FF; the selected effect is logged before the first
     recovery vibration.
+
+Static verification: `git diff --check` passed and the recovery program built
+as a statically linked AArch64 executable. The existing unrelated
+`draw_statusbar()` format-truncation warning remains.
 
 Recommended next experiment: build/boot a kernel image whose assigned kernel
 Issue registers the OnePlus 3 haptics device, then inspect `/tmp/fb.log` for
