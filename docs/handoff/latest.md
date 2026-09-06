@@ -1,5 +1,19 @@
 # Latest handoff
 
+## OP3 recovery ALSA sound-card registration checkpoint (owner build/test pending, 2026-09-06)
+
+The current device image has the recovery audio tools, but no ALSA card:
+`/dev/snd` contains only `timer`, `/proc/asound/cards` reports
+`--- no soundcards ---`, and `msm-snd-apq8096` aborts while parsing
+`MultiMedia4` with `-EINVAL` because the OP3 DTS declares `MultiMedia1..16`
+links while `&q6asmdai` declares only frontend IDs 0..2. Commit `228b319`
+prepares a single formal 6.12.1 DTS patch enabling q6asm IDs 3..15, leaving
+the existing codec and capture/speaker routes unchanged. The patch passes
+baseline and active-checkout `git apply --check`; no kernel build or post-patch
+device test has run. Handoff:
+`docs/handoff/op3-recovery-audio-card-001.md`. This kernel checkpoint is
+INCONCLUSIVE pending owner build and ALSA enumeration evidence.
+
 ## OP3 recovery voice capture/playback userspace preparation (owner test pending, 2026-09-06)
 
 Commit `2eab778` updates the recovery microphone-key flow to use the verified
