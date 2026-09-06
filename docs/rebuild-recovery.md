@@ -102,13 +102,17 @@ make -C "$kernel" O="$kout" ARCH=arm64 \
   CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
   -j"$(nproc)" Image.gz dtbs modules
 
-# Recreate the empty default initramfs with its locked directory mtime. Use a
-# numeric timezone: GNU date interprets the literal abbreviation CST as US
-# Central time, while the archived mtime is 14:32:51 China Standard Time.
-export KBUILD_BUILD_TIMESTAMP='Sun Sep  6 14:32:51 +0800 2026'
-make -C "$kernel" O="$kout" ARCH=arm64 \
-  CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
-  usr/initramfs_data.cpio
+# Recreate the empty default initramfs directly with the kernel's generator.
+# Do not use `make -B` here: it forces the top-level .config guard. Directly
+# invoking gen_initramfs.sh also makes the locked directory mtime independent
+# of whether the recursive Kbuild instance inherits KBUILD_BUILD_TIMESTAMP.
+# Use a numeric timezone because GNU date interprets literal CST as US Central
+# time, while the archived mtime is China Standard Time.
+(cd "$kout" && sh "$kernel/usr/gen_initramfs.sh" \
+  -o usr/initramfs_data.cpio \
+  -l usr/.initramfs_data.cpio.d \
+  -d 'Sun Sep  6 14:32:51 +0800 2026' \
+  "$kernel/usr/default_cpio_list")
 
 # The final link must leave this CPIO untouched while Kbuild regenerates the
 # timestamped version object. Remove only the timestamp option from the saved

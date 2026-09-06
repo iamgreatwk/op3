@@ -11,10 +11,13 @@ and kernel modules. The latest targeted kernel rerun produced Image.gz SHA256
 `3175a92fa47c54ad33c131b4a353f8e425c898270cdcda53bafda9032f84bc8d`, still
 different from the locked value. Although `olddefconfig` confirmed the output
 configuration, `make -B` forced Linux's top-level `.config` error guard and
-the shell continued into later phases. The rebuild guide now uses `set -e`,
-does not force the top-level target, locks the CPIO command record, and uses a
-tracked date wrapper for the final UTS timestamp. Re-run the kernel target
-sequence, then repack and run artifact verification. No device test was run.
+the shell continued into later phases. A retry without `-B` then treated the
+already-normalized CPIO command as unchanged, so the old CPIO bytes remained.
+The rebuild guide now uses `set -e`, directly invokes the kernel's CPIO
+generator with the locked timestamp, normalizes the saved command record, and
+uses a tracked date wrapper for the final UTS timestamp. Re-run the kernel
+target sequence, then repack and run artifact verification. No device test was
+run.
 
 ## Buildroot GNU mirror timeout (2026-09-06)
 
