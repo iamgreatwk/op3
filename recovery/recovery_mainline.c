@@ -1748,29 +1748,85 @@ static void screen_toggle(){
   screen_on=!screen_on;
 }
 
-/* 按设备名字串匹配 input 设备（主线设备名：pwrkey/gpio-keys/s1302/haptics…） */
-static int open_input_by_name(const char* substr){
-  for(int i=0;i<10;i++){char p[32];sprintf(p,"/dev/input/event%d",i);
+/*
+ * Input device discovery is deliberately based on capabilities, not event
+ * numbers.  The event order changes when a kernel driver is enabled and the
+ * standard gpio-keys driver uses its DT label as EVIOCGNAME(), so matching
+ * only "gpio-keys" silently misses a correctly registered volume device.
+ */
+#define MAX_INPUT_EVENTS 64
+#define INPUT_BITS_PER_LONG (sizeof(unsigned long) * 8)
+#define INPUT_KEY_BITS ((KEY_MAX + INPUT_BITS_PER_LONG) / INPUT_BITS_PER_LONG)
+
+static int input_key_present(const unsigned long *bits, int code){
+  return code >= 0 && code <= KEY_MAX &&
+         (bits[code / INPUT_BITS_PER_LONG] &
+          (1UL << (code % INPUT_BITS_PER_LONG)));
+}
+
+static int open_input_by_name(const char* role, const char* substr){
+  int scanned=0;
+  for(int i=0;i<MAX_INPUT_EVENTS;i++){
+    char p[40];snprintf(p,sizeof(p),"/dev/input/event%d",i);
     int f=open(p,O_RDONLY|O_NONBLOCK);if(f<0)continue;
-    char n[256]={0};ioctl(f,EVIOCGNAME(sizeof(n)-1),n);
-    for(char*c=n;*c;c++)*c=tolower(*c);
-    if(strstr(n,substr))return f;
-    close(f);}
+    char n[256]={0};
+    if(ioctl(f,EVIOCGNAME(sizeof(n)-1),n)<0){close(f);continue;}
+    scanned++;
+    for(char*c=n;*c;c++)*c=tolower((unsigned char)*c);
+    if(strstr(n,substr)){
+      fb_logf("input: %s -> %s name=%s\n",role,p,n);
+      return f;
+    }
+    close(f);
+  }
+  fb_logf("input: %s unavailable (name=%s scanned=%d)\n",role,substr,scanned);
   return -1;
 }
+
+static int open_input_by_keycodes(const char* role, int code_a, int code_b,
+                                  int code_c, int require_all){
+  int scanned=0;
+  for(int i=0;i<MAX_INPUT_EVENTS;i++){
+    char p[40];snprintf(p,sizeof(p),"/dev/input/event%d",i);
+    int f=open(p,O_RDONLY|O_NONBLOCK);if(f<0)continue;
+    char n[256]={0};
+    if(ioctl(f,EVIOCGNAME(sizeof(n)-1),n)<0){close(f);continue;}
+    unsigned long bits[INPUT_KEY_BITS];memset(bits,0,sizeof(bits));
+    if(ioctl(f,EVIOCGBIT(EV_KEY,sizeof(bits)),bits)<0){close(f);continue;}
+    scanned++;
+    int matches=input_key_present(bits,code_a)+input_key_present(bits,code_b)+
+                input_key_present(bits,code_c);
+    int requested=(code_a>=0)+(code_b>=0)+(code_c>=0);
+    if((require_all&&matches==requested)||(!require_all&&matches>0)){
+      fb_logf("input: %s -> %s name=%s codes=%d,%d,%d\n",
+              role,p,n,code_a,code_b,code_c);
+      return f;
+    }
+    close(f);
+  }
+  fb_logf("input: %s unavailable (codes=%d,%d,%d scanned=%d)\n",
+          role,code_a,code_b,code_c,scanned);
+  return -1;
+}
+
 static int open_touch(){
-  for(int i=0;i<10;i++){char p[32];sprintf(p,"/dev/input/event%d",i);
-    int f=open(p,O_RDONLY);if(f<0)continue;
+  for(int i=0;i<MAX_INPUT_EVENTS;i++){char p[40];snprintf(p,sizeof(p),"/dev/input/event%d",i);
+    int f=open(p,O_RDONLY|O_NONBLOCK);if(f<0)continue;
     char n[256]={0};ioctl(f,EVIOCGNAME(sizeof(n)-1),n);
-    for(char*c=n;*c;c++)*c=tolower(*c);
+    for(char*c=n;*c;c++)*c=tolower((unsigned char)*c);
     if(strstr(n,"synaptics")||strstr(n,"touch")||strstr(n,"fts")){
       struct input_absinfo ax,ay;
       if(ioctl(f,EVIOCGABS(ABS_MT_POSITION_X),&ax)==0 && ax.maximum>ax.minimum){ts_x_min=ax.minimum;ts_x_max=ax.maximum;}
       if(ioctl(f,EVIOCGABS(ABS_MT_POSITION_Y),&ay)==0 && ay.maximum>ay.minimum){ts_y_min=ay.minimum;ts_y_max=ay.maximum;}
-      fcntl(f,F_SETFL,fcntl(f,F_GETFL)|O_NONBLOCK);return f;
+      fb_logf("input: touch -> %s name=%s abs=%d..%d,%d..%d\n",p,n,
+              ts_x_min,ts_x_max,ts_y_min,ts_y_max);
+      return f;
     }
     close(f);}
-  return open("/dev/input/event3",O_RDONLY|O_NONBLOCK);
+  int f=open("/dev/input/event3",O_RDONLY|O_NONBLOCK);
+  if(f>=0)fb_log("input: touch fallback -> /dev/input/event3\n");
+  else fb_log("input: touch unavailable\n");
+  return f;
 }
 
 int main(){
@@ -1819,13 +1875,17 @@ int main(){
   int pending_press=0,pending_release=0;
   int selection_motion=0;  /* 本 SYN_REPORT 帧内有新的选择坐标 */
   int swipe_rows=0;        /* 本 SYN_REPORT 帧内累计的历史滚动行数 */
-  /* 主线(6.x) input 设备名与 3.18 完全不同（event 编号也变）——按名字动态匹配：
-   *   电源 = pm8941_pwrkey（event2）  三段式+音量 = gpio-keys（event5，同一设备双 fd）
-   *   电容键 = op3-capkey-s1302（event3）  haptics=spmi_haptics（event0） */
-  int pw_fd=open_input_by_name("pwrkey");
-  int tri_fd=open_input_by_name("gpio-keys");  /* 三段式 600/601/602 */
-  int vol_fd=open_input_by_name("gpio-keys");  /* 音量 115/114（独立 fd 各自排队） */
-  int cap_fd=open_input_by_name("s1302");      /* 左580中英 右158回车 */
+  /*
+   * Use the power-key name where it is stable, and key capabilities for
+   * gpio-keys-derived devices.  This works whether DT names the device
+   * "gpio-keys", "volume-keys", or a board-specific label.
+   */
+  int pw_fd=open_input_by_name("power", "pwrkey");
+  int tri_fd=open_input_by_keycodes("tri-state", 600, 601, 602, 1);
+  int vol_fd=open_input_by_keycodes("volume", KEY_VOLUMEUP, KEY_VOLUMEDOWN, -1, 1);
+  int cap_fd=open_input_by_keycodes("capacitive-keys", 580, KEY_BACK, -1, 1);
+  fb_logf("input: recovery fds touch=%d power=%d tri=%d volume=%d cap=%d\n",
+          ts_fd,pw_fd,tri_fd,vol_fd,cap_fd);
   long long cap_press[2]={0,0};   /* 电容键按下时间：0=左 1=右 */
   int cap_done[2]={0,0};
   struct pollfd fds[5+MAX_TABS];
@@ -2025,12 +2085,19 @@ touch_press_done:
           }
         }
       }
-      if(!browser_active && fds[1].revents&POLLIN){struct input_event pe;while(read(pw_fd,&pe,sizeof(pe))==sizeof(pe)){if(pe.type==EV_KEY&&pe.code==KEY_POWER&&pe.value==1)screen_toggle();}}
-      if(!browser_active && fds[2].revents&POLLIN){struct input_event te;while(read(tri_fd,&te,sizeof(te))==sizeof(te)){if(te.type==EV_KEY&&te.value==1)tri_handle(te.code);}}
+      if(!browser_active && fds[1].revents&POLLIN){struct input_event pe;while(read(pw_fd,&pe,sizeof(pe))==sizeof(pe)){
+        if(pe.type==EV_KEY){fb_logf("input: power code=%u value=%d\n",pe.code,pe.value);
+          if(pe.code==KEY_POWER&&pe.value==1)screen_toggle();}
+      }}
+      if(!browser_active && fds[2].revents&POLLIN){struct input_event te;while(read(tri_fd,&te,sizeof(te))==sizeof(te)){
+        if(te.type==EV_KEY){fb_logf("input: tri-state code=%u value=%d\n",te.code,te.value);
+          if(te.value==1)tri_handle(te.code);}
+      }}
       if(!browser_active && vol_fd>=0&&(fds[3].revents&POLLIN)){  /* 音量键 = 光标上/下（息屏禁用，仅电源/三段式可用） */
         struct input_event ve;while(read(vol_fd,&ve,sizeof(ve))==sizeof(ve)){
-          if(!screen_on)continue;
           if(ve.type==EV_KEY&&ve.value==1){
+            fb_logf("input: volume code=%u value=%d screen=%d\n",ve.code,ve.value,screen_on);
+            if(!screen_on)continue;
             if(ve.code==KEY_VOLUMEUP)sh_input("\x1b[A");      /* 音量+ = 光标上 */
             else if(ve.code==KEY_VOLUMEDOWN)sh_input("\x1b[B"); /* 音量- = 光标下 */
           }
@@ -2038,8 +2105,9 @@ touch_press_done:
       }
       if(!browser_active && cap_fd>=0&&(fds[4].revents&POLLIN)){  /* 电容键：记按下时间（长按 300ms 触发，防误触；息屏禁用） */
         struct input_event ce;while(read(cap_fd,&ce,sizeof(ce))==sizeof(ce)){
-          if(!screen_on)continue;
           if(ce.type!=EV_KEY)continue;
+          fb_logf("input: capacitive code=%u value=%d screen=%d\n",ce.code,ce.value,screen_on);
+          if(!screen_on)continue;
           int idx = (ce.code==580)?0 : (ce.code==KEY_BACK)?1 : -1;  /* 实测：左下巴=APPSWITCH(580)，右下巴=BACK(158) */
           if(idx<0)continue;
           if(ce.value==1){cap_press[idx]=now_ms();cap_done[idx]=0;}
