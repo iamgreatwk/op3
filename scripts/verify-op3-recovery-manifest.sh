@@ -90,11 +90,12 @@ kernel_branch="$(git -C "$kernel_root" symbolic-ref --quiet --short HEAD || true
   die "kernel branch is '$kernel_branch', expected '$KERNEL_BRANCH'"
 
 kernel_commit="$(git -C "$kernel_root" rev-parse HEAD)"
-[[ "$kernel_commit" == "$KERNEL_COMMIT" ]] ||
-  die "kernel HEAD is '$kernel_commit', expected '$KERNEL_COMMIT'"
+kernel_tree="$(git -C "$kernel_root" rev-parse HEAD^{tree})"
+[[ "$kernel_tree" == "$KERNEL_TREE" ]] ||
+  die "kernel tree is '$kernel_tree', expected '$KERNEL_TREE'"
 
 git -C "$kernel_root" merge-base --is-ancestor \
-  "$KERNEL_BASE_COMMIT" "$KERNEL_COMMIT" ||
+  "$KERNEL_BASE_COMMIT" "$kernel_commit" ||
   die "kernel commit is not based on $KERNEL_BASE_COMMIT"
 
 test -f "$project_root/$BOOT_PROFILE" ||
@@ -119,8 +120,15 @@ patch_count="$(find "$project_root/$KERNEL_PATCH_SERIES_DIR" -maxdepth 1 \
 
 printf 'PASS source project=%s branch=%s\n' \
   "$(git -C "$project_root" rev-parse --short HEAD)" "$project_branch"
-printf 'PASS source kernel=%s branch=%s\n' \
-  "${kernel_commit:0:12}" "$kernel_branch"
+if [[ "$kernel_commit" == "$KERNEL_COMMIT" ]]; then
+  printf 'PASS source kernel=%s branch=%s (locked commit)\n' \
+    "${kernel_commit:0:12}" "$kernel_branch"
+else
+  printf 'PASS source kernel=%s branch=%s (reconstructed commit; tree locked)\n' \
+    "${kernel_commit:0:12}" "$kernel_branch"
+  printf 'INFO canonical tested kernel commit=%s\n' "$KERNEL_COMMIT"
+fi
+printf 'PASS source kernel-tree=%s\n' "$kernel_tree"
 printf 'PASS source baseline=%s\n' "$KERNEL_BASE_COMMIT"
 
 if [[ "$mode" == artifacts ]]; then

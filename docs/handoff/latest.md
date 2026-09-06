@@ -1,5 +1,17 @@
 # Latest handoff
 
+## Fresh kernel reconstruction uses tree identity (2026-09-06)
+
+The clean rebuild rehearsal exposed and corrected a false failure in source
+verification. The archived 31-patch series reconstructs the exact locked
+kernel tree `dd6476a68184e7293b05a7e962f0536f0d54048a`, but patch mail does not
+carry the historical committer timestamps, so a fresh `git am` checkout can
+have a different final commit SHA from the previously tested worktree. The
+restore script now uses author dates for deterministic new-machine commits,
+and the manifest verifier accepts the reconstructed commit when its tree,
+baseline ancestry, and branch all match. No kernel build or device test was
+run.
+
 ## OP3 initramfs source migration prepared (owner build and device test pending, 2026-09-06)
 
 The canonical recovery initramfs is now intended to come from the project-owned
