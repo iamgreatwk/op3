@@ -9,8 +9,13 @@ and `wifi ipv6 status` provide explicit control. Current and future interface
 sysctls are covered. The kernel, DTS, ath10k modules/firmware, IPv4 DHCP,
 DRM, audio, input, browser, and credentials are unchanged.
 
-Agent shell/static checks pass. Owner repack and device validation are
-pending. Handoff: `docs/handoff/op3-recovery-ipv6-001.md`. This is a separate
+Agent shell/static checks pass. The first owner boot reached the recovery
+launcher but had no `wlan0` or ath10k dmesg records because sda15 still held
+the pre-IPv6 CLI; the new hook exited before `wifi-start`. A replacement
+no-credential bundle is available at
+`artifacts/op3-wifi-bundle-ipv6.tar.gz` with SHA256
+`eeabbb20f0f8331fb220252c77acf52f1b0fabe2919dc5197c45690421994654`.
+Handoff: `docs/handoff/op3-recovery-ipv6-001.md`. This is a separate
 network-policy checkpoint on the same recovery implementation branch.
 
 ## OP3 recovery Wi-Fi integration checkpoint (Issue #8, 2026-09-06)

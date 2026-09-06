@@ -32,22 +32,32 @@ Artifacts and SHA256: `artifacts/initrd-op3-recovery-browser.cpio.gz`
   The appended entries include `usr/bin/wifi_auto.sh` with the IPv6-off
   preamble, the recovery selector, and the three A530 firmware files.
 
-Device test run by project owner: NOT_RUN
-Device result: NOT_RUN
-Evidence links / log paths: `/root/boot_mainline.log` including the
-  `wifi_auto started` marker; `/root/dmesg_early.txt` or
-  `/root/dmesg_rootfs.txt`; `wifi current`; `ip -4 addr show wlan0`;
-  `ip -4 route`; and `wifi ipv6 status` before and after the explicit command.
+Device test run by project owner: 2026-09-06
+Device result: FAIL before the Wi-Fi driver stage. The recovery log contained
+  `wifi_auto started`, but `wlan0` was absent and dmesg contained no
+  `ath10k`/`wlan` records. The deployed sda15 CLI was the earlier bundle and
+  lacked the new `wifi ipv6` command, so the updated hook exited at
+  `wifi ipv6 off` before invoking `wifi-start`.
+Evidence links / log paths: owner-provided `/root/boot_mainline.log`,
+  `wifi current`, `ip -4 addr show wlan0`, `ip -4 route`, filtered dmesg, and
+  `/tmp/fb.log`; the relevant evidence is also recorded in the Issue #9
+  comment. Replacement bundle:
+  `artifacts/op3-wifi-bundle-ipv6.tar.gz`
+  `eeabbb20f0f8331fb220252c77acf52f1b0fabe2919dc5197c45690421994654`.
 
 Conclusion: INCONCLUSIVE
 Uncertainties:
+  - The first device run used a stale persistent CLI; the replacement bundle
+    must be deployed before judging the IPv6 policy or IPv4 auto-connect.
   - Enabling IPv6 only changes the kernel IPv6 sysctl state; a router
     advertisement may require a reconnect on networks that do not announce
     promptly after the interface is enabled.
   - A kernel built without IPv6 has no IPv6 sysctl tree; `wifi ipv6 off` is a
     successful no-op in that case, while `wifi ipv6 on` reports unavailable.
-Recommended next experiment: regenerate the recovery initrd, repack the
-  approved 6.12.1 recovery image, boot with the validated Wi-Fi bundle/profile
-  on sda15, verify IPv4 plus `ipv6=off`, then run `wifi ipv6 on` and record the
-  status and any IPv6 address/route without changing the profile.
+Recommended next experiment: deploy the replacement bundle to sda15 without
+  changing the local profile, verify its CLI hash, run `wifi ipv6 off` and
+  `/newroot/opt/op3-wifi/wifi auto` once over SSH, then reboot the existing
+  recovery image and verify IPv4 plus `ipv6=off`. Finally run `wifi ipv6 on`
+  and record the status and any IPv6 address/route without changing the
+  profile.
 ```
