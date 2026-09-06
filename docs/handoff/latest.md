@@ -19,8 +19,9 @@ is `artifacts/boot-oneplus3-pmos612-capkey.img` with SHA256
 `9b7f25f549f69e2398516e46504c143eba7c3e2a3d62a2c9e9f0c16aa886e044`.
 Owner booted the image and confirmed kernel registration on `75b6000.i2c`:
 `op3-capkey-s1302` is `/dev/input/event1`, dmesg reports IRQ 86 ready, and
-recovery discovers codes 580/158. Physical left/right press and release
-events are still pending before acceptance. Handoff:
+recovery discovers codes 580/158. Physical testing produced complete press and
+release events for both codes 580 and 158. The device scope is supported;
+Integration acceptance remains pending. Handoff:
 `docs/handoff/op3-recovery-capkeys-001.md`.
 
 ## OP3 recovery Wi-Fi cold association wait extension (Issue #10 follow-up, 2026-09-06)

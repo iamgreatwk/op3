@@ -25,15 +25,15 @@ Artifacts and SHA256:
     (`artifacts/boot-oneplus3-pmos612-capkey.img`)
 
 Device test run by project owner: 2026-09-06
-Device result: PASS for kernel registration and recovery discovery; physical
-actuation still pending
+Device result: PASS
 Evidence links / log paths: owner SSH output; `/proc/bus/input/devices`
 contains `op3-capkey-s1302` on `event1`, dmesg reports
 `S1302 capacitive keys ready (irq=86)`, and `/tmp/fb.log` reports
 `input: capacitive-keys -> /dev/input/event1 name=op3-capkey-s1302
-codes=580,158,-1` plus `cap=7`.
+codes=580,158,-1` plus `cap=7`. Physical testing then produced
+`capacitive code=580 value=1/0` and `capacitive code=158 value=1/0`.
 
-Conclusion: INCONCLUSIVE
+Conclusion: INCONCLUSIVE (device scope supported; Integration acceptance pending)
 Uncertainties:
   - The driver/protocol and GPIO wiring are based on historical OP3 evidence
     and must be validated on the formal 6.12 kernel and the physical device.
@@ -61,7 +61,7 @@ generated paths first; do not run a broad clean on a shared kernel checkout.
   evtest /dev/input/eventN
 
 Expected kernel evidence is an `op3-capkey-s1302` device and EV_KEY events
-for codes 580 and 158. Kernel registration and recovery discovery are now
-observed; the owner must still report physical left/right key press and
-release events before this can be promoted beyond INCONCLUSIVE.
+for codes 580 and 158. Kernel registration, recovery discovery, and physical
+left/right press and release events are all observed. Integration must review
+the evidence before promoting this result.
 ```
