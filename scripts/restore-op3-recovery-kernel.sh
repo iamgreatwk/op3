@@ -87,7 +87,11 @@ check_sha256 "$ATH10K_BOARD_SHA256" "$board_source"
 git -C "$fresh_kernel" worktree add -b "$restore_branch" \
   "$destination" "$KERNEL_BASE_COMMIT"
 
-if ! git -C "$destination" am --3way "${patches[@]}"; then
+# The archived patches carry the original author timestamp. Reusing it for
+# the committer timestamp makes a fresh checkout reproduce the locked kernel
+# commit instead of embedding the wall clock time of the rebuild machine.
+if ! git -C "$destination" am --3way --committer-date-is-author-date \
+	"${patches[@]}"; then
   printf 'Patch application failed; worktree retained for inspection: %s\n' \
     "$destination" >&2
   printf 'After inspection, abort with: git -C %q am --abort\n' "$destination" >&2
