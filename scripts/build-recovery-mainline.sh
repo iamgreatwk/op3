@@ -25,6 +25,7 @@ recovery_source="$project_root/recovery/recovery_mainline.c"
 tsm="$project_root/third_party/libtsm"
 sources=(
 	"$recovery_source"
+	"$project_root/recovery/recovery_drm.c"
 	"$tsm/src/tsm/tsm-render.c"
 	"$tsm/src/tsm/tsm-screen.c"
 	"$tsm/src/tsm/tsm-selection.c"
@@ -36,7 +37,8 @@ sources=(
 	"$tsm/external/wcwidth/wcwidth.c"
 )
 
-for input in "${sources[@]}" "$tsm/src/tsm/libtsm.h" "$tsm/src/shared/shl-llog.h"; do
+for input in "${sources[@]}" "$project_root/recovery/recovery_drm.h" \
+	"$tsm/src/tsm/libtsm.h" "$tsm/src/shared/shl-llog.h"; do
 	test -f "$input" || { printf 'Missing input: %s\n' "$input" >&2; exit 1; }
 done
 

@@ -12,7 +12,6 @@
 #include <time.h>
 #include <errno.h>
 #include <linux/input.h>
-#include <linux/kd.h>
 #include <ctype.h>
 #include <signal.h>
 #include <sys/wait.h>
@@ -21,13 +20,12 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-typedef struct{unsigned xres,yres,xres_v,yres_v,xoff,yoff,bpp,_[152];}fbvi;
-typedef struct{char id[16];unsigned _1,_2,_3,_4,_5,_6,_7,_8,line_length,_9,_10,_11,_12,_13[2];}fbfi;
 #include "rend_font.h"
 #include "cjk_font.h"
 #include "py_dict.h"
 #include "py_words.h"
 #include "libtsm.h"
+#include "recovery_drm.h"
 /* 控制台搜索需要读取 libtsm 自己维护的 scrollback 行；本项目将 libtsm 源码
  * 静态编进 recovery，故可安全使用同版本的内部结构。 */
 #include "libtsm-int.h"
@@ -51,8 +49,6 @@ static int kbrows=20;  /* 当前键盘占用行数（默认字号 20x40 下 = ce
 #define CROWS CROWS_MAX  /* 旧代码残留（已废弃），保持编译通过 */
 static int crows=27;  /* 当前实际终端行数（默认字号 20x40：48-1-20；收/展/字号变时重算） */
 #define KB_Y (1920-kbrows*CHAR_H)
-#define FBIOPAN 0x4606
-
 typedef unsigned char u8;
 typedef unsigned short u16;
 typedef unsigned int u32;
@@ -64,19 +60,15 @@ static int sgr_reverse=0;      // SGR 7/27 reverse video
 static int scroll_top=0,scroll_bottom=44;  // DECSTBM scroll region (inclusive)；44=45-1（死代码固定维度）
 static int dirty=0;
 static int fb_fd=-1;
-static int activated=0;
-static int mainline_mode=0;  /* 主线内核(6.x)：无 msm_cmd_autorefresh，需持续 FBIOPAN 推帧 */
 static int screen_on;   /* 前置声明（定义在电源键区域） */
-static int vsync_fd=-1;
 #define BROWSER_SESSION_FLAG "/run/op3-browser.active"
 #define BROWSER_SESSION_READY "/run/op3-browser.recovery-ready"
-static size_t fb_map_len;
+static struct recovery_drm_display drm_display;
 
-/* The framebuffer recovery UI and Weston cannot consume input or submit
- * frames at the same time.  browser-session writes its own PID here before
- * taking the Wayland/DRM path.  Keep the recovery process alive so its PTY
- * shell and libtsm state survive, but pause recovery-side input/rendering
- * until the browser session has released the compositor. */
+/* The recovery UI and Weston cannot own the DRM device at the same time.
+ * browser-session writes its own PID before taking the Wayland path. Keep the
+ * recovery process alive so its PTY shell and libtsm state survive, but close
+ * recovery's DRM object until the browser session has released the device. */
 static int browser_session_active(void){
   char b[32]={0};int fd=open(BROWSER_SESSION_FLAG,O_RDONLY);long pid=0;
   if(fd>=0){int n=read(fd,b,sizeof(b)-1);close(fd);if(n>0)pid=strtol(b,NULL,10);}
@@ -84,36 +76,14 @@ static int browser_session_active(void){
   if(fd>=0)unlink(BROWSER_SESSION_FLAG); /* recover from a killed/stale runner */
   return 0;
 }
-/* 渲染写完后等一次 vsync：确保 cmd-mode autorefresh 下次推帧读的是完整新帧，
- * 消除 CPU 写 framebuffer 与内核 autorefresh 推帧不同步导致的残影/白点闪烁（tearing）。*/
-static void wait_vsync(void){
-  if(!screen_on)return;   /* 息屏不显示，无需同步（面板停扫时 vsync 不来，等反而卡） */
-  if(vsync_fd<0)vsync_fd=open("/sys/class/graphics/fb0/vsync_event",O_RDONLY|O_NONBLOCK|O_CLOEXEC);
-  if(vsync_fd<0)return;
-  char b[64];
-  while(read(vsync_fd,b,sizeof(b)-1)>0){}   /* 清掉残留旧事件，避免误判 */
-  struct pollfd p;p.fd=vsync_fd;p.events=POLLIN;p.revents=0;
-  if(poll(&p,1,50)>0)read(vsync_fd,b,sizeof(b)-1);  /* 等下一次 vsync（最多 50ms） */
-}
+static void fb_log(const char*msg);
 static void do_pan(){
-  if(dirty){
-    msync(fb,(size_t)stride*h,MS_SYNC);
-    asm volatile("dsb sy" ::: "memory");
-    dirty=0;
-    wait_vsync();   /* 等一次 vsync：确保 autorefresh 推的是完整新帧（防残影） */
-  }
-  /* After activation, stop FBIOPAN: panel autorefresh takes over and scans
-   * out fb0 continuously (proven: kill recovery -> dd fb0 shows immediately).
-   * FBIOPAN during runtime fights autorefresh -> the 1-frame delay.
-   * 主线内核(6.x)适配：无 autorefresh，必须持续 FBIOPAN（drm_fb_helper_pan_display
-   * -> atomic commit -> 推帧），否则画面冻结在最后一帧（黑屏）。 */
-  if(activated && !mainline_mode)return;
-  if(fb_fd<0)return;
-  /* FBIOPAN forces the DSI cmd-mode panel to scan out the framebuffer.
-   * Without it the panel stays stuck on the bootloader splash (Android logo). */
-  fbvi pan;memset(&pan,0,sizeof(pan));
-  pan.yoff=0;
-  ioctl(fb_fd,0x4606,&pan);
+  if(!dirty||fb_fd<0||!fb)return;
+  msync(fb,(size_t)stride*h,MS_SYNC);
+  asm volatile("dsb sy" ::: "memory");
+  dirty=0;
+  if(recovery_drm_present(&drm_display)<0)
+    fb_log("DRM dirtyfb present failed\n");
 }
 #define RBUF (fb32)
 
@@ -127,37 +97,25 @@ static void fb_logf(const char*fmt,...){
   fb_log(buf);
 }
 
-/* Open fb0 with close-on-exec.  The recovery PTY shell is forked after this
- * point; without O_CLOEXEC it keeps a second fb0 reference while it execs
- * browser-session, defeating the DRM handoff even after recovery closes its
- * own descriptor. */
+/* Open direct DRM/KMS. The recovery PTY/libtsm renderer writes to the mapped
+ * dumb buffer and recovery_drm_present() submits the dirty frontbuffer. */
 static int open_framebuffer(void){
-  int fd=open("/dev/graphics/fb0",O_RDWR|O_CLOEXEC);
-  if(fd<0)fd=open("/dev/fb0",O_RDWR|O_CLOEXEC);
-  if(fd<0){fb_logf("fb open failed: %s\n",strerror(errno));return -1;}
-  fbvi vi;fbfi fi;memset(&vi,0,sizeof(vi));memset(&fi,0,sizeof(fi));
-  if(ioctl(fd,0x4600,&vi)<0||ioctl(fd,0x4602,&fi)<0||
-     !vi.xres||!vi.yres||!fi.line_length){
-    fb_logf("fb geometry query failed: %s\n",strerror(errno));close(fd);return -1;
-  }
-  size_t map_len=(size_t)fi.line_length*vi.yres;
-  u8 *map=mmap(NULL,map_len,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0);
-  if(map==MAP_FAILED){fb_logf("fb mmap failed: %s\n",strerror(errno));close(fd);return -1;}
-  fb_fd=fd;fb=map;fb32=(u32*)map;w=vi.xres;h=vi.yres;stride=fi.line_length;fb_map_len=map_len;
-  fb_logf("fb opened fd=%d %ux%u stride=%u\n",fb_fd,w,h,stride);
+  if(recovery_drm_open(&drm_display)<0){fb_log("DRM display open failed\n");return -1;}
+  fb_fd=drm_display.fd;fb=drm_display.pixels;fb32=(u32*)fb;
+  w=drm_display.width;h=drm_display.height;stride=drm_display.pitch;
+  fb_logf("DRM display opened fd=%d connector=%u crtc=%u %ux%u pitch=%u\n",
+          fb_fd,drm_display.connector_id,drm_display.crtc_id,w,h,stride);
   return 0;
 }
 
-/* Release every recovery-owned display handle before Weston attempts to take
- * DRM ownership.  The PTY/libtsm state remains alive in this process. */
+/* Release every recovery-owned DRM handle before Weston attempts to take
+ * DRM ownership. The PTY/libtsm state remains alive in this process. */
 static void release_framebuffer(void){
   dirty=0;
-  if(vsync_fd>=0){close(vsync_fd);vsync_fd=-1;}
-  if(fb&&fb_map_len){munmap(fb,fb_map_len);fb=NULL;}
-  fb32=NULL;fb_map_len=0;
-  if(fb_fd>=0){close(fb_fd);fb_fd=-1;}
+  recovery_drm_close(&drm_display);
+  fb=NULL;fb32=NULL;fb_fd=-1;
   w=0;h=0;stride=0;
-  fb_log("fb released for browser DRM handoff\n");
+  fb_log("DRM display released for browser handoff\n");
 }
 
 static int mark_browser_ready(void){
@@ -794,7 +752,7 @@ static int kb_hl=-1;static long long kb_deadline=0;
 static int select_mode=0;   /* 0=触摸屏滚动历史, 1=选择复制模式（"选"键切换） */
 static int selecting=0;     /* 正在拖拽选择中 */
 /* 选择拖拽只在一帧触摸事件结束后渲染，且仅跨字符格才重绘。
- * 主线 DRM 的 FBIOPAN 是一次原子提交；若在每个 ABS_X/ABS_Y 事件中提交，
+ * 直接 DRM 的 DIRTYFB 是一次同步提交；若在每个 ABS_X/ABS_Y 事件中提交，
  * 事件队列会积压，选择框就会明显落后手指。 */
 static int sel_last_cx=-1,sel_last_cy=-1;
 #define CLIP_MAX 4096
@@ -1444,7 +1402,7 @@ static void kb_toggle_collapse(){
     if(i==cur_tab)tsm_screen_draw(tabs[i].scr,render_cell,NULL);  /* 当前标签整屏重画 */
   }
   draw_kb();  /* 键盘背景+键帽（收：黑底；展：浅灰+键帽） */
-  do_pan();   /* fb0 推屏 */
+  do_pan();   /* DRM 推屏 */
 }
 
 // --- Status bar: "Agent OS" + WiFi IP + battery (dynamically refreshed) ---
@@ -1595,25 +1553,18 @@ static void apply_fontsize(int fw){
   draw_kb();do_pan();
 }
 
-/* Reacquire fb0 only after the browser supervisor has removed its active flag.
+/* Reacquire DRM only after the browser supervisor has removed its active flag.
  * This reuses the live PTY/libtsm screens and redraws the recovery UI so the
  * browser session returns to the same console instead of starting a second
  * recovery process. */
 static int restore_framebuffer(void){
   if(open_framebuffer()<0)return -1;
-  int fd=fb_fd;
-  fbvi ip;memset(&ip,0,sizeof(ip));
-  if(ioctl(fd,0x4600,&ip)<0)fb_log("fb restore: GET var failed\n");
-  ip.yoff=0;
-  if(ioctl(fd,0x4601,&ip)<0)fb_log("fb restore: initial commit failed\n");
-  activated=0;
   fill(0,0,w,h,0xFF000000);
   draw_statusbar();
   if(cur_scr)tsm_screen_draw(cur_scr,render_cell,NULL);
   draw_kb();draw_ui_overlay();
   for(int i=0;i<30;i++){do_pan();usleep(20000);}
-  activated=1;
-  fb_log("fb restored after browser\n");
+  fb_log("DRM display restored after browser\n");
   return 0;
 }
 
@@ -1659,7 +1610,7 @@ static void sb_scroll_down(int n){
   tsm_screen_sb_down(cur_scr,n);
   tsm_screen_draw(cur_scr,render_cell,NULL);do_pan();
 }
-/* 一次提交多个滚动行。主线 fb0 的 do_pan() 会走 DRM 原子提交，
+/* 一次提交多个滚动行。主线 DRM 的 do_pan() 会走 DIRTYFB 原子提交，
  * 因此不能在同一触摸帧里每移动一行就单独重绘。 */
 static void sb_scroll_by(int rows){
   if(!cur_scr||rows==0)return;
@@ -1788,40 +1739,8 @@ int main(){
   vibe_init();vibe(500);
   unlink(BROWSER_SESSION_READY);
   if(open_framebuffer()<0)return 1;
-  int fd=fb_fd;
-  /* 主线内核(6.x)适配：KD_GRAPHICS 反而破坏推帧（VT 切图形模式 → DRM client 释放
-   * → 面板状态被破坏 → 后续 commit 黑屏）。test_push 实测：无 KD_GRAPHICS 时
-   * FBIOPAN 推帧正常（屏幕变红）。fbcon 共存即可，recovery 每次渲染后 FBIOPAN 覆盖。
-   * 3.18 无此问题。故 #if 0 跳过 KD_GRAPHICS。 */
-#if 0
-  {int tf=open("/dev/tty0",O_RDWR|O_NOCTTY);
-   if(tf>=0){if(ioctl(tf,KDSETMODE,KD_GRAPHICS)<0)fb_log("KD_GRAPHICS fail\n");else fb_log("KD_GRAPHICS ok\n");close(tf);}
-   else fb_log("tty0 open fail\n");}
-#endif
-  /* --- cmd-mode panel bring-up (order matters) --- */
-  /* 1. power cycle via blank sysfs: exits continuous-splash, powers panel on
-   * 主线内核(6.x)适配：#if 0 跳过 blank power cycle！DRM 自己管理 DPMS/panel 状态，
-   * 此处 blank=4/0 会把面板置入错误状态 -> 后续 commit 全部 pp done timeout（黑屏）。 */
-#if 0
-  {int bf=open("/sys/class/graphics/fb0/blank",O_WRONLY);
-   if(bf>=0){write(bf,"4\n",2);close(bf);fb_log("blank=4\n");}
-   else fb_log("blank open fail\n");}
-  usleep(100000);
-  {int bf=open("/sys/class/graphics/fb0/blank",O_WRONLY);
-   if(bf>=0){write(bf,"0\n",2);close(bf);fb_log("blank=0\n");}
-   else fb_log("blank open fail\n");}
-  usleep(100000);
-#endif
-  /* 2. first commit: complete panel power-on (MDP needs one commit to take over) */
-  {fbvi ip;if(ioctl(fd,0x4600,&ip)<0){memset(&ip,0,sizeof(ip));fb_log("GET var fail\n");}
-   ip.yoff=0;ioctl(fd,0x4601,&ip);fb_log("initial commit done\n");}
-  /* 3. enable autorefresh AFTER commit (commit may reset autorefresh state)
-   * 主线内核(6.x)无此 sysfs -> 写入失败 -> mainline_mode=1（持续 FBIOPAN 推帧） */
-  {const char* arp[]={"/sys/class/graphics/fb0/msm_cmd_autorefresh_en",
-                     "/sys/class/graphics/fb0/autorefresh",NULL};
-   int ok=0;
-   for(int ai=0;arp[ai];ai++){int ar=open(arp[ai],O_WRONLY);if(ar>=0){if(write(ar,"1\n",2)==2){ok=1;fb_log(arp[ai]);fb_log("=1 ok\n");}close(ar);if(ok)break;}}
-   if(!ok){fb_log("autorefresh write fail\n");mainline_mode=1;fb_log("mainline_mode=1: sustained FBIOPAN\n");}}
+  /* recovery_drm_open() has already selected DSI-1's preferred mode, created
+   * the XRGB8888 dumb buffer, and performed the initial legacy KMS modeset. */
   fill(0,0,w,h,0xFF000000);
   char bat[16]={0};rdfs("/sys/class/power_supply/battery/capacity",bat,16);
   draw_statusbar();
@@ -1850,10 +1769,8 @@ int main(){
    tsm_vte_input(cur_vte,"--- ready ---\r\n",14);
   }
   tsm_screen_draw(cur_scr,render_cell,NULL);
-  /* Activate panel with FBIOPAN for ~600ms so MDP takes over from splash,
-   * then switch to autorefresh-only (proven immediate, no 1-frame delay). */
-  for(int i=0;i<30;i++){do_pan();usleep(20000);}
-  activated=1;
+  /* Submit a few full frames while the DSI command-mode panel settles. */
+  for(int i=0;i<3;i++){do_pan();usleep(20000);}
 
   struct input_event ev;int ts_fd=open_touch(),tx=-1,ty=-1;
   int pending_press=0,pending_release=0;
@@ -1875,8 +1792,8 @@ int main(){
   while(1){
     int browser_active=browser_session_active();
     if(browser_active&&!browser_was_active){
-      /* Do not let Weston race an open fbdev mapping.  browser-session waits
-       * for this marker before it starts Weston/DRM. */
+      /* Do not let Weston race an open DRM client. browser-session waits for
+       * this marker before it starts Weston/DRM. */
       release_framebuffer();
       mark_browser_ready();
     }
