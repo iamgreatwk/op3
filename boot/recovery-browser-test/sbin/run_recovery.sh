@@ -14,6 +14,7 @@ PERSIST_DIR=/newroot/var/log
 PERSIST=$PERSIST_DIR/op3-recovery.log
 RECOVERY=/newroot/sbin/recovery_mainline
 WAIT_LIMIT=120
+GPU_POWER=/sys/bus/platform/devices/b00000.gpu/power/control
 
 mkdir -p /var/log
 : > "$LOG"
@@ -32,6 +33,19 @@ sync_log(){
 }
 
 log "recovery launcher start pid=$$"
+
+# MSM8996's GPU node currently has dummy vdd/vddcx regulators.  If runtime PM
+# suspends the GPU before a later browser launch, changing control=auto to
+# control=on can resume it without a real power sequence and hard-reset the
+# SoC.  Keep the GPU awake from recovery startup so the browser handoff is an
+# idempotent control write instead of the first runtime resume.  Restore to
+# auto only after the DTB regulator fix is available.
+if [ -f "$GPU_POWER" ]; then
+	echo on > "$GPU_POWER" 2>/dev/null
+	log "GPU runtime PM disabled before recovery: control=$(cat "$GPU_POWER" 2>/dev/null)"
+else
+	log "GPU runtime PM: $GPU_POWER not found"
+fi
 
 waited=0
 while [ ! -x "$RECOVERY" ] && [ "$waited" -lt "$WAIT_LIMIT" ]; do
