@@ -336,6 +336,43 @@ cat /proc/asound/cards
 cat /proc/bus/input/devices
 ~~~
 
+如果临时 `fastboot boot` 已经验证通过，并且确认目标设备无误，可以把同一
+镜像永久写入 boot 分区。该操作会覆盖当前 boot 分区；只在明确授权后执行：
+
+~~~bash
+boot_image=artifacts/boot-oneplus3-pmos612-recovery-buildroot-initramfs.img
+test -f "$boot_image"
+sha256sum "$boot_image"
+fastboot devices
+fastboot getvar product 2>&1
+fastboot getvar current-slot 2>&1 || true
+fastboot flash boot "$boot_image"
+fastboot reboot
+~~~
+
+不要把永久刷写命令用于 `system` 或其它分区；只验证镜像时继续使用
+`fastboot boot`。
+
+自动 Wi-Fi 连接还需要设备本地的默认 profile。`wifi connect` 会把凭据写入
+持久分区的 `/newroot/etc/op3-wifi/profiles/*.conf` 和
+`/newroot/etc/op3-wifi/default`，这些文件不会打包进 GitHub、initramfs 或
+rootfs tar。若清空并重新部署了 sda15，必须重新配置一次：
+
+~~~bash
+ssh root@172.16.42.1 '
+set +e
+mount | grep "on /newroot"
+ls -la /newroot/etc/op3-wifi /newroot/etc/op3-wifi/profiles
+wifi list
+'
+ssh root@172.16.42.1 'wifi connect "SSID" "密码"'
+~~~
+
+`wifi list` 显示 `no saved Wi-Fi profiles` 时，自动脚本会正常启动但立即
+退出；这不是缺少 Wi-Fi 驱动文件。若 profile 已存在仍失败，再收集
+`/root/boot_mainline.log` 中的 `wifi_auto`、`newroot`、`wlan0` 行，以及
+`dmesg | grep -iE 'ath10k|wlan|firmware|rfkill'`。
+
 ## 9. 可选浏览器 bundle
 
 浏览器不进入默认 recovery initramfs。需要测试 Cog/WPE 时使用独立的

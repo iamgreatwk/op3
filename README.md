@@ -331,6 +331,27 @@ BOOT_CMDLINE_OVERRIDE='完整的内核命令行' \
   artifacts/boot-oneplus3-pmos612-recovery-buildroot-initramfs.img
 ~~~
 
+### 8.1 永久写入 boot 分区
+
+`fastboot boot` 只在本次启动使用镜像；确认临时启动已经通过后，才执行
+下面的永久刷写。`fastboot flash boot` 会覆盖手机当前 boot 分区，必须先
+确认设备序列号和输入文件，不能把它误用于 `system` 或其它分区：
+
+~~~bash
+boot_image=artifacts/boot-oneplus3-pmos612-recovery-buildroot-initramfs.img
+test -f "$boot_image"
+sha256sum "$boot_image"
+fastboot devices
+fastboot getvar product 2>&1
+fastboot getvar current-slot 2>&1 || true
+
+fastboot flash boot "$boot_image"
+fastboot reboot
+~~~
+
+刷写后仍需按第 10 节检查启动日志、DRM 界面、音频、实体按键、振动和
+Wi-Fi。若只是验证新镜像，优先使用第 10 节的 `fastboot boot`，不要重复刷写。
+
 ## 9. 可选：部署持久化 /newroot
 
 这一步会删除 /dev/sda15 上原有内容，只有在已经确认目标设备、目标分区
@@ -417,6 +438,35 @@ wifi ipv6 status
 '
 ~~~
 
+自动连接依赖设备持久分区中的一个默认 profile，而不是依赖镜像内的固定
+密码。执行 `wifi connect` 会创建
+`/newroot/etc/op3-wifi/profiles/*.conf` 和
+`/newroot/etc/op3-wifi/default`；这两个文件按设计不会进入 GitHub、initramfs
+或 rootfs tar。清空并重新部署 `/dev/sda15` 后必须重新执行一次：
+
+~~~bash
+ssh root@172.16.42.1 '
+set +e
+mount | grep "on /newroot"
+ls -la /newroot/etc/op3-wifi /newroot/etc/op3-wifi/profiles
+wifi list
+'
+
+ssh root@172.16.42.1 'wifi connect "SSID" "密码"'
+ssh root@172.16.42.1 '
+wifi list
+wifi current
+iw dev wlan0 link
+ip -4 addr show dev wlan0
+ip -4 route
+'
+~~~
+
+如果 `wifi list` 显示 `no saved Wi-Fi profiles`，这就是自动连接未发生的
+直接原因；不是缺少 `wifi_auto.sh` 或 ath10k 固件。若 profile 已存在但仍
+未连接，再收集 `/root/boot_mainline.log` 中的 `wifi_auto`、`newroot`、
+`wlan0` 行及 `dmesg | grep -iE 'ath10k|wlan|firmware|rfkill'`。
+
 仅在按需测试 IPv6 时启用，验证完成后可关闭：
 
 ~~~bash
@@ -473,4 +523,3 @@ git -C source/linux-pmos-msm8996-6.12-recovery-audio-full \
 历史 boot 镜像或历史 reference initrd 当作 GitHub 源码依赖。重新生成的
 initramfs 必须来自 out/buildroot-op3-recovery/images/rootfs.cpio.gz，而不
 是历史 ramdisk 的解包或追加。
-
