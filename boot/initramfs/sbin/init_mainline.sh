@@ -22,7 +22,7 @@ log "=== Agent OS mainline (6.x) init ==="
 mount -t proc proc /proc 2>/dev/null
 mount -t sysfs sysfs /sys 2>/dev/null
 mount -t devtmpfs devtmpfs /dev 2>/dev/null || { mdev -s 2>/dev/null; }
-mkdir -p /dev/pts /dev/shm /tmp /run /var/log
+mkdir -p /dev/pts /dev/shm /tmp /run /var/log /newroot
 mount -t devpts devpts /dev/pts 2>/dev/null
 mount -t tmpfs tmpfs /tmp 2>/dev/null
 mount -t tmpfs tmpfs /run 2>/dev/null
