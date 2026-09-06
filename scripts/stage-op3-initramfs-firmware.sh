@@ -8,7 +8,7 @@ set -euo pipefail
 # Inputs:
 #   artifacts/a530-firmware
 #   artifacts/msm8996-oneplus3-firmware-verified
-#   external ath10k firmware-6.bin and board-2.bin
+#   external ath10k firmware-6.bin, board-2.bin, and board.bin
 #
 # Usage:
 #   scripts/stage-op3-initramfs-firmware.sh [output-dir]
@@ -54,7 +54,8 @@ for input in \
 	"$a530_root/lib/firmware/qcom/a530v3_gpmu.fw2" \
 	"$qcom_root/lib/firmware/qcom/msm8996/oneplus3/a530_zap.mbn" \
 	"$ath10k_dir/firmware-6.bin" \
-	"$ath10k_dir/board-2.bin"; do
+	"$ath10k_dir/board-2.bin" \
+	"$ath10k_dir/board.bin"; do
 	test -f "$input" || die "missing firmware input: $input"
 done
 
@@ -68,6 +69,8 @@ done
 	die 'ath10k firmware-6 checksum mismatch'
 [ "$(sha256sum "$ath10k_dir/board-2.bin" | awk '{print $1}')" = "$ATH10K_BOARD_SHA256" ] ||
 	die 'ath10k board-2 checksum mismatch'
+[ "$(sha256sum "$ath10k_dir/board.bin" | awk '{print $1}')" = "$ATH10K_BOARD_FALLBACK_SHA256" ] ||
+	die 'ath10k board checksum mismatch'
 
 tmpdir="$(mktemp -d "${TMPDIR:-/tmp}/op3-initramfs-fw.XXXXXX")"
 trap 'rm -rf "$tmpdir"' EXIT
@@ -80,6 +83,8 @@ install -m 0644 "$ath10k_dir/firmware-6.bin" \
 	"$stage/lib/firmware/$ath10k_rel/firmware-6.bin"
 install -m 0644 "$ath10k_dir/board-2.bin" \
 	"$stage/lib/firmware/$ath10k_rel/board-2.bin"
+install -m 0644 "$ath10k_dir/board.bin" \
+	"$stage/lib/firmware/$ath10k_rel/board.bin"
 
 mkdir -p "$(dirname "$destination")"
 mv "$stage" "$destination"

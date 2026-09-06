@@ -1,5 +1,22 @@
 # Latest handoff
 
+## OP3 QCA6174 board-data fallback prepared (device retest pending, 2026-09-06)
+
+ACM diagnostics isolated the Wi-Fi failure to firmware board-data selection,
+not to the interface name, module closure, PCI binding, or `wifi` executable
+path. The device reports PCI subsystem `0000:0000`; its `board-2.bin` contains
+no matching entry, and the kernel log ends with `failed to fetch board-2.bin or
+board.bin`, `failed to fetch board file: -2`, and `could not probe fw (-2)`.
+
+The 8124-byte `board.bin` fallback was extracted from the retained historical
+reference initrd and matches the host firmware package. It is now recorded in
+the external-input SHA256 manifest with hash
+`1a8d225818b46986fc4f615594fbe448fa820618590d6902c8f844bb37cda667`. Kernel
+`CONFIG_EXTRA_FIRMWARE`, kernel restoration, initramfs firmware staging, and
+Buildroot post-build validation all require and carry both `board-2.bin` and
+`board.bin`. No rebuilt kernel or device retest has been run yet. Handoff:
+`docs/handoff/op3-wifi-board-fallback-001.md`.
+
 ## Clean rebuild artifact check (2026-09-06)
 
 The owner-authorized clean rebuild in

@@ -54,6 +54,7 @@ install --version | head -1
 /home/kai/op3-recovery-external-inputs/
 ├── ath10k/QCA6174/hw3.0/firmware-6.bin
 ├── ath10k/QCA6174/hw3.0/board-2.bin
+├── ath10k/QCA6174/hw3.0/board.bin
 ├── qualcomm/NON-HLOS.bin
 ├── qualcomm/a530_zap.elf
 ├── qualcomm/a530/a530_pm4.fw
@@ -177,7 +178,7 @@ grep -nE 'BOOT_(CMDLINE|APPEND_DTB|RAMDISK_OFFSET)' boot/oneplus3-fa5.env
 
 ~~~text
 artifacts/op3-initramfs-firmware/lib/firmware/
-├── ath10k/QCA6174/hw3.0/{firmware-6.bin,board-2.bin}
+├── ath10k/QCA6174/hw3.0/{firmware-6.bin,board-2.bin,board.bin}
 ├── qcom/{a530_pm4.fw,a530_pfp.fw,a530v3_gpmu.fw2}
 └── qcom/msm8996/oneplus3/
     {adsp.mbn,modem.mbn,slpi.mbn,venus.mbn,mba.mbn,a530_zap.mbn}

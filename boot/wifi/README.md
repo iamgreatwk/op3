@@ -12,6 +12,11 @@ absolute `insmod` paths in the dependency order installed by the Buildroot
 post-build hook. This does not rely on the stale `/lib/modules/6.18.7` tree in
 the initramfs.
 
+The OP3 QCA6174 can report PCI subsystem `0000:0000`. Its `board-2.bin` may
+contain no matching board entry, so the firmware loader falls back to
+`board.bin`. Both files are therefore staged and embedded; shipping only
+`board-2.bin` produces `failed to fetch board file: -2` and no `wlan0`.
+
 The CLI writes a quoted WPA passphrase directly into the device-local profile;
 `wpa_supplicant` derives the PSK. It deliberately does not invoke
 `wpa_passphrase`, because an older `/newroot` binary may be dynamically linked

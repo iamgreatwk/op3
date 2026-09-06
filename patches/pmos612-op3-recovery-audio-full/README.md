@@ -39,6 +39,7 @@ firmware is not committed to GitHub:
 ```text
 extfw/ath10k/QCA6174/hw3.0/firmware-6.bin
 extfw/ath10k/QCA6174/hw3.0/board-2.bin
+extfw/ath10k/QCA6174/hw3.0/board.bin
 ```
 
 The script checks their SHA256 values from the manifest, creates a new kernel

@@ -31,7 +31,8 @@ for required in \
 	"$firmware_root/lib/firmware/qcom/a530v3_gpmu.fw2" \
 	"$firmware_root/lib/firmware/qcom/msm8996/oneplus3/a530_zap.mbn" \
 	"$firmware_root/lib/firmware/ath10k/QCA6174/hw3.0/firmware-6.bin" \
-	"$firmware_root/lib/firmware/ath10k/QCA6174/hw3.0/board-2.bin"; do
+	"$firmware_root/lib/firmware/ath10k/QCA6174/hw3.0/board-2.bin" \
+	"$firmware_root/lib/firmware/ath10k/QCA6174/hw3.0/board.bin"; do
 	test -f "$required" || die "missing staged firmware: $required"
 done
 
