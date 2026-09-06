@@ -24,6 +24,12 @@ Artifacts and SHA256: output directory
 `Image.gz` `504ca5bc1623dd038cb3a9c9d36b7e77d45a3c28e34f7c86e1cff1a05f3347bd`,
 and `msm8996-oneplus3.dtb`
 `264f981678c1dd8d1d9a52f2db6e2130a0ebccbb9f4485ab8740784f73806db7`.
+The final test initrd, with the current recovery audio/browser bundle
+overlaid, is `artifacts/initrd-op3-recovery-browser-audio.cpio.gz` with SHA256
+`c0f0a2b45a5b9b1e6d34f25c5a20d19521203794c779b9460b9d0e5ec5a0055b`; the
+packed temporary-boot image is
+`artifacts/boot-oneplus3-pmos612-recovery-audio-full-v2.img` with SHA256
+`2a979d0fd78fdf492141fb6213a4206d72d26de381e3e3ae04f96c8568f41028`.
 
 Device test run by project owner: NOT_RUN for the final integration branch
 Device result: NOT_RUN
@@ -52,8 +58,8 @@ Uncertainties:
 Static verification: after correcting the first DTC syntax failure, the
 final kernel integration worktree is clean; its OP3 DTS
 contains only q6asm `dai@0`--`dai@2` and disables MM4--MM16 in the board DTS.
-The owner completed the kernel build successfully; no post-build device test
-has run yet.
+The owner completed the kernel build successfully; the final boot image is
+ready for the post-build device test.
 
 The owner build first failed at DTC line 91 of
 `msm8996-oneplus-common.dtsi` because the conflict resolution omitted the

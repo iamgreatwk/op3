@@ -23,8 +23,12 @@ The next build exposed missing ignored ath10k `extfw` inputs; both required
 files are now staged locally in the final worktree. The owner then completed
 the kernel build successfully: `.config` `c3da142e…`, `Image.gz`
 `504ca5bc…`, and OP3 DTB `264f9816…`. Device boot and ALSA enumeration are
-still pending. Handoff: `docs/handoff/op3-recovery-audio-card-001.md`.
-This checkpoint is INCONCLUSIVE pending device evidence.
+still pending. Final test image:
+`artifacts/boot-oneplus3-pmos612-recovery-audio-full-v2.img`, SHA256
+`2a979d0f…`; final initrd:
+`artifacts/initrd-op3-recovery-browser-audio.cpio.gz`, SHA256 `c0f0a2b4…`.
+Handoff: `docs/handoff/op3-recovery-audio-card-001.md`. This checkpoint is
+INCONCLUSIVE pending device evidence.
 
 ## OP3 recovery voice capture/playback userspace preparation (owner test pending, 2026-09-06)
 
