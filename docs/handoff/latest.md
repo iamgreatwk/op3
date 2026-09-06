@@ -1,5 +1,18 @@
 # Latest handoff
 
+## OP3 recovery volume and tri-state physical-key preparation (pending owner test, 2026-09-06)
+
+Commit `6f58544` prepares a formal pmOS MSM8996 Linux 6.12.1 DTS patch for
+the missing OnePlus 3 side keys. It registers the standard `gpio-keys`
+device: PMIC GPIO3/2 as active-low `KEY_VOLUMEUP(115)`/`KEY_VOLUMEDOWN(114)`
+and PMIC GPIO6/4/5 as active-low tri-state top/middle/bottom codes
+600/601/602. The three switch inputs receive PMIC pull-ups. The validated
+kernel configuration already has `CONFIG_KEYBOARD_GPIO=y`, so no config
+change is needed. Baseline and active-checkout `git apply --check` plus
+`git diff --check` pass. No kernel build or current-device test was run for
+this patch. Handoff: `docs/handoff/op3-recovery-physical-keys-001.md`.
+Vibration remains a separate kernel haptics issue and test.
+
 ## OP3 recovery S1302 chin capacitive-key preparation (pending owner test, 2026-09-06)
 
 Commit `d1c525f` prepares a formal pmOS MSM8996 Linux 6.12.1 patch series for
