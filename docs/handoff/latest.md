@@ -19,8 +19,15 @@ The persistent rootfs on `/dev/sda15` was cleared and replaced from
 `artifacts/op3-audio-rootfs-board-fallback-passwd.tar.gz`. Post-extraction
 checks passed for the root password hash, `/newroot/sbin/recovery_mainline`,
 the QCA6174 `board.bin`, `/newroot/opt/op3-wifi/wifi`, and TinyALSA tools.
-The current session remains in the temporary `fastboot boot` recovery; no
-reboot-to-persistent-image test has been performed yet.
+
+After provisioning the device-local Wi-Fi profile with `wifi connect`, the
+phone was returned to bootloader and booted with the same image a second time.
+The second boot again mounted `/dev/sda15`, accepted SSH `root/1234`, and
+`wifi_auto` loaded the complete ath10k module closure. `wlan0` automatically
+associated with the saved `1106` profile, obtained `192.168.1.5` and a default
+IPv4 route, with IPv6 still disabled. The ath10k log confirms the expected
+`board-2.bin` miss for the `0000:0000` subsystem followed by successful
+`board_file` fallback and interface association.
 
 Build outputs and hashes:
 
@@ -32,9 +39,9 @@ Build outputs and hashes:
 - boot image `c39acb3cd79421523f25c45d939d4b173fe3ca2d71b0ca3957ceb798236d354c`
 
 Wi-Fi credentials remain device-local by design and are not included in the
-rootfs artifact. The clean replacement therefore has no saved profile under
-`/newroot/etc/op3-wifi/profiles`; run `wifi connect` on the device once after
-boot if automatic Wi-Fi association is required.
+rootfs artifact. The test device now has its profile under
+`/newroot/etc/op3-wifi/profiles`; a newly formatted device must run
+`wifi connect` once after boot if automatic Wi-Fi association is required.
 
 ## OP3 corrected Wi-Fi board-fallback image built (device retest pending, 2026-09-06)
 
