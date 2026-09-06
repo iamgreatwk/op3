@@ -1,5 +1,26 @@
 # Latest handoff
 
+## OP3 recovery voice capture/playback userspace preparation (owner test pending, 2026-09-06)
+
+Commit `2eab778` updates the recovery microphone-key flow to use the verified
+AMIC4 -> MultiMedia1 `tinycap` route, remove a stale `/tmp/voice.wav` before
+capture, validate the WAV after stopping, and write independent capture and
+playback diagnostics to `/tmp/op3-recovery-audio.log`. Playback keeps the
+optional `pcm-wav` path when present and falls back to the `tinyplay` already
+present in the current audio payload; no kernel, DTS, or Buildroot audio
+sources were changed. The documented interaction is a two-second microphone
+long press to start, then a tap to stop and replay.
+
+The small static AArch64 recovery compile passed. Binary SHA256:
+`a82e2ff356e0447ecce422b372dbc134c23658c9bd08d4f5ebd48db41368f300`.
+Staged package:
+`artifacts/op3-recovery-browser-audio-bundle.tar.gz`, SHA256
+`a744c2ea4112d3551681e6aaa42ed2ec86ca14c712ecab284760134a76832fe8`.
+The current audio rootfs has `tinycap`, `tinymix`, and `tinyplay`, but not
+`pcm-wav`. Owner deployment and device recording/playback validation are
+pending; external speaker routing remains a separate uncertainty. Handoff:
+`docs/handoff/op3-recovery-audio-001.md`. This checkpoint is INCONCLUSIVE.
+
 ## OP3 recovery kernel haptics device PASS (Integration pending, 2026-09-06)
 
 Commit `d31f471` prepares a separate formal pmOS MSM8996 Linux 6.12.1 patch
