@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/ioctl.h>
+#include <sys/stat.h>
 #include <string.h>
 #include <termios.h>
 #include <poll.h>
@@ -1324,7 +1325,7 @@ static void tri_handle(int code){
   else if(code==601)apply_tri_mode(1);  /* 中=均衡 */
   else if(code==602)apply_tri_mode(2);  /* 下=省电 */
 }
-// --- 语音录音（🎤 键）：按一下开始录，再按一下停止并回放 ---
+// --- 语音录音（🎤 键）：长按开始录，再按一下停止并回放 ---
 /* 状态栏配色（宏转变量：theme 命令可切换） */
 static u32 st_bg=0xFF001122;
 static u32 st_fg=0xFFFFFFFF;
@@ -1339,14 +1340,27 @@ static int voice_recording=0;
 static pid_t voice_pid=-1;
 static long long voice_press_start=0;  /* KF_VOICE 按下时间(ms)；=0 表示未按下 */
 static int voice_long_done=0;           /* 本次按下已触发 2 秒长按启动（防重复） */
+#define VOICE_WAV_PATH "/tmp/voice.wav"
+#define VOICE_AUDIO_LOG "/tmp/op3-recovery-audio.log"
 static void voice_toggle(){
   if(!voice_recording){
+    unlink(VOICE_WAV_PATH);
+    fb_log("audio: capture requested\n");
     voice_pid=fork();
+    if(voice_pid<0){
+      fb_logf("audio: capture fork failed: %s\n",strerror(errno));
+      voice_pid=-1;
+      return;
+    }
     if(voice_pid==0){
       /* 主线(6.x)：mic 路由（v52 mic-capture 验证链）+ tinycap 录音。
        * -t 60 只是上限（防止无 -t 时的数据异常，8/21 实测无 -t 录全零），
        * 实际靠短按 SIGINT 停止（tinycap handler 写头，数据保留）。 */
       execl("/bin/sh","sh","-c",
+        "exec >>"VOICE_AUDIO_LOG" 2>&1;"
+        "echo 'audio: capture start';"
+        "command -v tinymix >/dev/null 2>&1 || { echo 'audio: missing tinymix'; exit 127; };"
+        "command -v tinycap >/dev/null 2>&1 || { echo 'audio: missing tinycap'; exit 127; };"
         "tinymix -D 0 set 'AIF1_CAP Mixer SLIM TX3' 0;"
         "tinymix -D 0 set 'SLIM TX3 MUX' ZERO;"
         "tinymix -D 0 set 'SLIM TX4 MUX' DEC4;"
@@ -1356,7 +1370,7 @@ static void voice_toggle(){
         "tinymix -D 0 set 'AIF1_CAP Mixer SLIM TX4' 1;"
         "tinymix -D 0 set 'MultiMedia3 Mixer SLIMBUS_0_TX' 0;"
         "tinymix -D 0 set 'MultiMedia1 Mixer SLIMBUS_0_TX' 1;"
-        "exec tinycap /tmp/voice.wav -D 0 -d 0 -c 1 -r 48000 -b 16 -p 480 -n 8 -t 60",
+        "exec tinycap "VOICE_WAV_PATH" -D 0 -d 0 -c 1 -r 48000 -b 16 -p 480 -n 8 -t 60",
         NULL);
       _exit(1);
     }
@@ -1364,11 +1378,33 @@ static void voice_toggle(){
   }else{
     if(voice_pid>0)kill(voice_pid,SIGINT);  /* 短按：SIGINT 让 tinycap 写头退出 */
     voice_pid=-1;voice_recording=0;vibe(80);
-    usleep(300000);                          /* 等 tinycap 写完 header */
-    pid_t p=fork();                          /* 回放：pcm-wav 设备2 扬声器 */
+    usleep(500000);                          /* 等 tinycap 写完 header */
+    struct stat st;
+    if(stat(VOICE_WAV_PATH,&st)<0||st.st_size<44){
+      fb_logf("audio: capture invalid file path=%s errno=%d\n",VOICE_WAV_PATH,errno);
+      draw_statusbar();
+      return;
+    }
+    fb_logf("audio: capture ready path=%s bytes=%lld\n",VOICE_WAV_PATH,(long long)st.st_size);
+    pid_t p=fork();                          /* 回放：优先 pcm-wav，回退 tinyplay */
+    if(p<0){
+      fb_logf("audio: playback fork failed: %s\n",strerror(errno));
+      draw_statusbar();
+      return;
+    }
     if(p==0){execl("/bin/sh","sh","-c",
-      "tinymix -D 0 set 'QUAT_MI2S_RX Audio Mixer MultiMedia3' 1;"
-      "exec pcm-wav -D 0 -d 2 -v 100 /tmp/voice.wav",NULL);_exit(1);}
+      "exec >>"VOICE_AUDIO_LOG" 2>&1;"
+      "echo 'audio: playback start';"
+      "command -v tinymix >/dev/null 2>&1 && tinymix -D 0 set 'QUAT_MI2S_RX Audio Mixer MultiMedia3' 1;"
+      "if command -v pcm-wav >/dev/null 2>&1; then "
+        "exec pcm-wav -D 0 -d 2 -v 100 "VOICE_WAV_PATH";"
+      "elif command -v tinyplay >/dev/null 2>&1; then "
+        "echo 'audio: pcm-wav unavailable; using tinyplay';"
+        "exec tinyplay "VOICE_WAV_PATH" -D 0 -d 2 -p 480 -n 8;"
+      "else "
+        "echo 'audio: missing pcm-wav and tinyplay'; exit 127;"
+      "fi",NULL);_exit(1);}
+    fb_logf("audio: playback started pid=%d\n",p);
   }
   draw_statusbar();
 }

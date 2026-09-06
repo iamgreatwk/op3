@@ -17,6 +17,15 @@ browser chromium [URL]  # Chromium/Alpine Wayland session
 browser cog [URL]       # Cog/WPE WebKit Wayland session
 ```
 
+The recovery keyboard also has a microphone key. Hold `🎤` for two seconds to
+start a capture; `*REC` appears in the status bar. Tap it again to stop and
+play the recorded `/tmp/voice.wav` through the MultiMedia3 speaker PCM. The
+capture path uses the verified AMIC4 → MultiMedia1 route at `hw:0,0`; playback
+uses the QUAT MI2S MultiMedia3 route at `hw:0,2`. The persistent audio payload
+must provide `tinymix` and `tinycap`; playback prefers the optional `pcm-wav`
+helper and falls back to the available TinyALSA `tinyplay` tool. Capture and
+playback diagnostics are written to `/tmp/op3-recovery-audio.log`.
+
 `browser` sets `/run/op3-browser.active` before starting Weston. Recovery owns
 `/dev/dri/card0` directly through its KMS backend, keeps its PTY/libtsm state,
 closes its DRM framebuffer and card fd, then writes
