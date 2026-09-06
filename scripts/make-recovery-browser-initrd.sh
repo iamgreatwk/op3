@@ -23,11 +23,13 @@ command -v gzip >/dev/null 2>&1
 tmpdir="$(mktemp -d)"
 trap 'rm -rf "$tmpdir"' EXIT
 stage="$tmpdir/stage"
+epoch="${SOURCE_DATE_EPOCH:-0}"
 mkdir -p "$stage/sbin"
 install -m 0755 "$overlay_source/sbin/run_recovery.sh" "$stage/sbin/run_recovery.sh"
+touch -d "@$epoch" "$stage/sbin" "$stage/sbin/run_recovery.sh"
 
 ( cd "$stage" && find . -mindepth 1 -printf '%P\n' | LC_ALL=C sort |
-	cpio -o -H newc --owner=0:0 --quiet ) > "$tmpdir/overlay.cpio"
+	cpio -o -H newc --owner=0:0 --reproducible --quiet ) > "$tmpdir/overlay.cpio"
 gzip -9 -n -c "$tmpdir/overlay.cpio" > "$tmpdir/overlay.cpio.gz"
 
 mkdir -p "$(dirname "$output")"
