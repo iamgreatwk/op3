@@ -1,0 +1,34 @@
+From 2ef52ee021a133569515b5a3975beb918767bada Mon Sep 17 00:00:00 2001
+From: Agent OS <agent-os@example.invalid>
+Date: Sun, 6 Sep 2026 03:20:00 +0800
+Subject: [PATCH 26/31] Input: misc: qcom-spmi-haptics: allow ERM actuators
+
+The OnePlus 3 uses the PM8994 haptics peripheral with an eccentric rotating
+mass actuator.  The generic Qualcomm SPMI haptics driver already programs
+the actuator type and skips LRA-only auto-resonance work for ERM, but its
+probe path currently rejects every actuator type other than LRA.  Accept the
+ERM type so a board DTS can enable the existing peripheral.
+
+Signed-off-by: Agent OS <agent-os@example.invalid>
+---
+ drivers/input/misc/qcom-spmi-haptics.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/input/misc/qcom-spmi-haptics.c b/drivers/input/misc/qcom-spmi-haptics.c
+index 321bcca477d18912d99fabefa2a01a0c812decb4..31e42a37628a9e73eb1d0b33a1ad6d1315a8baba 100644
+--- a/drivers/input/misc/qcom-spmi-haptics.c
++++ b/drivers/input/misc/qcom-spmi-haptics.c
+@@ -817,11 +817,11 @@ static int spmi_haptics_probe(struct platform_device *pdev)
+ 		goto register_fail;
+ 	}
+ 
+-	// We only support LRAs for now
++	// Support LRA and ERM actuators.
+ 	haptics->actuator_type = HAP_TYPE_LRA;
+ 	ret = of_property_read_u32(node, "qcom,actuator-type", &val);
+ 	if (!ret) {
+-		if (val != HAP_TYPE_LRA) {
++		if (val > HAP_TYPE_ERM) {
+ 			dev_err(&pdev->dev, "qcom,actuator-type (%d) isn't supported\n", val);
+ 			ret = -EINVAL;
+ 			goto register_fail;

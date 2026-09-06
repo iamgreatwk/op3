@@ -71,6 +71,10 @@ repository and a separate Git repository for the formal kernel source.
    builds and `scripts/verify-op3-recovery-manifest.sh --artifacts` after
    packaging. If a source, branch, commit, or hash changes, update the
    manifest and handoff in the same assigned branch before building.
+   On a fresh host, restore the independent kernel from
+   `patches/pmos612-op3-recovery-audio-full/README.md` with
+   `scripts/restore-op3-recovery-kernel.sh`; do not apply unrelated historical
+   patch directories.
 
 Recommended state check:
 

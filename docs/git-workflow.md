@@ -70,11 +70,18 @@ scripts/verify-op3-recovery-manifest.sh --source
 scripts/verify-op3-recovery-manifest.sh --artifacts
 ```
 
-The kernel commit in this manifest is currently local to the independent
-kernel worktree; the formal kernel remote URL and this limitation are recorded
-in the manifest. A fresh rebuild host must either receive that exact kernel
-commit through an authorized remote or use an exported, reviewed patch series
-before the artifact check can pass.
+The canonical kernel commit remains local to the independent kernel worktree,
+but its complete 31-commit source change is now archived in
+`patches/pmos612-op3-recovery-audio-full/`. The archive starts at the pinned
+baseline and is checked by the expected restored tree ID in the manifest. A
+fresh host must use `scripts/restore-op3-recovery-kernel.sh` instead of copying
+from an old worktree. The exact tested kernel configuration is tracked at
+`kernel/configs/oneplus3-recovery-audio-full.config`.
+
+The ath10k firmware and board file remain external inputs because they are not
+project source. The restore script requires `OP3_ATH10K_EXTFW_SOURCE` and
+verifies both pinned SHA256 values before installing them into the restored
+kernel worktree.
 
 ## Change rules
 

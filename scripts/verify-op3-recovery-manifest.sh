@@ -86,6 +86,17 @@ test -x "$project_root/scripts/pack-boot.sh" ||
   die "missing executable boot packer: $project_root/scripts/pack-boot.sh"
 test -f "$project_root/$RECOVERY_INITRD" ||
   die "missing recovery initrd: $project_root/$RECOVERY_INITRD"
+test -d "$project_root/$KERNEL_PATCH_SERIES_DIR" ||
+  die "missing kernel patch series: $project_root/$KERNEL_PATCH_SERIES_DIR"
+test -f "$project_root/$KERNEL_CONFIG_SOURCE" ||
+  die "missing tracked kernel config: $project_root/$KERNEL_CONFIG_SOURCE"
+check_sha256 "$KERNEL_CONFIG_SOURCE_SHA256" \
+  "$project_root/$KERNEL_CONFIG_SOURCE"
+
+patch_count="$(find "$project_root/$KERNEL_PATCH_SERIES_DIR" -maxdepth 1 \
+  -type f -name '*.patch' | wc -l)"
+[[ "$patch_count" -eq "$KERNEL_PATCH_COUNT" ]] ||
+  die "patch series has $patch_count patches, expected $KERNEL_PATCH_COUNT"
 
 printf 'PASS source project=%s branch=%s\n' \
   "$(git -C "$project_root" rev-parse --short HEAD)" "$project_branch"

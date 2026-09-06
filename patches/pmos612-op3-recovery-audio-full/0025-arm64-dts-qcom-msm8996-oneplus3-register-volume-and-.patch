@@ -1,0 +1,95 @@
+From 21533bb8c874df463935387f700a75aa722abee3 Mon Sep 17 00:00:00 2001
+From: Agent OS <agent-os@example.invalid>
+Date: Sun, 6 Sep 2026 03:00:00 +0800
+Subject: [PATCH 25/31] arm64: dts: qcom: msm8996-oneplus3: register volume and
+ tri-state keys
+
+The OnePlus 3 exposes its side volume buttons and three-position switch
+through PM8994 GPIOs.  Register them with the standard gpio-keys driver so
+recovery and other userspace input consumers receive ordinary EV_KEY events.
+
+The GPIO and key-code mapping is retained from the historical OnePlus 3 DTS:
+GPIO3/2 are volume up/down and GPIO6/4/5 are the top/middle/bottom positions
+of the tri-state switch.  The switch pulls the selected line low; its
+pull-ups are configured in the PMIC pinctrl state.
+
+The formal 6.12 OP3 configuration already has CONFIG_KEYBOARD_GPIO=y, so no
+separate Kconfig change is needed.
+
+Signed-off-by: Agent OS <agent-os@example.invalid>
+---
+ .../boot/dts/qcom/msm8996-oneplus-common.dtsi | 54 ++++++++++++++++++-
+ 1 file changed, 52 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi b/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi
+index 2da9a722451643da04a919de2b261ed6cfd1c3ec..b294d53a044729b32ec40676b1b763248cc6141e 100644
+--- a/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi
++++ b/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi
+@@ -83,8 +83,51 @@ div1_mclk: div1-clk {
+ 		pinctrl-names = "default";
+ 		pinctrl-0 = <&audio_mclk>;
+ 		#clock-cells = <0>;
+-		clocks = <&rpmcc RPM_SMD_DIV_CLK1>;
+-		enable-gpios = <&pm8994_gpios 15 GPIO_ACTIVE_HIGH>;
++	clocks = <&rpmcc RPM_SMD_DIV_CLK1>;
++	enable-gpios = <&pm8994_gpios 15 GPIO_ACTIVE_HIGH>;
++};
++
++/ {
++	gpio-keys {
++		compatible = "gpio-keys";
++		autorepeat;
++		pinctrl-names = "default";
++		pinctrl-0 = <&tri_state_default>;
++
++		vol-up {
++			label = "Volume Up";
++			gpios = <&pm8994_gpios 3 GPIO_ACTIVE_LOW>;
++			linux,code = <115>;
++			debounce-interval = <15>;
++		};
++
++		vol-down {
++			label = "Volume Down";
++			gpios = <&pm8994_gpios 2 GPIO_ACTIVE_LOW>;
++			linux,code = <114>;
++			debounce-interval = <15>;
++		};
++
++		tri-top {
++			label = "Tri State Top";
++			gpios = <&pm8994_gpios 6 GPIO_ACTIVE_LOW>;
++			linux,code = <600>;
++			debounce-interval = <15>;
++		};
++
++		tri-mid {
++			label = "Tri State Middle";
++			gpios = <&pm8994_gpios 4 GPIO_ACTIVE_LOW>;
++			linux,code = <601>;
++			debounce-interval = <15>;
++		};
++
++		tri-bot {
++			label = "Tri State Bottom";
++			gpios = <&pm8994_gpios 5 GPIO_ACTIVE_LOW>;
++			linux,code = <602>;
++			debounce-interval = <15>;
++		};
+ 	};
+ };
+ 
+@@ -327,6 +370,13 @@ divclk4_pin_a: divclk4-state {
+ 		bias-disable;
+ 		power-source = <PM8994_GPIO_S4>;
+ 	};
++
++	tri_state_default: tri-state-default-state {
++		pins = "gpio4", "gpio5", "gpio6";
++		function = PMIC_GPIO_FUNC_NORMAL;
++		input-enable;
++		bias-pull-up;
++	};
+ };
+ 
+ &pm8994_spmi_regulators {

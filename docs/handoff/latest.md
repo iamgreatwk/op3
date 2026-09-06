@@ -13,6 +13,16 @@ the latest tested artifact hashes. Run
 worktrees, `out/`, `cache/`, and historical artifacts remain outside the
 rebuild input and are not copied into it.
 
+The independent kernel source is now reproducible from GitHub: the 31-patch
+archive is in `patches/pmos612-op3-recovery-audio-full/`, the tested full
+configuration is `kernel/configs/oneplus3-recovery-audio-full.config`, and
+`scripts/restore-op3-recovery-kernel.sh` reconstructs a fresh kernel worktree
+from `KERNEL_BASE_COMMIT`. The restored tree must equal manifest
+`KERNEL_TREE`. ath10k firmware remains an external, SHA256-pinned input and is
+not committed. Archive reconstruction was tested locally by applying all 31
+patches and matching the expected tree ID; this organization change did not
+run a kernel build or a device test.
+
 ## OP3 recovery S1302 startup retry follow-up (registration PASS, physical test pending, 2026-09-06)
 
 The final audio-integrated image registered the audio card and `/dev/snd`

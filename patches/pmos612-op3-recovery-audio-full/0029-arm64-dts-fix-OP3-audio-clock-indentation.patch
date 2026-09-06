@@ -1,0 +1,22 @@
+From 9491be0d64601c2bdbce30f2ff3eedf1bcc5a45d Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Sun, 6 Sep 2026 14:06:05 +0800
+Subject: [PATCH 29/31] arm64: dts: fix OP3 audio clock indentation
+
+---
+ arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi b/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi
+index 098bb4c03cd8c88724e8dda285dd843de8f93497..4fabeea24de73defb181c22d4a0d7e2ec903c18b 100644
+--- a/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi
++++ b/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi
+@@ -84,7 +84,7 @@ div1_mclk: div1-clk {
+ 		pinctrl-names = "default";
+ 		pinctrl-0 = <&audio_mclk>;
+ 		#clock-cells = <0>;
+-	clocks = <&rpmcc RPM_SMD_DIV_CLK1>;
++		clocks = <&rpmcc RPM_SMD_DIV_CLK1>;
+ 		enable-gpios = <&pm8994_gpios 15 GPIO_ACTIVE_HIGH>;
+ 	};
+ };
