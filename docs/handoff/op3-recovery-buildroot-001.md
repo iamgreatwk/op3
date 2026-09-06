@@ -9,7 +9,7 @@ Changed files: buildroot/package-patches/op3-recovery/{Config.in,op3-recovery.mk
   buildroot/op3-recovery.defconfig; scripts/prepare-op3-buildroot.sh;
   scripts/stage-op3-audio-rootfs.sh; docs/rebuild-recovery.md;
   boot/recovery-browser-test/README.md; docs/handoff/latest.md
-Commit SHA: pending
+Commit SHA: b51a714
 
 Layer: Buildroot recovery package and persistent payload staging
 Hypothesis tested: The tracked recovery C/libtsm sources and browser-session
