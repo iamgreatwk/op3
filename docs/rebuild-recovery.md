@@ -262,6 +262,10 @@ make -C source/buildroot O="$PWD/out/buildroot-op3-recovery" \
   BR2_JLEVEL=3 2>&1 | tee /tmp/buildroot-op3-recovery.log
 ~~~
 
+当前 recovery defconfig 为实验设备启用了 dropbear root 登录，并在配置中只
+保存固定的 SHA-512 crypt 哈希；对应的实验室初始密码是 `1234`，仅用于本机
+bring-up，部署到其他设备或公开环境前应替换为新的哈希。
+
 `BR2_PRIMARY_SITE` 只改变下载候选顺序，Buildroot 仍会在该源缺少文件时
 继续尝试包自身的上游地址；它不改变源码版本或校验值。构建中断后重新
 执行同一命令即可从已有的 `dl/` 和 `output/` 继续。

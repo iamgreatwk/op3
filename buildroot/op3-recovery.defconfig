@@ -8,6 +8,11 @@
 BR2_aarch64=y
 BR2_TOOLCHAIN_BUILDROOT_GLIBC=y
 
+# Test-device bootstrap access for dropbear. This is a fixed crypt( SHA-512 )
+# hash for the lab password; never reuse that password outside bring-up.
+BR2_TARGET_ENABLE_ROOT_LOGIN=y
+BR2_TARGET_GENERIC_ROOT_PASSWD="$$6$$op3recovery$$F7VxL8Dp3dj0m3solXDvy5ANBpEVcIiK8v0yeTsVfd.sH7DEfntcz1fDl9ZG03wrtUldrPCVYxBftwPuXZJSD1"
+
 # Keep a TAR for the optional persistent /newroot payload and make the CPIO
 # image the canonical, self-built initramfs used by pack-boot.sh.
 BR2_TARGET_ROOTFS_TAR=y
