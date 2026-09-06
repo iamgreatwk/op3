@@ -31,10 +31,13 @@ browser session remains unvalidated until the DRM-only recovery gate passes.
 
 The recovery initramfs launcher now includes the validated
 `/usr/bin/wifi_auto.sh` hook from OP3-WIFI-001. After `/newroot` is mounted by
-the established initramfs flow, it calls `/newroot/opt/op3-wifi/wifi auto`;
+the established initramfs flow, it first runs
+`/newroot/opt/op3-wifi/wifi ipv6 off`, then calls
+`/newroot/opt/op3-wifi/wifi auto`;
 the matching modules/firmware, persistent CLI, and default profile must be
 staged on sda15 as described in `boot/wifi/README.md`. No credentials are
-included in this initrd.
+included in this initrd. IPv6 can be enabled explicitly after boot with
+`wifi ipv6 on` and inspected with `wifi ipv6 status`.
 
 The recovery initramfs launcher currently keeps the A530 GPU runtime active
 from boot because this DTB exposes dummy `vdd`/`vddcx` regulators; allowing the

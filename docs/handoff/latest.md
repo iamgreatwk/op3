@@ -1,5 +1,18 @@
 # Latest handoff
 
+## OP3 recovery IPv6 opt-in checkpoint (Issue #9, 2026-09-06)
+
+Recovery Wi-Fi now applies an IPv6-off policy before the existing automatic
+IPv4 connection. The initramfs hook runs `wifi ipv6 off` before
+`/newroot/opt/op3-wifi/wifi auto`; after boot, `wifi ipv6 on`, `wifi ipv6 off`,
+and `wifi ipv6 status` provide explicit control. Current and future interface
+sysctls are covered. The kernel, DTS, ath10k modules/firmware, IPv4 DHCP,
+DRM, audio, input, browser, and credentials are unchanged.
+
+Agent shell/static checks pass. Owner repack and device validation are
+pending. Handoff: `docs/handoff/op3-recovery-ipv6-001.md`. This is a separate
+network-policy checkpoint on the same recovery implementation branch.
+
 ## OP3 recovery Wi-Fi integration checkpoint (Issue #8, 2026-09-06)
 
 The recovery initramfs recipe now appends the already validated

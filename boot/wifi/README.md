@@ -23,6 +23,11 @@ The CLI invokes the static initramfs `/usr/sbin/wpa_supplicant` and
 control socket directory `/run/op3-wifi`; otherwise it looks in its default
 directory and cannot observe an already-completed association.
 
+Recovery keeps IPv6 disabled by default. Use `wifi ipv6 status` to inspect the
+policy, `wifi ipv6 on` to enable IPv6 on demand, and `wifi ipv6 off` to disable
+it again. The setting applies to current interfaces and to interfaces created
+later; it does not change the saved Wi-Fi profile or the IPv4 DHCP path.
+
 ## Persistent layout
 
 The owner stages `op3-wifi-bundle.tar.gz` into `/newroot`. It supplies:
@@ -87,5 +92,7 @@ Passwords are intentionally never displayed.
      artifacts/initrd-op3-wifi.cpio.gz
    ```
 
-Collect `/root/wifi_auto.log`, `dmesg | grep -iE 'ath10k|wlan|firmware'`,
-`wifi current`, and the Wi-Fi SSH result. Do not copy credentials into logs.
+Collect `/root/boot_mainline.log` (including the `wifi_auto started` marker),
+`/root/dmesg_early.txt` or `/root/dmesg_rootfs.txt`,
+`dmesg | grep -iE 'ath10k|wlan|firmware|rfkill'`, `wifi current`, and the
+Wi-Fi SSH result. Do not copy credentials into logs.

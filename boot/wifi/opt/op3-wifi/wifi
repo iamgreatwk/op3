@@ -9,6 +9,7 @@ set -u
 
 ROOT=${OP3_WIFI_ROOT:-/newroot}
 STATE=${OP3_WIFI_STATE:-/run/op3-wifi}
+IPV6_CONF=${OP3_WIFI_IPV6_CONF:-/proc/sys/net/ipv6/conf}
 CONFIG="$ROOT/etc/op3-wifi"
 PROFILES="$CONFIG/profiles"
 DEFAULT="$CONFIG/default"
@@ -31,6 +32,7 @@ usage() {
 	cat <<'EOF'
 Usage:
   wifi on | off | current | disconnect | portal
+  wifi ipv6 on | off | status
   wifi connect <ssid> [passphrase] [identity]
   wifi reconnect <ssid>
   wifi list
@@ -179,6 +181,48 @@ current() {
 	"$WPA_CLI" -p "$STATE" -i "$IFACE" status 2>/dev/null || true
 	ip -4 addr show dev "$IFACE"
 	ip -4 route show dev "$IFACE"
+	ipv6_status
+}
+
+ipv6_set() {
+	value=$1
+	found=0
+
+	# The all/default knobs cover interfaces created later; the per-interface
+	# writes also cover links that already exist when this command runs.
+	for path in "$IPV6_CONF/all/disable_ipv6" \
+		"$IPV6_CONF/default/disable_ipv6" \
+		"$IPV6_CONF"/*/disable_ipv6; do
+		[ -e "$path" ] || continue
+		printf '%s\n' "$value" > "$path" 2>/dev/null ||
+			die "cannot set IPv6 state at $path"
+		found=1
+	done
+
+	# A kernel without IPv6 has no sysctl tree, which already satisfies the
+	# default-off policy. Enabling IPv6 must report that it is unavailable.
+	if [ "$found" = 0 ] && [ "$value" = 0 ]; then
+		return 0
+	fi
+	[ "$found" = 1 ] || die "IPv6 sysctl is unavailable"
+}
+
+ipv6_status() {
+	if [ ! -d "$IPV6_CONF" ]; then
+		printf '%s\n' 'ipv6=unavailable'
+		return 1
+	fi
+
+	all=$(cat "$IPV6_CONF/all/disable_ipv6" 2>/dev/null || printf '?')
+	default=$(cat "$IPV6_CONF/default/disable_ipv6" 2>/dev/null || printf '?')
+	iface=$(cat "$IPV6_CONF/$IFACE/disable_ipv6" 2>/dev/null || printf '?')
+	case $all in
+		0) state=on ;;
+		1) state=off ;;
+		*) state=unknown ;;
+	esac
+	printf 'ipv6=%s all=%s default=%s %s=%s\n' \
+		"$state" "$all" "$default" "$IFACE" "$iface"
 }
 
 portal() {
@@ -199,6 +243,15 @@ case ${1-} in
 	off) stop_client; ip link set "$IFACE" down 2>/dev/null || true ;;
 	disconnect) stop_client ;;
 	current) current ;;
+	ipv6)
+		[ "$#" = 2 ] || { usage; exit 2; }
+		case "$2" in
+			on) ipv6_set 0 ;;
+			off) ipv6_set 1 ;;
+			status) ipv6_status ;;
+			*) usage; exit 2 ;;
+		esac
+		;;
 	portal) portal ;;
 	connect) [ "$#" -ge 2 ] && [ "$#" -le 4 ] || { usage; exit 2; }; connect "$2" "${3-}" "${4-}" ;;
 	reconnect) [ "$#" = 2 ] || { usage; exit 2; }; reconnect "$2" ;;
