@@ -1,4 +1,5 @@
-# Buildroot defconfig for the OnePlus 3 browser gate (aarch64 / MSM8996).
+# Optional Buildroot defconfig for the OnePlus 3 browser gate (aarch64 / MSM8996).
+# This profile is not selected by the default recovery build.
 #
 # Purpose: build the WPE WebKit browser stack (cog + WPEBackend-fdo) on top of
 # the validated Mesa/EGL/Weston stack. The result is staged as a self-contained

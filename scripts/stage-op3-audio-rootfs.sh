@@ -9,7 +9,9 @@ set -euo pipefail
 #   scripts/stage-op3-audio-rootfs.sh [buildroot-target] [output-tarball]
 
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-target="${1:-$project_root/out/buildroot-op3-egl/target}"
+# shellcheck source=/dev/null
+source "$project_root/manifests/op3-recovery-audio-full.env"
+target="${1:-$project_root/$BUILDROOT_RECOVERY_TARGET_DIR}"
 output="${2:-$project_root/artifacts/op3-audio-rootfs.tar.gz}"
 route="$project_root/boot/audio-test/opt/op3-audio/route.sh"
 

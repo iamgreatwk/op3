@@ -64,35 +64,56 @@ git clone --branch msm8996-stable-6.12.y --single-branch \
 The restore script applies all 31 patches and verifies the expected tree
 object. It does not compile the kernel.
 
-## 2. Buildroot source and patches
+## 2. Buildroot source and profiles
 
 Run this against a fresh Buildroot checkout. It pins commit
-`679b9ead7620bbf193620d1ebf56f53c1764d37a`, installs the tracked OP3 browser
-defconfig, and installs the three Cog patches in the correct order. It does
-not build anything.
+`679b9ead7620bbf193620d1ebf56f53c1764d37a` and installs the selected tracked
+profile. The default `recovery` profile does not select Mesa/Freedreno
+EGL/GLES, Weston DRM, WPE WebKit, Cog, or WPEWebDriver. It installs only the
+TinyALSA tools needed by recovery audio plus small diagnostics. This script
+does not build anything.
 
 ```bash
 ./scripts/prepare-op3-buildroot.sh source/buildroot
 ```
 
-The installed defconfig is also locked by SHA256 in
+The installed recovery defconfig is locked by SHA256 in
 `manifests/op3-recovery-audio-full.env`; the preparation script rejects a
 modified project defconfig before touching the Buildroot checkout.
 
 The owner then performs the large Buildroot build:
 
 ```bash
-mkdir -p out/buildroot-op3-egl
-make -C source/buildroot O="$PWD/out/buildroot-op3-egl" \
-  op3_browser_defconfig
-make -C source/buildroot O="$PWD/out/buildroot-op3-egl" \
-  BR2_JLEVEL=3 2>&1 | tee /tmp/buildroot-op3-egl.log
+mkdir -p out/buildroot-op3-recovery
+make -C source/buildroot O="$PWD/out/buildroot-op3-recovery" \
+  op3_recovery_defconfig
+make -C source/buildroot O="$PWD/out/buildroot-op3-recovery" \
+  BR2_JLEVEL=3 2>&1 | tee /tmp/buildroot-op3-recovery.log
 ```
 
-The tracked defconfig includes the WPE WebKit/Cog/Weston/Mesa stack, TLS,
-WPEWebDriver, and `BR2_PACKAGE_TINYALSA=y` plus
-`BR2_PACKAGE_TINYALSA_TOOLS=y`. Therefore the same Buildroot target supplies
-the browser files and `tinycap`, `tinymix`, and `tinyplay` for recovery audio.
+Use the recovery target for the audio bundle:
+
+```bash
+./scripts/stage-op3-audio-rootfs.sh \
+  out/buildroot-op3-recovery/target \
+  artifacts/op3-audio-rootfs.tar.gz
+```
+
+The browser remains an explicit opt-in profile. It uses a separate output
+directory and a separate Buildroot source checkout; it installs the three Cog
+patches:
+
+```bash
+./scripts/prepare-op3-buildroot.sh source/buildroot-browser browser
+
+make -C source/buildroot-browser O="$PWD/out/buildroot-op3-egl" \
+  op3_browser_defconfig
+make -C source/buildroot-browser O="$PWD/out/buildroot-op3-egl" \
+  BR2_JLEVEL=3 2>&1 | tee /tmp/buildroot-op3-browser.log
+```
+
+Only if browser testing is explicitly requested, stage its target with
+`scripts/stage-browser-rootfs.sh`.
 
 For a clean retry of a failed WebKit package build, keep the Buildroot output
 directory and run the relevant owner-approved package dirclean before the
@@ -213,16 +234,10 @@ not a kernel or Buildroot build:
   out/recovery/recovery_mainline
 ```
 
-The audio payload is the Buildroot target plus the tracked diagnostic route
-helper. It contains the TinyALSA tools required by the recovery microphone
-key. The archive is a persistent payload, not an initramfs and not a complete
-filesystem image:
-
-```bash
-./scripts/stage-op3-audio-rootfs.sh \
-  out/buildroot-op3-egl/target \
-  artifacts/op3-audio-rootfs.tar.gz
-```
+The audio payload is the recovery Buildroot target plus the tracked diagnostic
+route helper. It contains the TinyALSA tools required by the recovery
+microphone key. The archive is a persistent payload, not an initramfs and not
+a complete filesystem image.
 
 The final recovery initrd overlays the recovery bundle on the firmware-
 provenance browser initrd:

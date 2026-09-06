@@ -1,5 +1,17 @@
 # Latest handoff
 
+## OP3 default Buildroot profile excludes browser (2026-09-06)
+
+The default Buildroot profile is now `buildroot/op3-recovery.defconfig` and
+is installed as `op3_recovery_defconfig`. It keeps TinyALSA and the recovery
+diagnostic tools, but does not select Mesa/Freedreno EGL/GLES, Weston DRM, WPE
+WebKit, Cog, or WPEWebDriver. The existing `buildroot/op3-browser.defconfig`
+remains an explicit opt-in profile; use
+`scripts/prepare-op3-buildroot.sh source/buildroot-browser browser` with a
+separate Buildroot source/output tree when browser testing is needed. No
+kernel, recovery runtime, or device behavior changed. Handoff:
+`docs/handoff/op3-recovery-default-profile-001.md`.
+
 ## OP3 external input bundle (2026-09-06)
 
 All binary inputs that must survive deletion of the checkout are organized in
@@ -20,11 +32,12 @@ repository.
 Buildroot, the external reference initrd, browser, Wi-Fi, audio, recovery
 bundles, and final boot-image packaging. Buildroot is pinned to commit
 `679b9ead7620bbf193620d1ebf56f53c1764d37a`; its project-owned Cog patches are
-archived on the current GitHub branch, and the browser defconfig explicitly
-enables TinyALSA plus `tinycap`/`tinymix`/`tinyplay` so audio tools are not
-silently inherited from a stale `out/` tree. New preparation scripts restore
-the Buildroot source, extract the hash-pinned historical initrd from the
-external v100 boot image, and stage the audio target bundle.
+archived on the current GitHub branch. The default `op3_recovery_defconfig`
+explicitly enables TinyALSA plus `tinycap`/`tinymix`/`tinyplay` while leaving
+Mesa/Freedreno, Weston, WPE WebKit, Cog, and WPEWebDriver disabled; the
+browser stack remains an explicit opt-in profile. New preparation scripts
+restore the Buildroot source, extract the hash-pinned historical initrd from
+the external v100 boot image, and stage the audio target bundle.
 
 This is a source/provenance checkpoint only: no large build, device test, or
 local-directory deletion was performed. The reference v100 boot image,

@@ -13,7 +13,7 @@ set -euo pipefail
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=/dev/null
 source "$project_root/manifests/op3-recovery-audio-full.env"
-target="${1:-$project_root/out/buildroot-op3-egl/target}"
+target="${1:-$project_root/$BUILDROOT_BROWSER_TARGET_DIR}"
 output="${2:-$project_root/artifacts/op3-browser-bundle.tar.gz}"
 run_script="$project_root/boot/browser-test/opt/op3-browser/run.sh"
 page="$project_root/boot/browser-test/opt/op3-browser/test-page.html"
