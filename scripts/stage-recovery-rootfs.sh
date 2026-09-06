@@ -33,7 +33,12 @@ install -m 0755 "$binary" "$stage/sbin/recovery_mainline"
 install -m 0755 \
 	"$project_root/boot/recovery-browser-test/opt/op3-recovery/browser-session.sh" \
 	"$stage/usr/bin/op3-browser-session"
-ln -s op3-browser-session "$stage/usr/bin/browser"
+# Keep this as a regular executable: init_mainline.sh mirrors regular files
+# from /newroot/usr/bin into the initramfs PATH, but intentionally skips
+# symlinks.  The recovery shell must therefore see `browser` after boot.
+install -m 0755 \
+	"$project_root/boot/recovery-browser-test/opt/op3-recovery/browser-session.sh" \
+	"$stage/usr/bin/browser"
 
 # The Cog runner is copied into the recovery payload so its one-shot mode can
 # be updated independently of the large Buildroot bundle. OP3_BROWSER_BASE
