@@ -6,8 +6,9 @@ Role: Implementation
 Baseline commit: 254483efaf039a15457a42c8555b87859645ee80
 Working branch: agent/implementation/recovery-browser-001
 Changed files: scripts/make-recovery-browser-initrd.sh;
-  boot/recovery-browser-test/README.md
-Commit SHA: pending implementation commit
+  boot/recovery-browser-test/README.md; docs/handoff/latest.md;
+  docs/handoff/op3-recovery-wifi-001.md
+Commit SHA: 68dc5af
 
 Layer: 02 recovery boot userspace / initramfs integration
 Previous PASS milestone: Issue #7 direct DRM recovery with visible restore
