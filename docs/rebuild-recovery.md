@@ -127,7 +127,7 @@ git clone --branch msm8996-stable-6.12.y --single-branch \
 ~~~bash
 set -e
 
-project=/home/kai/op3-rebuild-clean-20260906
+project="$PWD"
 cd "$project"
 kernel="$project/source/linux-pmos-msm8996-6.12-recovery-audio-full"
 kout="$project/out/pmos-msm8996-6.12-recovery-audio-full-s1302-retry"
