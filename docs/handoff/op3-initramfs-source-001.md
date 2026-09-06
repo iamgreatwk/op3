@@ -61,12 +61,15 @@ recovery/Wi-Fi/audio runtime behavior require the owner build and OnePlus 3
 boot test. Proprietary firmware remains outside GitHub and is still required.
 
 Follow-up check: the latest owner run produced Image.gz SHA256
-`92ab271e191ab64841d281f3fe34a57ccdf3d12dcfa50dfe81bdbf574d2a3a8c`, still
+`3175a92fa47c54ad33c131b4a353f8e425c898270cdcda53bafda9032f84bc8d`, still
 different from the locked `5c89259d9340071c9c8684d361042482ca25c8f76b2de4d33cdacf2105f78861`.
-Its first phase also stopped because the output directory did not contain
-`.config`; the command had combined `project=...` and `cd "$project"` on one
-line. The corrected guide uses separate assignment and `cd` commands and
-explicitly restores the tracked full configuration when it is absent.
+The output configuration was present and matched the tracked config, and
+`olddefconfig` reported no change. The first phase nevertheless stopped
+because `make -B` forces the top-level `.config` target; Linux defines that
+target as an error guard rather than a rebuild recipe. The shell then
+continued into later phases, producing a different invalid hash. The guide
+now uses `set -e` and removes `-B`; the timestamped CPIO command itself causes
+the required CPIO rebuild.
 
 The remaining reproducibility issue is the empty default initramfs: its
 archived directory mtime is `2026-09-06 14:32:51 +0800`, while GNU date

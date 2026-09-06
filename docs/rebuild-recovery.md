@@ -76,6 +76,8 @@ git clone --branch msm8996-stable-6.12.y --single-branch \
 ## 3. 内核编译（项目所有者执行）
 
 ~~~bash
+set -e
+
 project=/home/kai/op3-rebuild-clean-20260906
 cd "$project"
 kernel="$project/source/linux-pmos-msm8996-6.12-recovery-audio-full"
@@ -104,7 +106,7 @@ make -C "$kernel" O="$kout" ARCH=arm64 \
 # numeric timezone: GNU date interprets the literal abbreviation CST as US
 # Central time, while the archived mtime is 14:32:51 China Standard Time.
 export KBUILD_BUILD_TIMESTAMP='Sun Sep  6 14:32:51 +0800 2026'
-make -B -C "$kernel" O="$kout" ARCH=arm64 \
+make -C "$kernel" O="$kout" ARCH=arm64 \
   CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
   usr/initramfs_data.cpio
 

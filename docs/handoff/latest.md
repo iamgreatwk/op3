@@ -8,13 +8,13 @@ The owner completed the kernel and Buildroot builds in
 `3a704c8f64dde483204f4391997cb60230bf736478009330bf27df2085e0bf6c`) whose
 CPIO contains the project `/init`, recovery, Wi-Fi/audio helpers, firmware,
 and kernel modules. The latest targeted kernel rerun produced Image.gz SHA256
-`92ab271e191ab64841d281f3fe34a57ccdf3d12dcfa50dfe81bdbf574d2a3a8c`, still
-different from the locked value. Its first CPIO phase stopped because the
-output `.config` was absent; the later phases succeeded only because the
-output was then populated. The rebuild guide now restores `.config`
-explicitly, locks the CPIO command record, and uses a tracked date wrapper
-for the final UTS timestamp. Re-run the kernel target sequence, then repack
-and run artifact verification. No device test was run.
+`3175a92fa47c54ad33c131b4a353f8e425c898270cdcda53bafda9032f84bc8d`, still
+different from the locked value. Although `olddefconfig` confirmed the output
+configuration, `make -B` forced Linux's top-level `.config` error guard and
+the shell continued into later phases. The rebuild guide now uses `set -e`,
+does not force the top-level target, locks the CPIO command record, and uses a
+tracked date wrapper for the final UTS timestamp. Re-run the kernel target
+sequence, then repack and run artifact verification. No device test was run.
 
 ## Buildroot GNU mirror timeout (2026-09-06)
 
