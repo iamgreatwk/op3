@@ -25,7 +25,7 @@ Artifacts and SHA256: Agent static aarch64 recovery compile passed:
   484d7db7d4a977bb0b451cb148b50532c83a7eddedd8938817e340c7cb83cb3a
 
 Device test run by project owner: 2026-09-06
-Device result: PASS (DRM-only smoke test)
+Device result: PASS (DRM-only smoke test and visible restore)
 Evidence links / log paths: owner-provided OP3 DRM-only boot capture
   (2026-09-06): `/tmp/fb.log`, `/newroot/var/log/op3-recovery.log`, and
   filtered `dmesg`. Recovery logged `DRM display opened fd=3 connector=33
@@ -36,34 +36,20 @@ Evidence links / log paths: owner-provided OP3 DRM-only boot capture
   does not identify a direct-DRM recovery failure. The controlled handoff
   then logged `DRM display released for browser handoff`, `browser handoff
   ready`, `DRM display opened ...`, and `DRM display restored after browser`;
-  both session markers were cleared and PID 388 remained alive. No browser
-  was started.
+  both session markers were cleared and PID 388 remained alive. After the
+  panel-preserving handoff fix in `eeba948`, the owner confirmed that the
+  recovery GUI was visible again after the fake session exited. No browser was
+  started.
 
 Conclusion: INCONCLUSIVE
 Uncertainties:
-  - The first smoke test proved the userspace DRM lifecycle but the owner
-    reported that the restored UI was not visible. The direct DRM close
-    disables the panel/backlight, while the old restore path did not restore
-    the saved brightness even though `screen_on` remained true.
-  - Commit `398ec3a` saves the active brightness before handoff and explicitly
-    restores it after the DRM modeset, but the owner capture showed 255 was
-    restored while the UI remained black. This rules out brightness level as
-    the sole cause.
-  - Commit `071cc75` defers `SETCRTC` until after the first frame is rendered,
-    matching the validated standalone KMS probe, but the owner still saw a
-    black panel after the recovery-to-recovery handoff.
-  - Commit `eeba948` stops explicitly disabling the CRTC during recovery DRM
-    close. Closing the DRM fd already drops DRM master; the explicit fb=0
-    modeset was powering down the DSI panel and was not needed for ownership
-    handoff. This change has not yet been device tested.
-  - The recovery display now owns and closes `/dev/dri/card0`; browser
-    handoff behavior is deliberately not part of this gate.
+  - This DRM-only retest did not start a real compositor/browser and did not
+    include a post-handoff filtered dmesg excerpt. Browser ownership and the
+    browser return path remain outside this issue.
   - The existing GPU runtime-PM workaround remains unchanged; this issue does
     not repair the DTB's dummy GPU regulators.
-Recommended next experiment: deploy the bundle from commit `eeba948` and
-  rerun the DRM-only boot plus handoff. Confirm `/tmp/fb.log` contains the
-  activation and backlight lines, and verify the recovery UI remains visible
-  after the fake session exits. Confirm the physical power key still toggles
-  it. Keep browser testing out of this gate; it belongs to Issue #6 after the
-  recovery foundation issues are complete.
+Recommended next experiment: Integration records the visible DRM-only result
+  and keeps Issue #6 browser testing separate. Before starting Cog/Chrome,
+  complete the recovery foundation issues for network, audio, and physical
+  input as planned.
 ```

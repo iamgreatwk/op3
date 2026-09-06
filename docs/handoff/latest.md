@@ -23,12 +23,14 @@ reopen, and display restore; both session markers cleared and recovery PID
 388 remained alive. The captured `pp done time out, lm=2` occurred at dmesg
 2.097s, before the recovery launcher marker at 9.809s, so it is classified as
 a pre-recovery boot warning. The DRM-only result is not yet an Integration
-acceptance because the owner reported no visible restored UI even though the
-backlight restored to 255. Commit `398ec3a` preserves that brightness, and
-`071cc75` defers `SETCRTC` until the first recovery frame is rendered.
-The latest commit `eeba948` also leaves the active panel scanout in place
+acceptance because the first smoke test showed a black restored panel even
+though the backlight restored to 255. Commit `398ec3a` preserves that
+brightness, and `071cc75` defers `SETCRTC` until the first recovery frame is
+rendered. The latest commit `eeba948` leaves the active panel scanout in place
 while closing recovery's DRM fd; the explicit disable was powering down the
-DSI panel unnecessarily. This fix is awaiting device retest. Issue #7 handoff:
+DSI panel unnecessarily. The owner retest now shows the recovery GUI after
+the fake session exits, so the DRM-only behavior is device-validated. Issue
+#7 handoff:
 `docs/handoff/op3-recovery-drm-001.md`. Browser testing remains paused until
 this DRM-only gate has evidence.
 
