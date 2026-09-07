@@ -83,6 +83,17 @@ project source. The restore script requires `OP3_ATH10K_EXTFW_SOURCE` and
 verifies both pinned SHA256 values before installing them into the restored
 kernel worktree.
 
+## Small-change device fast path
+
+For a small recovery-userspace change, first validate the changed script or
+binary directly on the device. Upload it to `/newroot/tmp/*.new`, verify it is
+non-empty and executable, then atomically move it into `/newroot` and restart
+only the affected recovery process if needed. Do not spend time rebuilding the
+full Buildroot initramfs before this fast-path test passes. Once the device
+behavior is confirmed, rebuild Buildroot and produce the final initramfs and
+boot image from the committed source; temporary replacements are test inputs,
+not release artifacts.
+
 ## Change rules
 
 1. Start every change by recording its layer, hypothesis, one variable, and

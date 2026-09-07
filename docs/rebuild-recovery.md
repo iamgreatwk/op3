@@ -123,6 +123,44 @@ git clone --branch msm8996-stable-6.12.y --single-branch \
 提交者时间，新机器恢复后的提交 SHA 可能不同；脚本和校验器锁定的是
 基线、补丁数量以及最终 tree hash，而不是不可重建的旧提交时间。
 
+## 3a. 小改动先在设备上快速验证
+
+仅修改 recovery 用户空间脚本或 `recovery_mainline` 等小文件时，不要
+先重新编译完整 Buildroot。先在主机完成小文件本身的编译/准备，把文件
+上传到手机的临时目录，校验后原子替换 `/newroot` 中的目标文件；验证
+通过后再把同一改动合入 Buildroot，生成最终 initramfs。
+
+例如替换 recovery 二进制：
+
+~~~bash
+project=/home/kai/src/oneplus3-mainline
+binary="$project/out/recovery/recovery_mainline"
+
+scp -O "$binary" root@172.16.42.1:/newroot/tmp/recovery_mainline.new
+sha256sum "$binary"
+ssh root@172.16.42.1 '
+set -e
+test -s /newroot/tmp/recovery_mainline.new
+chmod 0755 /newroot/tmp/recovery_mainline.new
+mv /newroot/tmp/recovery_mainline.new /newroot/sbin/recovery_mainline
+sync
+old=$(pidof recovery_mainline | awk "{print \$1}")
+test -n "$old"
+kill -TERM "$old"
+for i in 1 2 3 4 5; do
+  sleep 1
+  new=$(pidof recovery_mainline | awk "{print \$1}")
+  test -n "$new" && break
+done
+readlink /proc/$new/exe
+'
+~~~
+
+脚本也应先上传到 `/newroot/tmp/name.new`，再用 `mv` 原子替换。快速验证
+阶段不能直接清空 sda15，也不能把临时文件当作最终 artifact；确认设备
+功能和日志通过后，再执行第 6 节的 Buildroot 编译、initramfs 复制和
+boot image 打包。
+
 ## 4. 内核编译（项目所有者执行）
 
 ~~~bash
