@@ -1734,7 +1734,7 @@ static void sel_copy_and_clear(){
 static int bl_fd=-1;
 static const char* bl_path=NULL;   /* 实际使用的背光路径 */
 static int last_bl=102;   /* 息屏前亮度，唤醒恢复（默认 40%=102，与开机默认一致） */
-static int poll_timeout=20;  /* 主循环 poll 超时（ms）；息屏降载时拉长 */
+static int poll_timeout=100;  /* 主循环空闲 poll 超时（ms）；息屏进一步拉长 */
 static void bl_open(){
   if(bl_fd>=0)return;
   /* 3.18: leds/lcd-backlight；主线(6.x): DRM backlight（994000.dsi.0）——按序探测 */
@@ -1800,7 +1800,7 @@ static void screen_toggle(){
     char b[16];snprintf(b,sizeof(b),"%d\n",last_bl);
     write(bl_fd,b,strlen(b));
     set_gov(tri_gov[tri_mode]);
-    poll_timeout=20;
+    poll_timeout=100;
   }
   screen_on=!screen_on;
 }
