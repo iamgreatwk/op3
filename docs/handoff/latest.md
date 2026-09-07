@@ -1,5 +1,29 @@
 # Latest handoff
 
+## OP3 recovery DRM idle wakeup and S1302 IRQ mitigation prepared (owner build pending, 2026-09-07)
+
+Two independent changes are prepared for the next integrated recovery test.
+The recovery userspace commit `e11a9dc` changes only the screen-on idle
+`poll()` timeout from 20 ms to 100 ms. Input and PTY events still wake the
+poll immediately; the goal is to reduce idle CPU wakeups while retaining the
+direct CPU-rendered DRM UI. The previous sample showed about 51 voluntary
+context switches/s in the 20 ms loop, while the GPU was already runtime
+suspended.
+
+The formal kernel commit `21a64a8c2a20` changes only S1302 event delivery on
+the OP3: because GPIO132 was observed low and IRQ88 increased by about 784/s,
+the DT now selects a 30 ms I2C polling worker instead of requesting the
+level-low IRQ. The existing EV_KEY mappings and chin-key behavior are kept.
+The change is archived as patch 0032 in
+`patches/pmos612-op3-recovery-audio-full/`; the kernel tree lock is
+`afa264a577f7f531159816f2d62c5173c87af735`.
+
+The integrated manifest now points to these trial inputs and marks the new
+kernel image, DTB, Buildroot initramfs, and boot image as
+`OWNER_BUILD_REQUIRED`. Build and device evidence are still pending. Handoff:
+`docs/handoff/op3-recovery-drm-idle-poll-001.md` and
+`docs/handoff/op3-recovery-s1302-irq-storm-001.md`.
+
 ## Default recovery leaves GPU runtime-PM unchanged (2026-09-07)
 
 The default `boot/initramfs/sbin/run_recovery.sh` no longer writes `on` to

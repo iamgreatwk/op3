@@ -1,6 +1,6 @@
 # OP3 recovery audio-full kernel archive
 
-This directory is the durable GitHub archive of the 31 source commits between
+This directory is the durable GitHub archive of the 32 source commits between
 the formal pmOS MSM8996 Linux 6.12.1 baseline and the tested integrated kernel
 tree. It is intentionally stored as a `git am` series instead of relying on a
 local kernel repository or on an unpushed kernel branch.
@@ -43,7 +43,7 @@ extfw/ath10k/QCA6174/hw3.0/board.bin
 ```
 
 The script checks their SHA256 values from the manifest, creates a new kernel
-worktree from the pinned baseline, applies all 31 patches, checks the restored
+worktree from the pinned baseline, applies all 32 patches, checks the restored
 tree ID, and installs the firmware into the restored worktree. It does not
 run a kernel build.
 
@@ -56,7 +56,7 @@ run the large kernel build, using a new output directory:
 ```bash
 project=/home/kai/src/oneplus3-mainline
 kernel=/home/kai/src/linux-pmos-msm8996-6.12.1-op3-recovery-audio-full
-output=$project/out/pmos-msm8996-6.12-recovery-audio-full-rebuild
+output=$project/out/pmos-msm8996-6.12-recovery-audio-full-s1302-poll-drm100
 
 mkdir -p "$output"
 cp "$project/kernel/configs/oneplus3-recovery-audio-full.config" \
@@ -72,7 +72,11 @@ make -C "$kernel" O="$output" ARCH=arm64 \
 ```
 
 The resulting `.config` hash must equal `CONFIG_SHA256` in the manifest. The
-initrd and boot image remain separate ignored build artifacts; use the tracked
-recovery/initrd recipes and `boot/oneplus3-fa5.env` to reproduce those inputs,
-then run `scripts/verify-op3-recovery-manifest.sh --artifacts` when all locked
-artifacts are present.
+S1302 trial should log `polling=30 ms`; check that IRQ88 no longer increases
+while the two chin keys still produce press/release events. The recovery
+userspace trial uses a 100 ms screen-on idle poll timeout. The initrd and boot
+image remain separate ignored build artifacts; use the tracked recovery/initrd
+recipes and `boot/oneplus3-fa5.env` to reproduce those inputs, then run
+`scripts/verify-op3-recovery-manifest.sh --artifacts` when all locked
+artifacts are present and their owner hashes have replaced the pending
+`OWNER_BUILD_REQUIRED` values.

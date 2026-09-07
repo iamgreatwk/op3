@@ -71,7 +71,7 @@ scripts/verify-op3-recovery-manifest.sh --artifacts
 ```
 
 The canonical kernel commit remains local to the independent kernel worktree,
-but its complete 31-commit source change is now archived in
+but its complete 32-commit source change is now archived in
 `patches/pmos612-op3-recovery-audio-full/`. The archive starts at the pinned
 baseline and is checked by the expected restored tree ID in the manifest. A
 fresh host must use `scripts/restore-op3-recovery-kernel.sh` instead of copying

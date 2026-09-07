@@ -1,0 +1,172 @@
+From 21a64a8c2a2065dc3faa66223c3b3210143c596b Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Mon, 7 Sep 2026 17:18:14 +0800
+Subject: [PATCH] Input: misc: poll OP3 S1302 when IRQ is held low
+
+
+diff --git a/Documentation/devicetree/bindings/input/oneplus,s1302-capkey.yaml b/Documentation/devicetree/bindings/input/oneplus,s1302-capkey.yaml
+index 73b507e8b874..e5df82388a76 100644
+--- a/Documentation/devicetree/bindings/input/oneplus,s1302-capkey.yaml
++++ b/Documentation/devicetree/bindings/input/oneplus,s1302-capkey.yaml
+@@ -27,6 +27,15 @@ properties:
+   interrupts:
+     maxItems: 1
+ 
++  polling-interval-ms:
++    description: |
++      Poll the key-state register at this interval instead of requesting the
++      interrupt.  Some S1302 firmware versions hold the interrupt line low;
++      polling avoids a level-triggered interrupt storm while retaining key
++      events.
++    minimum: 10
++    maximum: 1000
++
+   reset-gpios:
+     maxItems: 1
+     description: Active low controller reset
+diff --git a/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi b/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi
+index 4fabeea24de7..3b367cf68e5b 100644
+--- a/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi
++++ b/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi
+@@ -191,6 +191,7 @@ capkey@20 {
+ 		reg = <0x20>;
+ 		interrupt-parent = <&tlmm>;
+ 		interrupts = <132 IRQ_TYPE_LEVEL_LOW>;
++		polling-interval-ms = <30>;
+ 		reset-gpios = <&tlmm 76 GPIO_ACTIVE_LOW>;
+ 		pinctrl-names = "default", "sleep";
+ 		pinctrl-0 = <&capkey_default>;
+diff --git a/drivers/input/misc/op3-capkey-s1302.c b/drivers/input/misc/op3-capkey-s1302.c
+index 04072a6efdb8..79c369607560 100644
+--- a/drivers/input/misc/op3-capkey-s1302.c
++++ b/drivers/input/misc/op3-capkey-s1302.c
+@@ -14,7 +14,9 @@
+ #include <linux/input.h>
+ #include <linux/interrupt.h>
+ #include <linux/module.h>
++#include <linux/property.h>
+ #include <linux/regulator/consumer.h>
++#include <linux/workqueue.h>
+ 
+ #define S1302_PAGE_SELECT	0xff
+ #define S1302_KEYS_PAGE		0x02
+@@ -29,6 +31,9 @@ struct s1302_capkey {
+ 	struct regulator *vdd;
+ 	struct regulator *vio;
+ 	struct gpio_desc *reset;
++	struct delayed_work poll_work;
++	unsigned int poll_interval_ms;
++	bool polling;
+ 	u8 state;
+ };
+ 
+@@ -117,6 +122,22 @@ static void s1302_report_state(struct s1302_capkey *key, u8 state)
+ 	input_sync(key->input);
+ }
+ 
++static void s1302_report_state_change(struct s1302_capkey *key, int state)
++{
++	u8 new_state = state & S1302_KEY_MASK;
++	u8 changed = new_state ^ key->state;
++
++	if (!changed)
++		return;
++
++	if (changed & BIT(0))
++		input_report_key(key->input, KEY_APPSELECT, new_state & BIT(0));
++	if (changed & BIT(1))
++		input_report_key(key->input, KEY_BACK, new_state & BIT(1));
++	input_sync(key->input);
++	key->state = new_state;
++}
++
+ static irqreturn_t s1302_irq_thread(int irq, void *data)
+ {
+ 	struct s1302_capkey *key = data;
+@@ -129,23 +150,42 @@ static irqreturn_t s1302_irq_thread(int irq, void *data)
+ 		return IRQ_HANDLED;
+ 	}
+ 
+-	state &= S1302_KEY_MASK;
+-	if (state != key->state) {
+-		if ((state ^ key->state) & BIT(0))
+-			input_report_key(key->input, KEY_APPSELECT, state & BIT(0));
+-		if ((state ^ key->state) & BIT(1))
+-			input_report_key(key->input, KEY_BACK, state & BIT(1));
+-		input_sync(key->input);
+-		key->state = state;
+-	}
++	s1302_report_state_change(key, state);
+ 
+ 	return IRQ_HANDLED;
+ }
+ 
++static void s1302_poll_work(struct work_struct *work)
++{
++	struct s1302_capkey *key =
++		container_of(to_delayed_work(work), struct s1302_capkey, poll_work);
++	int state;
++
++	state = s1302_read_keys(key);
++	if (state < 0)
++		dev_warn_ratelimited(&key->client->dev,
++				     "failed to poll key state: %d\n", state);
++	else
++		s1302_report_state_change(key, state);
++
++	if (key->polling)
++		schedule_delayed_work(&key->poll_work,
++				      msecs_to_jiffies(key->poll_interval_ms));
++}
++
++static void s1302_cancel_poll_work(void *data)
++{
++	struct s1302_capkey *key = data;
++
++	key->polling = false;
++	cancel_delayed_work_sync(&key->poll_work);
++}
++
+ static int s1302_capkey_probe(struct i2c_client *client)
+ {
+ 	struct device *dev = &client->dev;
+ 	struct s1302_capkey *key;
++	u32 poll_interval_ms;
+ 	int state;
+ 	int ret;
+ 
+@@ -160,6 +200,15 @@ static int s1302_capkey_probe(struct i2c_client *client)
+ 	key->client = client;
+ 	i2c_set_clientdata(client, key);
+ 
++	if (!device_property_read_u32(dev, "polling-interval-ms",
++				      &poll_interval_ms)) {
++		if (poll_interval_ms < 10 || poll_interval_ms > 1000)
++			return dev_err_probe(dev, -EINVAL,
++					     "polling interval must be 10..1000 ms\n");
++		key->poll_interval_ms = poll_interval_ms;
++		key->polling = true;
++	}
++
+ 	ret = s1302_enable_regulator(dev, "vdd", &key->vdd);
+ 	if (ret)
+ 		return ret;
+@@ -197,6 +246,18 @@ static int s1302_capkey_probe(struct i2c_client *client)
+ 
+ 	s1302_report_state(key, key->state);
+ 
++	if (key->polling) {
++		INIT_DELAYED_WORK(&key->poll_work, s1302_poll_work);
++		ret = devm_add_action_or_reset(dev, s1302_cancel_poll_work, key);
++		if (ret)
++			return ret;
++		schedule_delayed_work(&key->poll_work,
++				      msecs_to_jiffies(key->poll_interval_ms));
++		dev_info(dev, "S1302 capacitive keys ready (polling=%u ms)\n",
++			 key->poll_interval_ms);
++		return 0;
++	}
++
+ 	ret = devm_request_threaded_irq(dev, client->irq, NULL,
+ 				s1302_irq_thread, IRQF_ONESHOT,
+ 				"op3-capkey-s1302", key);

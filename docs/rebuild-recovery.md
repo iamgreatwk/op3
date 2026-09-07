@@ -118,7 +118,7 @@ git clone --branch msm8996-stable-6.12.y --single-branch \
   agent/implementation/recovery-browser-audio-full-001
 ~~~
 
-恢复脚本会应用 GitHub 中归档的 31 个补丁，并把外部 ath10k 文件安装
+恢复脚本会应用 GitHub 中归档的 32 个补丁，并把外部 ath10k 文件安装
 到内核要求的 extfw/ 路径。它不会编译内核。由于 patch 邮件不包含历史
 提交者时间，新机器恢复后的提交 SHA 可能不同；脚本和校验器锁定的是
 基线、补丁数量以及最终 tree hash，而不是不可重建的旧提交时间。
@@ -131,7 +131,7 @@ set -e
 project="$PWD"
 cd "$project"
 kernel="$project/source/linux-pmos-msm8996-6.12-recovery-audio-full"
-kout="$project/out/pmos-msm8996-6.12-recovery-audio-full-s1302-retry"
+kout="$project/out/pmos-msm8996-6.12-recovery-audio-full-s1302-poll-drm100"
 wifi_mods="$project/artifacts/op3-wifi-modules-root"
 
 mkdir -p "$kout"
@@ -286,9 +286,9 @@ out/buildroot-op3-recovery/target/
 mkdir -p artifacts
 install -D -m 0644 \
   out/buildroot-op3-recovery/images/rootfs.cpio.gz \
-  artifacts/initrd-op3-recovery-buildroot.cpio.gz
-gzip -t artifacts/initrd-op3-recovery-buildroot.cpio.gz
-sha256sum artifacts/initrd-op3-recovery-buildroot.cpio.gz
+  artifacts/initrd-op3-recovery-buildroot-s1302-poll-drm100.cpio.gz
+gzip -t artifacts/initrd-op3-recovery-buildroot-s1302-poll-drm100.cpio.gz
+sha256sum artifacts/initrd-op3-recovery-buildroot-s1302-poll-drm100.cpio.gz
 ~~~
 
 如需把同一 target 部署到持久化分区：
@@ -305,13 +305,13 @@ sha256sum artifacts/initrd-op3-recovery-buildroot.cpio.gz
 ## 7. 打包 boot image
 
 ~~~bash
-kout=out/pmos-msm8996-6.12-recovery-audio-full-s1302-retry
+kout=out/pmos-msm8996-6.12-recovery-audio-full-s1302-poll-drm100
 
 ./scripts/pack-boot.sh \
   "$kout/arch/arm64/boot/Image.gz" \
   "$kout/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dtb" \
-  artifacts/initrd-op3-recovery-buildroot.cpio.gz \
-  artifacts/boot-oneplus3-pmos612-recovery-buildroot-initramfs.img
+  artifacts/initrd-op3-recovery-buildroot-s1302-poll-drm100.cpio.gz \
+  artifacts/boot-oneplus3-pmos612-recovery-buildroot-s1302-poll-drm100.img
 ~~~
 
 该步骤读取项目自己的 boot/oneplus3-fa5.env 参数，不读取历史 v100 镜像。
@@ -345,7 +345,7 @@ cat /proc/bus/input/devices
 镜像永久写入 boot 分区。该操作会覆盖当前 boot 分区；只在明确授权后执行：
 
 ~~~bash
-boot_image=artifacts/boot-oneplus3-pmos612-recovery-buildroot-initramfs.img
+boot_image=artifacts/boot-oneplus3-pmos612-recovery-buildroot-s1302-poll-drm100.img
 test -f "$boot_image"
 sha256sum "$boot_image"
 fastboot devices
