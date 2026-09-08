@@ -1,5 +1,21 @@
 # Latest handoff
 
+## OP3 PSCI CPU idle configuration prepared (owner build and device test pending, 2026-09-08)
+
+The next experiment changes only the formal recovery kernel configuration:
+`CONFIG_ARM_PSCI_CPUIDLE=y`. The OP3 device tree already contains the PSCI
+`CPU_SLEEP_0` state (`standalone-power-collapse`), while the previous running
+image reported `current_driver=none`. No DRM, refresh, input, Wi-Fi, audio, or
+system-suspend behavior was changed.
+
+The experiment is recorded in `docs/handoff/op3-recovery-psci-cpuidle-001.md`.
+The recovery manifest now uses the separate output directory
+`out/pmos-msm8996-6.12-recovery-audio-full-psci-cpuidle` and requires the
+owner-built kernel config, Image.gz, and boot image hashes. The existing
+Buildroot initrd and DTB remain fixed inputs. Device testing must first verify
+that a PSCI cpuidle driver registers and that the power key wakes recovery;
+full system suspend is deliberately not part of this experiment.
+
 ## OP3 recovery DRM idle wakeup and S1302 IRQ mitigation packaged (device test pending, 2026-09-08)
 
 Two independent changes are now packaged for the next integrated recovery test.
