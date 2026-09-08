@@ -246,14 +246,15 @@ make -C "$kernel" O="$kout" ARCH=arm64 \
 ./scripts/stage-msm8996-oneplus3-firmware.sh \
   artifacts/msm8996-oneplus3-firmware-verified
 
-./scripts/stage-op3-initramfs-firmware.sh \
-  artifacts/op3-initramfs-firmware
+firmware_root="$PWD/artifacts/op3-initramfs-firmware-s1302-poll-drm100"
+./scripts/stage-op3-initramfs-firmware.sh "$firmware_root"
+export OP3_INITRAMFS_FIRMWARE_ROOT="$firmware_root"
 ~~~
 
 最终目录至少包含：
 
 ~~~text
-artifacts/op3-initramfs-firmware/lib/firmware/
+artifacts/op3-initramfs-firmware-s1302-poll-drm100/lib/firmware/
 ├── ath10k/QCA6174/hw3.0/{firmware-6.bin,board-2.bin,board.bin}
 ├── qcom/{a530_pm4.fw,a530_pfp.fw,a530v3_gpmu.fw2}
 └── qcom/msm8996/oneplus3/{adsp.mbn,modem.mbn,slpi.mbn,venus.mbn,mba.mbn,a530_zap.mbn}
@@ -287,14 +288,15 @@ install --version | head -1
 
 ~~~bash
 mkdir -p out/buildroot-op3-recovery
+firmware_root="${OP3_INITRAMFS_FIRMWARE_ROOT:-$PWD/artifacts/op3-initramfs-firmware-s1302-poll-drm100}"
 
 OP3_WIFI_MODULES_ROOT="$PWD/artifacts/op3-wifi-modules-root" \
-OP3_INITRAMFS_FIRMWARE_ROOT="$PWD/artifacts/op3-initramfs-firmware" \
+OP3_INITRAMFS_FIRMWARE_ROOT="$firmware_root" \
 make -C source/buildroot O="$PWD/out/buildroot-op3-recovery" \
   op3_recovery_defconfig
 
 OP3_WIFI_MODULES_ROOT="$PWD/artifacts/op3-wifi-modules-root" \
-OP3_INITRAMFS_FIRMWARE_ROOT="$PWD/artifacts/op3-initramfs-firmware" \
+OP3_INITRAMFS_FIRMWARE_ROOT="$firmware_root" \
 make -C source/buildroot O="$PWD/out/buildroot-op3-recovery" \
   BR2_PRIMARY_SITE=https://sources.buildroot.net \
   BR2_JLEVEL=3 2>&1 | tee /tmp/buildroot-op3-recovery.log
@@ -303,6 +305,12 @@ make -C source/buildroot O="$PWD/out/buildroot-op3-recovery" \
 当前 recovery defconfig 为实验设备启用了 dropbear root 登录，并在配置中只
 保存固定的 SHA-512 crypt 哈希；对应的实验室初始密码是 `1234`，仅用于本机
 bring-up，部署到其他设备或公开环境前应替换为新的哈希。
+
+固件暂存目录由校验脚本生成后视为不可变输入。不要把旧的
+`artifacts/op3-initramfs-firmware` 目录直接复用于包含 `board.bin` 的新构建：
+脚本会拒绝覆盖目录，而 Buildroot post-build 也会在缺少任一固件时停止，避免
+生成不完整的 rootfs。应使用新的版本化目录，并在 defconfig 和正式构建中传入
+同一个 `OP3_INITRAMFS_FIRMWARE_ROOT`。
 
 `BR2_PRIMARY_SITE` 只改变下载候选顺序，Buildroot 仍会在该源缺少文件时
 继续尝试包自身的上游地址；它不改变源码版本或校验值。构建中断后重新

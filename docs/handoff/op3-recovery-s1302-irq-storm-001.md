@@ -17,14 +17,21 @@ preserving the same I2C key-state reads and EV_KEY mappings.
 Only variable changed: OP3 S1302 event delivery, level-low IRQ -> 30 ms I2C
 polling, selected by `polling-interval-ms = <30>`.
 
-Build run by project owner: NOT_RUN
-Build result: NOT_RUN
-Artifacts and SHA256: Pending owner kernel, Buildroot initramfs, and boot-image
-rebuild. The 32nd kernel patch is archived as
+Build run by project owner: YES
+Build result: PASS
+Artifacts and SHA256:
+
+- Kernel `Image.gz`: `5c89259d9340071c9c8684d361042482ca25c8f76b2de4d33cdacf2105f78861`
+- Kernel DTB: `264f981678c1dd8d1d9a52f2db6e2130a0ebccbb9f4485ab8740784f73806db7`
+- Buildroot initramfs: `27736d1d662158bedd5170c033f9b73d807d559a564d3fd6c9090438b6d0f968`
+- Boot image: `fcd5e6bd476467e09abfbcbea3dcafd206b0ae98e60a17165a697fd87f4239c5`
+
+The 32nd kernel patch is archived as
 `patches/pmos612-op3-recovery-audio-full/0032-Input-misc-poll-OP3-S1302-when-IRQ-is-held-low.patch`.
 
-Device test run by project owner: NOT_RUN for this commit
-Device result: NOT_RUN
+Device test run by project owner: NOT_RUN for this commit; deferred while the
+phone is charging
+Device result: PENDING
 Evidence links / log paths: Before this change, debugfs showed GPIO132 as
 `in low`, while `/proc/interrupts` IRQ88 increased by 1,568 in 2 s (about 784
 interrupts/s). The S1302 input device and physical key events were otherwise

@@ -1,8 +1,8 @@
 # Latest handoff
 
-## OP3 recovery DRM idle wakeup and S1302 IRQ mitigation prepared (owner build pending, 2026-09-07)
+## OP3 recovery DRM idle wakeup and S1302 IRQ mitigation packaged (device test pending, 2026-09-08)
 
-Two independent changes are prepared for the next integrated recovery test.
+Two independent changes are now packaged for the next integrated recovery test.
 The recovery userspace commit `e11a9dc` changes only the screen-on idle
 `poll()` timeout from 20 ms to 100 ms. Input and PTY events still wake the
 poll immediately; the goal is to reduce idle CPU wakeups while retaining the
@@ -18,10 +18,24 @@ The change is archived as patch 0032 in
 `patches/pmos612-op3-recovery-audio-full/`; the kernel tree lock is
 `afa264a577f7f531159816f2d62c5173c87af735`.
 
-The integrated manifest now points to these trial inputs and marks the new
-kernel image, DTB, Buildroot initramfs, and boot image as
-`OWNER_BUILD_REQUIRED`. Build and device evidence are still pending. Handoff:
-`docs/handoff/op3-recovery-drm-idle-poll-001.md` and
+The first Buildroot attempt was stopped by the host's uutils `install`; the
+resumed attempt then exposed a stale firmware staging directory without the
+required QCA6174 `board.bin`. The documented recovery is to put GNU `install`
+first in `PATH`, stage a fresh versioned firmware directory, and resume the
+existing Buildroot output. The corrected incremental build completed and
+produced a valid `rootfs.cpio.gz`.
+
+Locked build outputs are:
+
+- `Image.gz`: `5c89259d9340071c9c8684d361042482ca25c8f76b2de4d33cdacf2105f78861`
+- OP3 DTB: `264f981678c1dd8d1d9a52f2db6e2130a0ebccbb9f4485ab8740784f73806db7`
+- Buildroot initramfs: `27736d1d662158bedd5170c033f9b73d807d559a564d3fd6c9090438b6d0f968`
+- boot image: `fcd5e6bd476467e09abfbcbea3dcafd206b0ae98e60a17165a697fd87f4239c5`
+
+The initramfs passed `gzip -t`; the boot image was inspected as an Android
+boot image and uses the device-specific `sda15` UUID from
+`boot/oneplus3-fa5.env`. Device testing remains pending until charging is
+complete. Handoffs: `docs/handoff/op3-recovery-drm-idle-poll-001.md` and
 `docs/handoff/op3-recovery-s1302-irq-storm-001.md`.
 
 ## Default recovery leaves GPU runtime-PM unchanged (2026-09-07)

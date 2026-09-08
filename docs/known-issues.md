@@ -7,6 +7,12 @@
 - **主线 v6.12.1 DSI 控制镜像无 USB 网卡/ACM（实测，2026-08-30）**：`artifacts/boot-oneplus3-mainline-6121-dsi-pm-v74dtb-full-initrd.img` 能跑到 `recovery.c`，但实测没有 USB RNDIS 网卡、也没有 ACM 串口，无法取日志。凡是需要日志证据的测试，基线改用 pmOS 6.12 的 `artifacts/boot-oneplus3-pmos612-v74dtb-full-initrd.img`（USB RNDIS/ACM/Dropbear 已验证可用）。
 - **Buildroot 2025.02 在本机 GCC 15.2 上构建失败（2026-08-30）**：`host-m4 1.4.19` 内置的 gnulib 与 GCC 15 默认的 `-std=gnu23` 不兼容（`GL_OSET_INLINE _GL_ATTRIBUTE_NODISCARD int` → `expected identifier or '(' before 'int'`）。改用 **2026.02.x** 分支（m4 1.4.21）。注意：本机仓库无 gcc-14 可装，不能用降级编译器绕过；备选方案是 `HOST_CFLAGS="-O2 -std=gnu17" HOST_CXXFLAGS="-O2 -std=gnu++17"`（两个都要给，因为 `HOST_CXXFLAGS` 会继承 `HOST_CFLAGS`，而 `-std=gnu17` 对 g++ 非法）。
 - **本机 coreutils 是 uutils 实现，Buildroot 会拒绝（2026-08-30）**：`install/stat/dd/mkdir/ln/sort/cut/tr/wc/od/split/uniq/basename/dirname` 都指向 `/usr/lib/cargo/bin/coreutils/`，Buildroot 的 `support/dependencies/dependencies.sh` 硬检查 `install` 版本并报错（uutils coreutils 0.8.0 issue 12166）。GNU 版以 `/usr/bin/gnu<name>` 形式存在（`gnuinstall` 为 GNU coreutils 9.7）。**构建时把 GNU 版前置到 PATH**：建 `~/gnubin` 软链后 `PATH="$HOME/gnubin:$PATH" make ...`。
+- **Buildroot recovery 固件目录不可复用（2026-09-08）**：QCA6174 需要
+  `firmware-6.bin`、`board-2.bin` 和 `board.bin`。旧暂存目录可能只有前两个，
+  使 post-build 在复制全部固件前停止，最终没有生成 `images/rootfs.cpio.gz`。
+  用 `scripts/stage-op3-initramfs-firmware.sh` 生成新的版本化目录，并在
+  `op3_recovery_defconfig` 与正式构建中传入同一个
+  `OP3_INITRAMFS_FIRMWARE_ROOT`；不要尝试覆盖已有暂存目录。
 - **改 Buildroot 工具链 C++ 选项后必须 dirclean 编译器（2026-08-30）**：开了 `BR2_TOOLCHAIN_BUILDROOT_CXX` 后，`gcc-final-dirclean` 只清目标侧的 `gcc-final` 包，**真正的编译器是 `host-gcc-final`**（`build/host-gcc-final-14.3.0/`），它的构建目录与完成戳还在就会被整体跳过，结果 g++ 依旧缺失、mesa3d 的 meson 报 "Unknown compiler(s): aarch64-buildroot-linux-gnu-g++"。正确做法：`make host-gcc-final-dirclean gcc-final-dirclean` 后重编。
 - **ACM 串口日志为空（2026-08-30，已定位并规避，根治需内核重建）**：`cat /dev/ttyACM0` 抓不到任何内核输出。三个叠加原因：
   1. **主机端**：用户 `kai` 不在 `dialout` 组，`/dev/ttyACM0` 打开直接 `Permission denied`（已用 `sudo usermod -aG dialout kai` + `setfacl` 解决，重插设备后 ACL 需重设或等组生效）。

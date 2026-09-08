@@ -20,6 +20,7 @@ initramfs_package="$project_root/buildroot/package-patches/op3-initramfs"
 initramfs_source="$project_root/boot/initramfs"
 wifi_source="$project_root/boot/wifi"
 profile="${2:-recovery}"
+recovery_firmware_root="${OP3_INITRAMFS_FIRMWARE_ROOT:-$project_root/artifacts/op3-initramfs-firmware}"
 
 case "$profile" in
 	recovery)
@@ -205,7 +206,7 @@ if [ "$profile" = recovery ]; then
 		"$project_root/$BUILDROOT_WIFI_MODULES_ROOT" \
 		"$buildroot_dir" "$buildroot_output" "$config_name"
 	printf '  OP3_INITRAMFS_FIRMWARE_ROOT=%q OP3_WIFI_MODULES_ROOT=%q make -C %q O=%q BR2_JLEVEL=3\n' \
-		"$project_root/artifacts/op3-initramfs-firmware" \
+		"$recovery_firmware_root" \
 		"$project_root/$BUILDROOT_WIFI_MODULES_ROOT" \
 		"$buildroot_dir" "$buildroot_output"
 else

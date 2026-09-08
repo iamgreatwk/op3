@@ -14,12 +14,18 @@ idle CPU activity without delaying input because actual input still wakes
 `poll()` immediately.
 Only variable changed: Screen-on idle `poll()` timeout, 20 ms -> 100 ms.
 
-Build run by project owner: NOT_RUN
-Build result: NOT_RUN
-Artifacts and SHA256: Pending owner Buildroot initramfs and boot-image rebuild.
+Build run by project owner: YES
+Build result: PASS
+Artifacts and SHA256:
 
-Device test run by project owner: NOT_RUN for this commit
-Device result: NOT_RUN
+- Kernel `Image.gz`: `5c89259d9340071c9c8684d361042482ca25c8f76b2de4d33cdacf2105f78861`
+- Kernel DTB: `264f981678c1dd8d1d9a52f2db6e2130a0ebccbb9f4485ab8740784f73806db7`
+- Buildroot initramfs: `27736d1d662158bedd5170c033f9b73d807d559a564d3fd6c9090438b6d0f968`
+- Boot image: `fcd5e6bd476467e09abfbcbea3dcafd206b0ae98e60a17165a697fd87f4239c5`
+
+Device test run by project owner: NOT_RUN for this commit; deferred while the
+phone is charging
+Device result: PENDING
 Evidence links / log paths: Prior device sample recorded about 0.9% recovery
 CPU over 30 s and about 1,535 voluntary context switches over 30 s; GPU was
 runtime-suspended during screen-on and screen-off idle samples. This does not
