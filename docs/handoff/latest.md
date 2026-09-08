@@ -22,14 +22,19 @@ has deliberately not been rebuilt yet; this transient test binary is not the
 final initramfs artifact. Final Buildroot integration remains pending after the
 remaining test series.
 
-## OP3 S1302 polling interval 100 ms candidate (owner build pending, 2026-09-08)
+## OP3 S1302 polling interval 100 ms candidate (kernel built, device test pending, 2026-09-08)
 
 The formal kernel worktree has one isolated DTS change after the current
 integrated checkpoint: `polling-interval-ms = <30>` -> `<100>` for the S1302
 capacitive-key controller. Kernel commit `4f8595b13fbd` and tree
 `5633301bb0fa5f05254d0d48d0c55cfed81a40e2` are locked in the manifest, with
-patch 0033 added to the durable restore series. No kernel or Buildroot build
-has been started for this candidate.
+patch 0033 added to the durable restore series. The owner kernel build passed
+in `out/pmos-msm8996-6.12-recovery-audio-full-s1302-poll100-drm100`.
+`Image.gz` SHA256 is
+`aac420e188dd2ede0e0ade0e42fb110af6f5d03643d2d22be2581c9cdc03233a`, and the
+OP3 DTB SHA256 is
+`acf85fd6ae148861374ec4d65feee0e3d909cce9b75e96d09c2f44a102914d1b`.
+Buildroot and device testing have not been run for this candidate.
 
 The current image reference sample (30 ms polling, screen off) showed CPU
 about 92% idle, recovery at 0% CPU, 5.5 GB available memory, and GPU

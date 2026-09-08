@@ -57,7 +57,14 @@ The committed kernel is `4f8595b13fbd` with tree
 `5633301bb0fa5f05254d0d48d0c55cfed81a40e2`; the durable archive is patch
 `0033-arm64-dts-qcom-slow-OP3-S1302-polling.patch`.
 
-Owner kernel build: NOT RUN
+Owner kernel build: PASS
+Output directory: `out/pmos-msm8996-6.12-recovery-audio-full-s1302-poll100-drm100`
+Build artifacts:
+
+- Kernel `Image.gz`: `aac420e188dd2ede0e0ade0e42fb110af6f5d03643d2d22be2581c9cdc03233a`
+- Kernel DTB: `acf85fd6ae148861374ec4d65feee0e3d909cce9b75e96d09c2f44a102914d1b`
+- Configuration: `6f8efe25de1c7f64af15002f46e180b8cc0a8c214508e880d5008180bc1c23a9`
+
 Device test for the 100 ms candidate: NOT RUN
 
 Current-image reference observation before this change (30 ms polling,
@@ -77,7 +84,7 @@ to 157. The screen-on sample did not expose a separate high-CPU or active-GPU
 consumer; the S1302 I2C polling activity remains the main actionable wakeup
 source.
 
-Expected PASS condition after the owner build and boot: the probe log reports
+Expected PASS condition after boot: the probe log reports
 `polling=100 ms`, the S1302 controller IRQ rate is lower than the current
 reference, and both chin keys still generate complete press/release events.
 The screen-on resource reference is recorded above; the 100 ms candidate
