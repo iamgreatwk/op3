@@ -5,7 +5,7 @@ Role: Implementation Agent
 Baseline commit: `67b0bbc3cbf46bae712a2606a43361756fcbd829`
 Working branch: `agent/implementation/op3-camera-imx298-001`
 Working tree: `source/linux-pmos-msm8996-6.12-camera-imx298`
-Commit SHA: `ec5025c75ff4` (tip; commits `c37102be3c5b..ec5025c75ff4`)
+Commit SHA: `a112a6f19fa2` (tip; commits `c37102be3c5b..a112a6f19fa2`)
 
 Layer: kernel camera / CCI / CAMSS
 Hypothesis tested: The OP3 15801 rear IMX298 can be powered and identified on
@@ -27,13 +27,16 @@ Changed files:
 The DT uses the old 15801 evidence for GPIO30 reset/XCLR, GPIO13 MCLK0,
 24 MHz, CCI0 address `0x1a`, four CSI-2 lanes, and 1.1 V / 1.8 V / 2.6 V
 sensor rails. The VIO rail is now explicitly mapped to the PM8994 `LVS1`
-regulator (`ec5025c75ff4`); the previous candidate incorrectly used the
-always-on RPM-request `vreg_s4a_1p8`. The vendor Android mode tables were not
-copied.
+regulator in the previous candidate; the current checkpoint keeps the
+always-on RPM-request `vreg_s4a_1p8` while isolating the new `lvs1 {}` node.
+The direct `LVS1` mapping rebooted before userspace. The vendor Android mode
+tables were not copied.
 
 Build run by project owner: 2026-09-08, DTB-only build from `ec5025c75ff4`
-Build result: PASS; the DTB compiled and decompiled with the `LVS1` supply
-mapping present
+Build result: PASS for the previous direct-`LVS1` candidate. The resulting
+boot image rebooted immediately and did not reach SSH; `/sys/fs/pstore` was
+empty after booting the known-good control image. The current checkpoint
+`a112a6f19fa2` has not been built yet.
 Artifacts and SHA256: new DTB
 `9718c5f334d778aee57e3f7f3e59e0fd19f228ab68c744944fa8b997c1fdbe97`; reused
 `Image.gz` `5c89259d9340071c9c8684d361042482ca25c8f76b2de4d33cdacf2105f78861`
@@ -45,7 +48,8 @@ reused module bundle
 `33918d7cb399894a719f1567091054eaceb2eec8c6d96586ad61f26cdd6739ef`
 
 Device test run: first candidate tested 2026-09-08 by direct agent access;
-the new `LVS1` boot image is packaged and awaits device boot
+the direct-`LVS1` boot image rebooted before userspace. The known-good probe
+image booted normally on the same packaging path.
 Device result: software camera stack loaded after correcting module order;
 sensor probe still failed with I²C error `-6` on the previous DTB
 Evidence: `qcom-camss` loaded and `/dev/video0` through `/dev/video5` appeared.
@@ -65,21 +69,24 @@ driver convention and must be confirmed on hardware. The first device run
 also showed no sensor I²C acknowledgement after the initial software stack
 was corrected. The driver intentionally does not implement formats, modes,
 or streaming, so this stage cannot produce a capture frame.
-Recommended next experiment: build `ec5025c75ff4` and its DTB, load the same
-module closure, and check whether routing VIO through PM8994 `LVS1` produces
-`IMX298 probe passed: chip ID=0x0298`. Do not change the clock, reset GPIO,
-CCI address, or driver in that run. If the ID passes, add one independently
-tested IMX298 RAW10 mode and capture path in a follow-up commit.
+Recommended next experiment: build `a112a6f19fa2` and its DTB, then use the
+same known-good initrd and module closure. This keeps the new `lvs1 {}` node
+but restores the old camera VIO mapping, isolating whether the node itself
+causes the early reboot. Do not change the clock, reset GPIO, CCI address, or
+driver in that run. If it boots, the next experiment can test a safer LVS1
+enable sequence separately; if it still reboots, remove the unused node and
+revisit the regulator implementation.
 
 Owner test commands:
 
 ```sh
 project=/home/kai/src/oneplus3-mainline
 kernel=$project/source/linux-pmos-msm8996-6.12-camera-imx298
-kout=$project/out/pmos-msm8996-6.12-camera-imx298-vio-lvs1
+kout=$project/out/pmos-msm8996-6.12-camera-imx298-lvs1-node-control
 base=$project/kernel/configs/oneplus3-recovery-audio-full.config
 fragment=$project/kernel/configs/oneplus3-recovery-imx298-probe.fragment
 
+test "$(git -C "$kernel" rev-parse HEAD)" = a112a6f19fa2
 git -C "$kernel" log -1 --oneline
 
 mkdir -p "$kout"
@@ -100,7 +107,7 @@ grep -E '^CONFIG_(VIDEO_IMX298|VIDEO_QCOM_CAMSS|I2C_QCOM_CCI)=' \
 sha256sum "$kout/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dtb"
 ```
 
-The owner should package the new kernel/DTB with the existing known-good
+The owner should package the control DTB with the existing known-good
 Buildroot initramfs, then boot or flash according to the active test plan.
 The current deployed Buildroot rootfs also lacks the existing camera module
 closure. Reuse the already built and hash-verified

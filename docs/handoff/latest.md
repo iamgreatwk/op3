@@ -1,13 +1,13 @@
 # Latest handoff
 
-## OP3 rear IMX298 probe candidate (VIO remap boot image ready for device test, 2026-09-08)
+## OP3 rear IMX298 probe candidate (VIO remap reboot isolated, 2026-09-08)
 
 GitHub Issue #12 starts the camera layer with one isolated variable: rear Sony
 IMX298 probe support. The dedicated nested kernel worktree is
 `source/linux-pmos-msm8996-6.12-camera-imx298` on
 `agent/implementation/op3-camera-imx298-001`, based on the integrated kernel
-checkpoint `4f8595b13fbd`. The six camera commits end at
-`ec5025c75ff4`.
+checkpoint `4f8595b13fbd`. The camera branch's control checkpoint ends at
+`a112a6f19fa2` (with the direct-`LVS1` change at `ec5025c75ff4`).
 
 The candidate adds a probe-only V4L2 driver, a binding, and OnePlus 3 15801
 CCI0/CAMSS DT wiring. It uses CCI address `0x1a`, GPIO30 reset/XCLR, GPIO13
@@ -18,10 +18,15 @@ OP3 power sequence; the earlier candidate incorrectly used always-on
 does not touch the front IMX179, OIS, actuator, flash, EEPROM, or camera
 userspace.
 
-The owner-only DTB build for `ec5025c75ff4` passed. A direct device test of the
-previous DTB loaded the full module closure in dependency order; CAMSS created
-`/dev/video0`–`/dev/video5`, but the sensor still returned I²C error `-6` and
-did not bind. The new temporary boot image is
+The owner-only DTB build for `ec5025c75ff4` passed, but the corresponding
+direct-`LVS1` boot image rebooted before userspace. The old probe image boots on
+the same packaging path, so the failure is isolated to the new DTB rather than
+fastboot packaging. The camera branch now has control commit `a112a6f19fa2`,
+which retains the `lvs1 {}` node but restores the camera VIO mapping to
+`vreg_s4a_1p8`; it is ready for an owner DTB-only build. A direct device test
+of the previous DTB loaded the full module closure in dependency order; CAMSS
+created `/dev/video0`–`/dev/video5`, but the sensor still returned I²C error
+`-6` and did not bind. The failed temporary boot image was
 `artifacts/boot-oneplus3-pmos612-recovery-imx298-vio-lvs1.img` with SHA256
 `bb71fb07cd3461fdf3bd79ee272779db5f306f4d4c7f8e2497b6eecb36f79c43`. Use the candidate fragment
 `kernel/configs/oneplus3-recovery-imx298-probe.fragment` and the complete
