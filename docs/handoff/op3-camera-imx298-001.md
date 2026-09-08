@@ -31,17 +31,23 @@ regulator (`ec5025c75ff4`); the previous candidate incorrectly used the
 always-on RPM-request `vreg_s4a_1p8`. The vendor Android mode tables were not
 copied.
 
-Build run by project owner: NOT_RUN for `ec5025c75ff4`
-Build result: the earlier probe candidate built successfully, but this new
-DT-only power mapping has not been built yet
-Artifacts and SHA256: earlier probe candidate only — `imx298.ko`
-`fdddeb1f52710274c12e5f669a0643c8df7ca5a4fc5f26767316d1eadb3c2602`, DTB
-`51f494ef4f0a20697b0aecd8d4edbdd376a1614eda4959ef934735f4b75f4df3`, boot
-image `c01411ab8085ceb2366f5cd510d521f2b8b6893298a311e5f013e5df33305fe9`
+Build run by project owner: 2026-09-08, DTB-only build from `ec5025c75ff4`
+Build result: PASS; the DTB compiled and decompiled with the `LVS1` supply
+mapping present
+Artifacts and SHA256: new DTB
+`9718c5f334d778aee57e3f7f3e59e0fd19f228ab68c744944fa8b997c1fdbe97`; reused
+`Image.gz` `5c89259d9340071c9c8684d361042482ca25c8f76b2de4d33cdacf2105f78861`
+and initrd
+`27736d1d662158bedd5170c033f9b73d807d559a564d3fd6c9090438b6d0f968`;
+temporary boot image
+`bb71fb07cd3461fdf3bd79ee272779db5f306f4d4c7f8e2497b6eecb36f79c43`;
+reused module bundle
+`33918d7cb399894a719f1567091054eaceb2eec8c6d96586ad61f26cdd6739ef`
 
-Device test run: 2026-09-08, direct agent test on the owner-authorized device
+Device test run: first candidate tested 2026-09-08 by direct agent access;
+the new `LVS1` boot image is packaged and awaits device boot
 Device result: software camera stack loaded after correcting module order;
-sensor probe still failed with I²C error `-6`
+sensor probe still failed with I²C error `-6` on the previous DTB
 Evidence: `qcom-camss` loaded and `/dev/video0` through `/dev/video5` appeared.
 The clean load order was `mc`, `videodev`, `v4l2-async`, `v4l2-fwnode`,
 `videobuf2-common`, `videobuf2-memops`, `videobuf2-dma-sg`,

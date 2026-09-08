@@ -1,6 +1,6 @@
 # Latest handoff
 
-## OP3 rear IMX298 probe candidate (device software-stack test inconclusive; VIO remap ready for owner build, 2026-09-08)
+## OP3 rear IMX298 probe candidate (VIO remap boot image ready for device test, 2026-09-08)
 
 GitHub Issue #12 starts the camera layer with one isolated variable: rear Sony
 IMX298 probe support. The dedicated nested kernel worktree is
@@ -18,10 +18,12 @@ OP3 power sequence; the earlier candidate incorrectly used always-on
 does not touch the front IMX179, OIS, actuator, flash, EEPROM, or camera
 userspace.
 
-The owner-only kernel build for `ec5025c75ff4` has not run. A direct device
-test loaded the full module closure in dependency order; CAMSS created
+The owner-only DTB build for `ec5025c75ff4` passed. A direct device test of the
+previous DTB loaded the full module closure in dependency order; CAMSS created
 `/dev/video0`–`/dev/video5`, but the sensor still returned I²C error `-6` and
-did not bind. Use the candidate fragment
+did not bind. The new temporary boot image is
+`artifacts/boot-oneplus3-pmos612-recovery-imx298-vio-lvs1.img` with SHA256
+`bb71fb07cd3461fdf3bd79ee272779db5f306f4d4c7f8e2497b6eecb36f79c43`. Use the candidate fragment
 `kernel/configs/oneplus3-recovery-imx298-probe.fragment` and the complete
 handoff at `docs/handoff/op3-camera-imx298-001.md`. The next PASS condition is
 a clean `IMX298 probe passed: chip ID=0x0298` log and a registered V4L2 sensor
