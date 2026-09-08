@@ -93,9 +93,11 @@ sha256sum "$kout/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dtb" \
 
 The owner should package the new kernel/DTB with the existing known-good
 Buildroot initramfs, then boot or flash according to the active test plan.
-The new camera module must also be copied to the running rootfs module tree;
-the current integrated initramfs predates this candidate and does not contain
-`imx298.ko`.
+The current deployed Buildroot rootfs also lacks the existing `qcom-camss.ko`
+and `i2c-qcom-cci.ko` modules, so a probe-only test must temporarily copy
+those modules and their V4L2/Media dependencies together with `imx298.ko`.
+Do not rebuild Buildroot for this first probe; integrate the tested module set
+only after the device result is known.
 
 After boot, use the device's existing SSH path and run:
 
