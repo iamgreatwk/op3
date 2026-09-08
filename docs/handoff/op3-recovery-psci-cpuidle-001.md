@@ -38,7 +38,7 @@ The previous DTB hash in the manifest was stale and has been corrected.
 
 Device test run by project owner: YES
 Device result: PASS for CPU-idle registration and power-key wake path;
-thermal comparison INCONCLUSIVE
+wall-charger thermal/current values recorded as a reference baseline
 Evidence links / log paths: The owner booted the new image and the device
 reported Linux `6.12.1-msm8996+ #1 SMP PREEMPT Tue Sep 8 19:21:12 CST 2026`.
 `current_driver=psci_idle` and `current_governor=menu` were present. Over a
@@ -64,18 +64,21 @@ limit. Thermal zones 0/5 changed from 43.8/45.1 C to 43.8/45.4 C. The
 seconds of deep idle during the 30-second interval. Recovery PID `388`
 remained alive.
 
-This is a valid charging-condition sample, but it is not yet a same-condition
-A/B against the previous kernel. The earlier USB-host sample was invalid for
-thermal comparison because it was limited to 500 mA and the battery was
+This is a valid charging-condition sample for the current recovery image. It
+is a reference observation only; no old-kernel comparison or thermal-improvement
+claim is made. The earlier USB-host sample is retained as a separate
+non-comparable observation because it was limited to 500 mA and the battery was
 discharging.
 
-Conclusion: INCONCLUSIVE
+Conclusion: PASS for the scoped CPU-idle and power-key wake behavior; current
+version charging/thermal values are recorded as a tuning baseline.
 Uncertainties: Firmware previously logged `failed to set PC mode: -1`; the
 driver may register but fail to enter the deepest state. This experiment does
 not enable full system suspend and does not change DRM refresh or userspace
 services.
 
-Recommended next experiment: repeat the same 30-second or longer screen-off
-wall-charger sample on the previous integrated kernel, keeping the charger,
-Wi-Fi SSH session, brightness, and userspace state fixed. Do not use
-`echo mem > /sys/power/state` in this first A/B test.
+Recommended next experiment: use these current-version measurements as the
+reference while changing one recovery variable at a time. Keep the wall
+charger, Wi-Fi SSH session, brightness, and userspace state fixed, and record
+the same fields after each change. Do not use `echo mem > /sys/power/state`
+without a separate suspend experiment.
