@@ -36,8 +36,9 @@ The DTB differs from the previous integrated artifact only by the expected
 `polling-interval-ms = <30>` property from the locked S1302 polling patch.
 The previous DTB hash in the manifest was stale and has been corrected.
 
-Device test run by project owner: YES (partial read-only SSH verification)
-Device result: INCONCLUSIVE
+Device test run by project owner: YES
+Device result: PASS for CPU-idle registration and power-key wake path;
+thermal comparison INCONCLUSIVE
 Evidence links / log paths: The owner booted the new image and the device
 reported Linux `6.12.1-msm8996+ #1 SMP PREEMPT Tue Sep 8 19:21:12 CST 2026`.
 `current_driver=psci_idle` and `current_governor=menu` were present. Over a
@@ -46,8 +47,10 @@ reported Linux `6.12.1-msm8996+ #1 SMP PREEMPT Tue Sep 8 19:21:12 CST 2026`.
 the deep CPU idle state. The PM8941 power-key node reported
 `power/wakeup=enabled`. The GPU remained `auto/suspended`.
 
-The physical power-key press/resume path and display restoration were not
-captured in this read-only check. The device was also connected to a USB host:
+The owner then confirmed a physical power-key press to turn the display off
+and a second press to wake it. The recovery log contains multiple complete
+`KEY_POWER` press/release pairs, and the final backlight value is `255`.
+The device was also connected to a USB host:
 the charger reported `Not charging`, `input_current_limit=500000`, and the
 battery reported about `-444000` uA, so this run is not a clean thermal/charge
 comparison.
@@ -60,6 +63,5 @@ services.
 
 Recommended next experiment: With the device on a wall charger or with USB
 data disconnected and SSH kept over Wi-Fi, record a longer screen-off thermal
-and current sample. Press the power key after the device has entered idle and
-verify that the input event wakes recovery and restores the display. Do not
-use `echo mem > /sys/power/state` in this first test.
+and current sample against the previous kernel. Do not use
+`echo mem > /sys/power/state` in this first test.

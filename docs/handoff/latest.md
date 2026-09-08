@@ -1,6 +1,6 @@
 # Latest handoff
 
-## OP3 PSCI CPU idle verified on device (wake-button test pending, 2026-09-08)
+## OP3 PSCI CPU idle and power-key wake verified (thermal comparison pending, 2026-09-08)
 
 The next experiment changes only the formal recovery kernel configuration:
 `CONFIG_ARM_PSCI_CPUIDLE=y`. The OP3 device tree already contains the PSCI
@@ -19,9 +19,10 @@ boot image `10e34f455707bac3060f5d58edc6d589c8ba6e7b5578a896350326782a93bbaa`.
 The existing Buildroot initrd remains fixed. The owner booted this image and
 read-only SSH verification confirmed `current_driver=psci_idle`; the
 `cpu-sleep-0` state accumulated about 14 seconds during a 15-second idle
-sample, and the PM8941 power-key wakeup attribute is `enabled`. A physical
-power-key press and display restoration have not yet been captured. The run
-was connected to a USB host and the battery was still discharging, so thermal
+sample, and the PM8941 power-key wakeup attribute is `enabled`. The owner then
+confirmed physical power-key息屏/唤醒; the recovery log contains complete
+`KEY_POWER` press/release pairs and the final backlight is `255`. The run was
+connected to a USB host and the battery was still discharging, so thermal
 comparison remains inconclusive. Full system suspend is deliberately not part
 of this experiment.
 
