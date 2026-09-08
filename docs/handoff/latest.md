@@ -22,7 +22,7 @@ has deliberately not been rebuilt yet; this transient test binary is not the
 final initramfs artifact. Final Buildroot integration remains pending after the
 remaining test series.
 
-## OP3 S1302 polling interval 100 ms candidate (kernel built, device test pending, 2026-09-08)
+## OP3 S1302 polling interval 100 ms candidate (kernel/device scoped PASS, Buildroot pending, 2026-09-08)
 
 The formal kernel worktree has one isolated DTS change after the current
 integrated checkpoint: `polling-interval-ms = <30>` -> `<100>` for the S1302
@@ -34,7 +34,17 @@ in `out/pmos-msm8996-6.12-recovery-audio-full-s1302-poll100-drm100`.
 `aac420e188dd2ede0e0ade0e42fb110af6f5d03643d2d22be2581c9cdc03233a`, and the
 OP3 DTB SHA256 is
 `acf85fd6ae148861374ec4d65feee0e3d909cce9b75e96d09c2f44a102914d1b`.
-Buildroot and device testing have not been run for this candidate.
+The owner then used temporary `fastboot boot` with the existing GPU-idle
+Buildroot initramfs (no Buildroot rebuild). Dmesg reported `polling=100 ms`.
+IRQ87 (`i2c_qup`, BLSP2 I2C2) increased from `11398` to `11793` in 10 seconds,
+about `39.5 IRQ/s`, below the old 30 ms reference of about `118–121 IRQ/s`.
+The recovery log recorded complete press/release pairs for both S1302 key
+codes `158` and `580`. The temporary boot image
+`artifacts/boot-oneplus3-pmos612-recovery-s1302-poll100-gpu-auto-transient.img`
+has SHA256
+`6825245ee29bfa4009cf65fb4bbc8eabf33ed2a1f2980640bebd2988642583b9`.
+This is a scoped device PASS; final Buildroot integration and Integration-role
+acceptance remain pending.
 
 The current image reference sample (30 ms polling, screen off) showed CPU
 about 92% idle, recovery at 0% CPU, 5.5 GB available memory, and GPU

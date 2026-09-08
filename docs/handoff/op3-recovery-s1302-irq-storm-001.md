@@ -65,7 +65,23 @@ Build artifacts:
 - Kernel DTB: `acf85fd6ae148861374ec4d65feee0e3d909cce9b75e96d09c2f44a102914d1b`
 - Configuration: `6f8efe25de1c7f64af15002f46e180b8cc0a8c214508e880d5008180bc1c23a9`
 
-Device test for the 100 ms candidate: NOT RUN
+Device test for the 100 ms candidate: PASS for the scoped kernel-only boot
+
+Temporary test boot image:
+`artifacts/boot-oneplus3-pmos612-recovery-s1302-poll100-gpu-auto-transient.img`
+with SHA256
+`6825245ee29bfa4009cf65fb4bbc8eabf33ed2a1f2980640bebd2988642583b9`.
+It used the already-tested Buildroot initramfs
+`initrd-op3-recovery-buildroot-board-fallback-gpu-auto.cpio.gz` with SHA256
+`4f788efb94a267130df19db23d436eb9f2546417e1c659bc777bf9ced686e93a`; no
+Buildroot rebuild was performed.
+
+Device evidence: dmesg reported `S1302 capacitive keys ready
+(polling=100 ms)`. IRQ87 (`i2c_qup`, BLSP2 I2C2) increased from `11398` to
+`11793` during 10 seconds, a delta of `395` or about `39.5 IRQ/s`. The
+recovery log contained complete press/release pairs for both S1302 codes
+`158` and `580`. The temporary recovery userspace binary was the tested
+`de52b2e0e4b8b24a55348547e36c3a91160b64963f337099b32201c264519ae7`.
 
 Current-image reference observation before this change (30 ms polling,
 screen off) showed CPU about 92% idle, recovery userspace at 0% CPU, GPU
@@ -83,6 +99,10 @@ essentially the same as the screen-off rate. DSI IRQ increased only from 151
 to 157. The screen-on sample did not expose a separate high-CPU or active-GPU
 consumer; the S1302 I2C polling activity remains the main actionable wakeup
 source.
+
+The scoped device PASS condition is satisfied. Final integrated acceptance
+remains pending the Buildroot initramfs rebuild and the Integration role's
+review.
 
 Expected PASS condition after boot: the probe log reports
 `polling=100 ms`, the S1302 controller IRQ rate is lower than the current
