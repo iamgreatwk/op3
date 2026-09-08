@@ -1,5 +1,26 @@
 # Latest handoff
 
+## OP3 rear IMX298 probe candidate (owner build/device test pending, 2026-09-08)
+
+GitHub Issue #12 starts the camera layer with one isolated variable: rear Sony
+IMX298 probe support. The dedicated nested kernel worktree is
+`source/linux-pmos-msm8996-6.12-camera-imx298` on
+`agent/implementation/op3-camera-imx298-001`, based on the integrated kernel
+checkpoint `4f8595b13fbd`. The five camera commits end at
+`42da3ad95668`.
+
+The candidate adds a probe-only V4L2 driver, a binding, and OnePlus 3 15801
+CCI0/CAMSS DT wiring. It uses CCI address `0x1a`, GPIO30 reset/XCLR, GPIO13
+MCLK0, 24 MHz, four CSI-2 lanes, and the documented 1.1 V / 1.8 V / 2.6 V
+rails. It does not add Android camera blobs or mode tables, and it does not
+touch the front IMX179, OIS, actuator, flash, EEPROM, or camera userspace.
+
+The owner-only kernel build and device test have not run. Use the candidate
+fragment `kernel/configs/oneplus3-recovery-imx298-probe.fragment` and the
+complete handoff at `docs/handoff/op3-camera-imx298-001.md`. The first-stage
+PASS condition is a clean `IMX298 probe passed: chip ID=0x0298` log and a
+registered V4L2 sensor sub-device; capture is deliberately a separate follow-up.
+
 ## OP3 recovery balanced CPU governor fix (userspace candidate device-tested, Buildroot pending, 2026-09-08)
 
 The recovery userspace candidate changes one value only: the three-position

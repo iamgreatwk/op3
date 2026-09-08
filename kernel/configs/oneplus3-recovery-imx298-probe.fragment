@@ -1,0 +1,6 @@
+# OP3 rear Sony IMX298 probe-only camera candidate.
+#
+# Merge this fragment with the canonical recovery config only for the owner-run
+# camera probe build. The integrated recovery lock is not changed until the
+# owner reports the IMX298 probe result.
+CONFIG_VIDEO_IMX298=m
