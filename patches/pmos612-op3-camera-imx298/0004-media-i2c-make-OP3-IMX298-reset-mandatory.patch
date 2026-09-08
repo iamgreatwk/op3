@@ -1,0 +1,19 @@
+From 58974c2450dd1217063b7f16606ef27d1f418a48 Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Tue, 8 Sep 2026 21:22:58 +0800
+Subject: [PATCH 4/8] media: i2c: make OP3 IMX298 reset mandatory
+
+
+diff --git a/drivers/media/i2c/imx298.c b/drivers/media/i2c/imx298.c
+index 239b838e0cba..f9559d2f9c19 100644
+--- a/drivers/media/i2c/imx298.c
++++ b/drivers/media/i2c/imx298.c
+@@ -206,7 +206,7 @@ static int imx298_probe(struct i2c_client *client)
+ 	if (ret)
+ 		return dev_err_probe(dev, ret, "failed to get sensor supplies\n");
+ 
+-	imx298->reset_gpio = devm_gpiod_get_optional(dev, "reset", GPIOD_OUT_LOW);
++	imx298->reset_gpio = devm_gpiod_get(dev, "reset", GPIOD_OUT_LOW);
+ 	if (IS_ERR(imx298->reset_gpio))
+ 		return dev_err_probe(dev, PTR_ERR(imx298->reset_gpio),
+ 				    "failed to get reset GPIO\n");

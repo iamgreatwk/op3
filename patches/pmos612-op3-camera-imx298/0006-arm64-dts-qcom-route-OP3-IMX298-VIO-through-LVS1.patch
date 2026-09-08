@@ -1,0 +1,33 @@
+From ec5025c75ff4a67b38a81445f190a007a1c714f7 Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Tue, 8 Sep 2026 22:09:51 +0800
+Subject: [PATCH 6/8] arm64: dts: qcom: route OP3 IMX298 VIO through LVS1
+
+
+diff --git a/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi b/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi
+index e47f031e2e07..191393bc7811 100644
+--- a/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi
++++ b/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi
+@@ -385,6 +385,9 @@ tri_state_default: tri-state-default-state {
+ &pm8994_spmi_regulators {
+ 	qcom,saw-reg = <&saw3>;
+ 
++	/* OP3 camera VIO is sourced from the PM8994 LVS1 rail. */
++	pm8994_lvs1: lvs1 {};
++
+ 	s9 {
+ 		qcom,saw-slave;
+ 	};
+diff --git a/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts b/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts
+index e8d9cf9a1706..89eb62c8e098 100644
+--- a/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts
++++ b/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts
+@@ -147,7 +147,7 @@ imx298: camera-sensor@1a {
+ 		reg = <0x1a>;
+ 
+ 		vdig-supply = <&vreg_l3a_1p1>;
+-		vio-supply = <&vreg_s4a_1p8>;
++		vio-supply = <&pm8994_lvs1>;
+ 		vana-supply = <&vreg_l17a_2p6>;
+ 
+ 		reset-gpios = <&tlmm 30 GPIO_ACTIVE_LOW>;

@@ -1,0 +1,358 @@
+From c37102be3c5b1d4904f01486865b51327f6421f6 Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Tue, 8 Sep 2026 21:22:24 +0800
+Subject: [PATCH 1/8] media: i2c: add OP3 IMX298 probe driver
+
+
+diff --git a/drivers/media/i2c/Kconfig b/drivers/media/i2c/Kconfig
+index 820ee46e351c..790e9104d911 100644
+--- a/drivers/media/i2c/Kconfig
++++ b/drivers/media/i2c/Kconfig
+@@ -204,6 +204,24 @@ config VIDEO_IMX296
+ 	  To compile this driver as a module, choose M here: the
+ 	  module will be called imx296.
+ 
++config VIDEO_IMX298
++	tristate "Sony IMX298 sensor support"
++	depends on I2C && VIDEO_DEV
++	select V4L2_FWNODE
++	select MEDIA_CONTROLLER
++	select VIDEO_V4L2_SUBDEV_API
++	select REGMAP_I2C
++	help
++	  This is a probe-only Video4Linux2 sensor driver for the Sony
++	  IMX298 camera.
++
++	  The initial driver powers the sensor, validates its chip ID, and
++	  registers its CSI-2 source pad. Streaming and sensor mode tables
++	  are deliberately deferred until the OP3 wiring is verified.
++
++	  To compile this driver as a module, choose M here: the
++	  module will be called imx298.
++
+ config VIDEO_IMX318
+ 	tristate "Sony IMX318 sensor support"
+ 	depends on I2C && VIDEO_DEV
+diff --git a/drivers/media/i2c/Makefile b/drivers/media/i2c/Makefile
+index bc98c32f421e..bb6c42bb8011 100644
+--- a/drivers/media/i2c/Makefile
++++ b/drivers/media/i2c/Makefile
+@@ -53,6 +53,7 @@ obj-$(CONFIG_VIDEO_IMX274) += imx274.o
+ obj-$(CONFIG_VIDEO_IMX283) += imx283.o
+ obj-$(CONFIG_VIDEO_IMX290) += imx290.o
+ obj-$(CONFIG_VIDEO_IMX296) += imx296.o
++obj-$(CONFIG_VIDEO_IMX298) += imx298.o
+ obj-$(CONFIG_VIDEO_IMX318) += imx318.o
+ obj-$(CONFIG_VIDEO_IMX319) += imx319.o
+ obj-$(CONFIG_VIDEO_IMX334) += imx334.o
+diff --git a/drivers/media/i2c/imx298.c b/drivers/media/i2c/imx298.c
+new file mode 100644
+index 000000000000..239b838e0cba
+--- /dev/null
++++ b/drivers/media/i2c/imx298.c
+@@ -0,0 +1,305 @@
++// SPDX-License-Identifier: GPL-2.0-only
++/*
++ * Sony IMX298 CMOS Image Sensor probe driver
++ *
++ * Copyright (c) 2026 OnePlus 3 mainline recovery project
++ *
++ * This first-stage driver intentionally stops after power sequencing, chip-ID
++ * validation, and V4L2 sub-device registration.  No sensor register tables
++ * from the Android vendor camera stack are copied here.  They will only be
++ * added after the physical OP3 camera wiring has been verified.
++ */
++
++#include <linux/clk.h>
++#include <linux/delay.h>
++#include <linux/gpio/consumer.h>
++#include <linux/i2c.h>
++#include <linux/module.h>
++#include <linux/of.h>
++#include <linux/pm_runtime.h>
++#include <linux/regmap.h>
++#include <linux/regulator/consumer.h>
++
++#include <media/media-entity.h>
++#include <media/v4l2-async.h>
++#include <media/v4l2-fwnode.h>
++#include <media/v4l2-subdev.h>
++
++#define IMX298_XCLK_RATE	24000000
++#define IMX298_REG_CHIP_ID	0x0016
++#define IMX298_CHIP_ID		0x0298
++
++static const char * const imx298_supply_names[] = {
++	"vdig",
++	"vio",
++	"vana",
++};
++
++#define IMX298_NUM_SUPPLIES ARRAY_SIZE(imx298_supply_names)
++
++struct imx298 {
++	struct device *dev;
++	struct regmap *regmap;
++	struct regulator_bulk_data supplies[IMX298_NUM_SUPPLIES];
++	struct gpio_desc *reset_gpio;
++	struct clk *extclk;
++	u32 extclk_rate;
++	u8 nlanes;
++
++	struct v4l2_subdev sd;
++	struct media_pad pad;
++};
++
++static const struct regmap_config imx298_regmap_config = {
++	.reg_bits = 16,
++	.val_bits = 8,
++};
++
++static inline struct imx298 *to_imx298(struct v4l2_subdev *sd)
++{
++	return container_of(sd, struct imx298, sd);
++}
++
++static int imx298_power_on(struct imx298 *imx298)
++{
++	int ret;
++
++	/* XCLR is active low; keep the sensor in reset while rails settle. */
++	gpiod_set_value_cansleep(imx298->reset_gpio, 1);
++
++	ret = regulator_bulk_enable(IMX298_NUM_SUPPLIES, imx298->supplies);
++	if (ret) {
++		dev_err(imx298->dev, "failed to enable sensor supplies: %d\n", ret);
++		return ret;
++	}
++
++	ret = clk_prepare_enable(imx298->extclk);
++	if (ret) {
++		dev_err(imx298->dev, "failed to enable sensor clock: %d\n", ret);
++		regulator_bulk_disable(IMX298_NUM_SUPPLIES, imx298->supplies);
++		return ret;
++	}
++
++	/* Release reset only after the 24 MHz clock is running. */
++	gpiod_set_value_cansleep(imx298->reset_gpio, 0);
++	usleep_range(19000, 20000);
++
++	return 0;
++}
++
++static int imx298_power_off(struct imx298 *imx298)
++{
++	gpiod_set_value_cansleep(imx298->reset_gpio, 1);
++	clk_disable_unprepare(imx298->extclk);
++
++	return regulator_bulk_disable(IMX298_NUM_SUPPLIES, imx298->supplies);
++}
++
++static int imx298_runtime_suspend(struct device *dev)
++{
++	struct v4l2_subdev *sd = i2c_get_clientdata(to_i2c_client(dev));
++	struct imx298 *imx298 = to_imx298(sd);
++
++	return imx298_power_off(imx298);
++}
++
++static int imx298_runtime_resume(struct device *dev)
++{
++	struct v4l2_subdev *sd = i2c_get_clientdata(to_i2c_client(dev));
++	struct imx298 *imx298 = to_imx298(sd);
++
++	return imx298_power_on(imx298);
++}
++
++static const struct dev_pm_ops imx298_pm_ops = {
++	SET_RUNTIME_PM_OPS(imx298_runtime_suspend, imx298_runtime_resume, NULL)
++};
++
++static int imx298_parse_fwnode(struct imx298 *imx298)
++{
++	struct fwnode_handle *fwnode = dev_fwnode(imx298->dev);
++	struct fwnode_handle *endpoint;
++	struct v4l2_fwnode_endpoint bus_cfg = {
++		.bus_type = V4L2_MBUS_CSI2_DPHY,
++	};
++	int ret;
++
++	if (!fwnode)
++		return -ENXIO;
++
++	ret = fwnode_property_read_u32(fwnode, "clock-frequency",
++				       &imx298->extclk_rate);
++	if (ret) {
++		dev_err(imx298->dev, "missing clock-frequency\n");
++		return ret;
++	}
++
++	endpoint = fwnode_graph_get_next_endpoint(fwnode, NULL);
++	if (!endpoint) {
++		dev_err(imx298->dev, "missing CSI-2 endpoint\n");
++		return -EINVAL;
++	}
++
++	ret = v4l2_fwnode_endpoint_alloc_parse(endpoint, &bus_cfg);
++	fwnode_handle_put(endpoint);
++	if (ret) {
++		dev_err(imx298->dev, "failed to parse CSI-2 endpoint: %d\n", ret);
++		return ret;
++	}
++
++	if (bus_cfg.bus_type != V4L2_MBUS_CSI2_DPHY ||
++	    bus_cfg.bus.mipi_csi2.num_data_lanes != 4) {
++		dev_err(imx298->dev, "expected four-lane CSI-2 D-PHY\n");
++		ret = -EINVAL;
++	} else {
++		imx298->nlanes = bus_cfg.bus.mipi_csi2.num_data_lanes;
++	}
++
++	v4l2_fwnode_endpoint_free(&bus_cfg);
++	return ret;
++}
++
++static int imx298_init_regulators(struct imx298 *imx298)
++{
++	unsigned int i;
++
++	for (i = 0; i < IMX298_NUM_SUPPLIES; i++)
++		imx298->supplies[i].supply = imx298_supply_names[i];
++
++	return devm_regulator_bulk_get(imx298->dev, IMX298_NUM_SUPPLIES,
++				       imx298->supplies);
++}
++
++/* No streaming operations are exposed until a clean IMX298 mode is added. */
++static const struct v4l2_subdev_ops imx298_subdev_ops = { };
++
++static int imx298_probe(struct i2c_client *client)
++{
++	struct device *dev = &client->dev;
++	struct imx298 *imx298;
++	u32 id_msb, id_lsb;
++	int ret;
++
++	imx298 = devm_kzalloc(dev, sizeof(*imx298), GFP_KERNEL);
++	if (!imx298)
++		return -ENOMEM;
++
++	imx298->dev = dev;
++
++	ret = imx298_parse_fwnode(imx298);
++	if (ret)
++		return ret;
++
++	imx298->extclk = devm_clk_get(dev, NULL);
++	if (IS_ERR(imx298->extclk))
++		return dev_err_probe(dev, PTR_ERR(imx298->extclk),
++				    "failed to get external clock\n");
++
++	ret = clk_set_rate(imx298->extclk, imx298->extclk_rate);
++	if (ret)
++		return dev_err_probe(dev, ret, "failed to set external clock rate\n");
++
++	if (clk_get_rate(imx298->extclk) != IMX298_XCLK_RATE)
++		dev_warn(dev, "external clock is not 24 MHz\n");
++
++	ret = imx298_init_regulators(imx298);
++	if (ret)
++		return dev_err_probe(dev, ret, "failed to get sensor supplies\n");
++
++	imx298->reset_gpio = devm_gpiod_get_optional(dev, "reset", GPIOD_OUT_LOW);
++	if (IS_ERR(imx298->reset_gpio))
++		return dev_err_probe(dev, PTR_ERR(imx298->reset_gpio),
++				    "failed to get reset GPIO\n");
++
++	imx298->regmap = devm_regmap_init_i2c(client, &imx298_regmap_config);
++	if (IS_ERR(imx298->regmap))
++		return dev_err_probe(dev, PTR_ERR(imx298->regmap),
++				    "failed to initialize register map\n");
++
++	v4l2_i2c_subdev_init(&imx298->sd, client, &imx298_subdev_ops);
++	imx298->sd.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
++	imx298->sd.dev = dev;
++	imx298->sd.entity.function = MEDIA_ENT_F_CAM_SENSOR;
++	imx298->pad.flags = MEDIA_PAD_FL_SOURCE;
++
++	ret = imx298_power_on(imx298);
++	if (ret)
++		return dev_err_probe(dev, ret, "failed to power on sensor\n");
++
++	ret = regmap_read(imx298->regmap, IMX298_REG_CHIP_ID, &id_msb);
++	if (!ret)
++		ret = regmap_read(imx298->regmap, IMX298_REG_CHIP_ID + 1,
++				  &id_lsb);
++	if (ret) {
++		dev_err(dev, "failed to read chip ID: %d\n", ret);
++		goto err_power_off;
++	}
++
++	if (((id_msb << 8) | id_lsb) != IMX298_CHIP_ID) {
++		dev_err(dev, "chip ID mismatch: got 0x%04x, expected 0x%04x\n",
++			(id_msb << 8) | id_lsb, IMX298_CHIP_ID);
++		ret = -ENODEV;
++		goto err_power_off;
++	}
++
++	dev_info(dev, "IMX298 probe passed: chip ID=0x%04x, CSI-2 lanes=%u\n",
++		 (id_msb << 8) | id_lsb, imx298->nlanes);
++
++	ret = media_entity_pads_init(&imx298->sd.entity, 1, &imx298->pad);
++	if (ret)
++		goto err_power_off;
++
++	ret = v4l2_async_register_subdev_sensor(&imx298->sd);
++	if (ret) {
++		dev_err(dev, "failed to register V4L2 sensor: %d\n", ret);
++		goto err_entity_cleanup;
++	}
++
++	pm_runtime_set_active(dev);
++	pm_runtime_enable(dev);
++	pm_runtime_idle(dev);
++
++	return 0;
++
++err_entity_cleanup:
++	media_entity_cleanup(&imx298->sd.entity);
++err_power_off:
++	imx298_power_off(imx298);
++	return ret;
++}
++
++static void imx298_remove(struct i2c_client *client)
++{
++	struct v4l2_subdev *sd = i2c_get_clientdata(client);
++	struct imx298 *imx298 = to_imx298(sd);
++
++	v4l2_async_unregister_subdev(&imx298->sd);
++	media_entity_cleanup(&imx298->sd.entity);
++
++	pm_runtime_disable(&client->dev);
++	if (!pm_runtime_status_suspended(&client->dev))
++		imx298_power_off(imx298);
++	pm_runtime_set_suspended(&client->dev);
++}
++
++static const struct of_device_id imx298_of_match[] = {
++	{ .compatible = "sony,imx298" },
++	{ }
++};
++MODULE_DEVICE_TABLE(of, imx298_of_match);
++
++static struct i2c_driver imx298_i2c_driver = {
++	.probe = imx298_probe,
++	.remove = imx298_remove,
++	.driver = {
++		.name = "imx298",
++		.pm = &imx298_pm_ops,
++		.of_match_table = imx298_of_match,
++	},
++};
++
++module_i2c_driver(imx298_i2c_driver);
++
++MODULE_DESCRIPTION("Sony IMX298 camera sensor probe driver");
++MODULE_AUTHOR("OnePlus 3 mainline recovery project");
++MODULE_LICENSE("GPL");

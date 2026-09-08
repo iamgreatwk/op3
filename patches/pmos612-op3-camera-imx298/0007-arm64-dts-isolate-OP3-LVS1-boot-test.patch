@@ -1,0 +1,20 @@
+From a112a6f19fa246d41b2e5f56a2ae1676be430bd6 Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Tue, 8 Sep 2026 22:25:48 +0800
+Subject: [PATCH 7/8] arm64: dts: isolate OP3 LVS1 boot test
+
+
+diff --git a/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts b/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts
+index 89eb62c8e098..3f9f82a02d30 100644
+--- a/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts
++++ b/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts
+@@ -147,7 +147,8 @@ imx298: camera-sensor@1a {
+ 		reg = <0x1a>;
+ 
+ 		vdig-supply = <&vreg_l3a_1p1>;
+-		vio-supply = <&pm8994_lvs1>;
++		/* Keep the legacy VIO mapping while isolating the PM8994 LVS1 node. */
++		vio-supply = <&vreg_s4a_1p8>;
+ 		vana-supply = <&vreg_l17a_2p6>;
+ 
+ 		reset-gpios = <&tlmm 30 GPIO_ACTIVE_LOW>;

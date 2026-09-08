@@ -1,0 +1,19 @@
+From 42da3ad95668afa2848e458a6dbf9018e4560f90 Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Tue, 8 Sep 2026 21:22:58 +0800
+Subject: [PATCH 5/8] dt-bindings: media: fix IMX298 maintainer
+
+
+diff --git a/Documentation/devicetree/bindings/media/i2c/sony,imx298.yaml b/Documentation/devicetree/bindings/media/i2c/sony,imx298.yaml
+index 3273d031d06d..6fb33442024a 100644
+--- a/Documentation/devicetree/bindings/media/i2c/sony,imx298.yaml
++++ b/Documentation/devicetree/bindings/media/i2c/sony,imx298.yaml
+@@ -7,7 +7,7 @@ $schema: http://devicetree.org/meta-schemas/core.yaml#
+ title: Sony IMX298 16 Megapixel CMOS Image Sensor
+ 
+ maintainers:
+-  - OnePlus 3 mainline recovery project
++  - Kai <249905534@qq.com>
+ 
+ description: |-
+   The Sony IMX298 is a CMOS image sensor programmable through an I2C/CCI

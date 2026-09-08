@@ -1,0 +1,91 @@
+From 4b7e09c7c851495a5f2bc6a69e4bf0432bac9a4d Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Tue, 8 Sep 2026 21:22:24 +0800
+Subject: [PATCH 2/8] dt-bindings: media: add Sony IMX298
+
+
+diff --git a/Documentation/devicetree/bindings/media/i2c/sony,imx298.yaml b/Documentation/devicetree/bindings/media/i2c/sony,imx298.yaml
+new file mode 100644
+index 000000000000..3273d031d06d
+--- /dev/null
++++ b/Documentation/devicetree/bindings/media/i2c/sony,imx298.yaml
+@@ -0,0 +1,79 @@
++# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
++%YAML 1.2
++---
++$id: http://devicetree.org/schemas/media/i2c/sony,imx298.yaml#
++$schema: http://devicetree.org/meta-schemas/core.yaml#
++
++title: Sony IMX298 16 Megapixel CMOS Image Sensor
++
++maintainers:
++  - OnePlus 3 mainline recovery project
++
++description: |-
++  The Sony IMX298 is a CMOS image sensor programmable through an I2C/CCI
++  control bus. Image data is sent through a four-lane MIPI CSI-2 interface.
++
++properties:
++  compatible:
++    const: sony,imx298
++
++  reg:
++    const: 0x1a
++
++  clocks:
++    description: Reference clock supplied to the sensor.
++    maxItems: 1
++
++  clock-frequency:
++    description: Reference clock frequency in Hz.
++    const: 24000000
++
++  reset-gpios:
++    description: Sensor XCLR/reset GPIO, active low.
++    maxItems: 1
++
++  vdig-supply:
++    description: Sensor digital core supply, 1.1 V.
++
++  vio-supply:
++    description: Sensor digital I/O supply, 1.8 V.
++
++  vana-supply:
++    description: Sensor analog supply, 2.6 V.
++
++  port:
++    $ref: /schemas/graph.yaml#/$defs/port-base
++    additionalProperties: false
++
++    properties:
++      endpoint:
++        $ref: /schemas/media/video-interfaces.yaml#
++        unevaluatedProperties: false
++
++        properties:
++          data-lanes:
++            items:
++              enum: [0, 1, 2, 3]
++            minItems: 4
++            maxItems: 4
++
++          link-frequencies: true
++
++        required:
++          - data-lanes
++
++    required:
++      - endpoint
++
++required:
++  - compatible
++  - reg
++  - clocks
++  - clock-frequency
++  - reset-gpios
++  - vdig-supply
++  - vio-supply
++  - vana-supply
++  - port
++
++additionalProperties: false

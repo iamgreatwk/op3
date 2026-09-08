@@ -1,0 +1,38 @@
+# pmOS 6.12 OnePlus 3 IMX298 camera patch series
+
+This directory is the project-owned GitHub archive of the OP3 rear IMX298
+probe work. It is the durable source input; the nested kernel worktree is not
+required for a clean rebuild and its GitLab remote is not used for publishing.
+
+## Base and order
+
+Start with the formal pmOS MSM8996 Linux v6.12.1 baseline pinned in
+`BASELINE.env`. First apply the integrated recovery series
+`patches/pmos612-op3-recovery-audio-full/` through patch `0033`, then apply
+this camera series in lexical order:
+
+```bash
+git am --3way patches/pmos612-op3-recovery-audio-full/00*.patch
+git am --3way patches/pmos612-op3-camera-imx298/000*.patch
+```
+
+The camera series was exported from nested-kernel commits
+`c37102be3c5b..306d4a364565`. Its final checkpoint deliberately removes the
+experimental PM8994 `lvs1 {}` DT child and keeps IMX298 VIO on the known-good
+`vreg_s4a_1p8`; the two preceding LVS1 experiments rebooted before userspace.
+
+| Patch | Original commit | SHA256 | Purpose |
+| --- | --- | --- | --- |
+| `0001` | `c37102be3c5b` | `bcf6c7c2d101552fc230c23ebb446241313bba98d806aa2f0cc8e08d6c943553` | Add probe-only IMX298 driver. |
+| `0002` | `4b7e09c7c851` | `506e88e843ca5770e8240d37f5ea14572ac20c41df0b70051728b88003bd6075` | Add IMX298 DT binding. |
+| `0003` | `f50ebce60238` | `a306be3e993c6dceb54ebb1e734fdfdadccee02a26f8dd80d39ddc3ec35aa4c1` | Enable OP3 IMX298 CCI/CAMSS DT wiring. |
+| `0004` | `58974c2450dd` | `dd0dd8b4c5caf05fc4b144a276d624728b4b5d96824908a8d2e4dda9845cf041` | Make reset GPIO mandatory. |
+| `0005` | `42da3ad95668` | `0e941817bc58812b44600d61abd5f7a41442baca75401f629138a18759381bb8` | Fix binding maintainer metadata. |
+| `0006` | `ec5025c75ff4` | `dd59ccb4b74f1d7b28162bf32b4ec59b5f539884eb78f2893bc267333893f647` | Experimental LVS1 VIO mapping. |
+| `0007` | `a112a6f19fa2` | `f939375bc3c72b83eb3e9ba39946b4b7929a2d1d72112cd7d597e89699281977` | Isolate the LVS1 node boot test. |
+| `0008` | `306d4a364565` | `fdc67826a0690187d857f1e8e02750b06a4f87ca94a6fd20c967c7969a33c868` | Remove the crashing LVS1 node. |
+
+These patches provide probe support only. They do not provide camera modes,
+streaming, capture userspace, front IMX179, OIS, actuator, flash, or EEPROM
+support. The device result and owner-only build commands are recorded in
+`docs/handoff/op3-camera-imx298-001.md`.
