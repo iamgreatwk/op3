@@ -53,6 +53,7 @@ project=/home/kai/src/oneplus3-mainline
 kernel=$project/source/linux-pmos-msm8996-6.12-camera-imx298
 kout=$project/out/pmos-msm8996-6.12-camera-imx298-probe
 baseout=$project/out/pmos-msm8996-6.12-recovery-audio-full-s1302-poll-drm100
+symvers=$baseout/Module.symvers
 base=$project/kernel/configs/oneplus3-recovery-audio-full.config
 fragment=$project/kernel/configs/oneplus3-recovery-imx298-probe.fragment
 firmware_fragment=$project/kernel/configs/oneplus3-recovery-camera-module-only.fragment
@@ -62,18 +63,22 @@ cp "$base" "$kout/.config"
 "$kernel/scripts/kconfig/merge_config.sh" -m -O "$kout" \
   "$kout/.config" "$fragment" "$firmware_fragment"
 
-# Reuse the vmlinux.o from the same already-built kernel/configuration so
-# modpost can resolve symbols without rebuilding the complete kernel.
-test -s "$baseout/vmlinux.o"
-ln -sfn "$baseout/vmlinux.o" "$kout/vmlinux.o"
-
 make -C "$kernel" O="$kout" ARCH=arm64 \
   CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
   olddefconfig modules_prepare
 
-make -C "$kernel" O="$kout" ARCH=arm64 \
+# Build the one module as an external kbuild target. The integrated kernel
+# keeps V4L2/MC symbols in modules, so use its Module.symvers for modpost.
+test -s "$symvers"
+module_dir="$kout/imx298-module"
+mkdir -p "$module_dir"
+ln -sfn "$kernel/drivers/media/i2c/imx298.c" "$module_dir/imx298.c"
+ln -sfn "$project/scripts/op3-imx298-module.mk" "$module_dir/Makefile"
+
+make -C "$kernel" O="$kout" M="$module_dir" \
+  ARCH=arm64 \
   CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
-  drivers/media/i2c/imx298.ko
+  KBUILD_EXTRA_SYMBOLS="$symvers" modules
 
 make -C "$kernel" O="$kout" ARCH=arm64 \
   CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
@@ -81,10 +86,9 @@ make -C "$kernel" O="$kout" ARCH=arm64 \
 
 grep -E '^CONFIG_(VIDEO_IMX298|VIDEO_QCOM_CAMSS|I2C_QCOM_CCI)=' \
   "$kout/.config"
-find "$kout" -name imx298.ko -print
-sha256sum "$kout/arch/arm64/boot/Image.gz" \
-  "$kout/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dtb" \
-  "$(find "$kout" -name imx298.ko -print -quit)"
+find "$module_dir" -name imx298.ko -print
+sha256sum "$kout/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dtb" \
+  "$module_dir/imx298.ko"
 ```
 
 The owner should package the new kernel/DTB with the existing known-good
