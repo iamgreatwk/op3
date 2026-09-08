@@ -12,8 +12,12 @@ has been started for this candidate.
 The current image reference sample (30 ms polling, screen off) showed CPU
 about 92% idle, recovery at 0% CPU, 5.5 GB available memory, and GPU
 `auto/suspended`. The S1302 BLSP2 I2C2 controller IRQ increased by about 118/s
-over 10 seconds. A real screen-on sample is still pending because the device
-remained at backlight `0` and no remote input-injection utility is available.
+over 10 seconds. The owner then woke the panel with the physical power key and
+a 30-second screen-on sample recorded about 90% → 92% CPU idle, recovery at
+0% CPU, GPU `auto/suspended`, and about 28.4 seconds in `cpu-sleep-0`. IRQ87
+increased by about 121/s, essentially unchanged from screen-off; DSI IRQ
+increased only six times. No separate high-CPU or active-GPU consumer was
+observed.
 
 ## OP3 PSCI CPU idle and power-key wake verified (wall-charger reference baseline, 2026-09-08)
 

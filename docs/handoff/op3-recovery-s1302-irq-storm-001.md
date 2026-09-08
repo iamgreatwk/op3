@@ -65,11 +65,21 @@ screen off) showed CPU about 92% idle, recovery userspace at 0% CPU, GPU
 `auto/suspended`, and 5.5 GB available memory. Linux IRQ87, the
 `75b6000.i2c` / BLSP2 I2C2 controller used by S1302, increased from 110969 to
 112146 during 10 seconds (about 118 controller IRQs/s). The touch controller's
-I2C line did not increase during the same interval. A true screen-on sample
-was not obtained because the device remained at backlight `0` and the
-recovery image has no remote evdev-injection utility.
+I2C line did not increase during the same interval. A 30-second screen-on
+sample was then obtained after the owner pressed the physical power key.
+Backlight was `255`; CPU was about 90% idle at the first sample and 92% idle
+at the second; `recovery_mainline` remained at 0% CPU; GPU remained
+`control=auto` and `runtime_status=suspended`; and `cpu-sleep-0` accumulated
+about 28.4 seconds during the interval. Linux IRQ87, the same BLSP2 I2C2
+controller, increased from 180145 to 183773 (about 121 controller IRQs/s),
+essentially the same as the screen-off rate. DSI IRQ increased only from 151
+to 157. The screen-on sample did not expose a separate high-CPU or active-GPU
+consumer; the S1302 I2C polling activity remains the main actionable wakeup
+source.
 
 Expected PASS condition after the owner build and boot: the probe log reports
 `polling=100 ms`, the S1302 controller IRQ rate is lower than the current
 reference, and both chin keys still generate complete press/release events.
-The screen-on resource sample remains a separate pending observation.
+The screen-on resource reference is recorded above; the 100 ms candidate
+should be checked in both screen states if the owner wants to confirm that the
+polling reduction is independent of display state.
