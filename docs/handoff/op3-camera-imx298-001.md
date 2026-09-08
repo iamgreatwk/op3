@@ -5,7 +5,7 @@ Role: Implementation Agent
 Baseline commit: `67b0bbc3cbf46bae712a2606a43361756fcbd829`
 Working branch: `agent/implementation/op3-camera-imx298-001`
 Working tree: `source/linux-pmos-msm8996-6.12-camera-imx298`
-Commit SHA: `42da3ad95668` (tip; commits `c37102be3c5b..42da3ad95668`)
+Commit SHA: `ec5025c75ff4` (tip; commits `c37102be3c5b..ec5025c75ff4`)
 
 Layer: kernel camera / CCI / CAMSS
 Hypothesis tested: The OP3 15801 rear IMX298 can be powered and identified on
@@ -26,25 +26,44 @@ Changed files:
 
 The DT uses the old 15801 evidence for GPIO30 reset/XCLR, GPIO13 MCLK0,
 24 MHz, CCI0 address `0x1a`, four CSI-2 lanes, and 1.1 V / 1.8 V / 2.6 V
-sensor rails. The vendor Android mode tables were not copied.
+sensor rails. The VIO rail is now explicitly mapped to the PM8994 `LVS1`
+regulator (`ec5025c75ff4`); the previous candidate incorrectly used the
+always-on RPM-request `vreg_s4a_1p8`. The vendor Android mode tables were not
+copied.
 
-Build run by project owner: NOT_RUN
-Build result: NOT_RUN
-Artifacts and SHA256: none
+Build run by project owner: NOT_RUN for `ec5025c75ff4`
+Build result: the earlier probe candidate built successfully, but this new
+DT-only power mapping has not been built yet
+Artifacts and SHA256: earlier probe candidate only — `imx298.ko`
+`fdddeb1f52710274c12e5f669a0643c8df7ca5a4fc5f26767316d1eadb3c2602`, DTB
+`51f494ef4f0a20697b0aecd8d4edbdd376a1614eda4959ef934735f4b75f4df3`, boot
+image `c01411ab8085ceb2366f5cd510d521f2b8b6893298a311e5f013e5df33305fe9`
 
-Device test run by project owner: NOT_RUN
-Device result: NOT_RUN
-Evidence links / log paths: none
+Device test run: 2026-09-08, direct agent test on the owner-authorized device
+Device result: software camera stack loaded after correcting module order;
+sensor probe still failed with I²C error `-6`
+Evidence: `qcom-camss` loaded and `/dev/video0` through `/dev/video5` appeared.
+The clean load order was `mc`, `videodev`, `v4l2-async`, `v4l2-fwnode`,
+`videobuf2-common`, `videobuf2-memops`, `videobuf2-dma-sg`,
+`videobuf2-v4l2`, `i2c-qcom-cci`, `qcom-camss`, `imx298`. The sensor node
+`5-001a` had no bound driver and dmesg reported `imx298 5-001a: failed to
+read chip ID: -6`. Debugfs showed `vreg_l3a_1p1` and `vreg_l17a_2p6` off after
+probe cleanup, while the old candidate's `vreg_s4a_1p8` remained always-on.
+The direct test also found that unloading `qcom_camss` triggers a device
+kernel unload-time segfault; no further unload or broad I²C scan should be
+used in the next run.
 
 Conclusion: INCONCLUSIVE
 Uncertainties: The IMX298 ID register layout follows the existing Sony IMX318
-driver convention and must be confirmed on hardware. The driver intentionally
-does not implement formats, modes, or streaming, so this stage cannot produce
-a `/dev/video*` capture node or a frame.
-Recommended next experiment: build this candidate, load the existing CCI and
-CAMSS modules plus `imx298.ko`, and check for the `IMX298 probe passed` log and
-a registered V4L2 sub-device. If the ID passes, add one independently tested
-IMX298 RAW10 mode and capture path in a follow-up commit.
+driver convention and must be confirmed on hardware. The first device run
+also showed no sensor I²C acknowledgement after the initial software stack
+was corrected. The driver intentionally does not implement formats, modes,
+or streaming, so this stage cannot produce a capture frame.
+Recommended next experiment: build `ec5025c75ff4` and its DTB, load the same
+module closure, and check whether routing VIO through PM8994 `LVS1` produces
+`IMX298 probe passed: chip ID=0x0298`. Do not change the clock, reset GPIO,
+CCI address, or driver in that run. If the ID passes, add one independently
+tested IMX298 RAW10 mode and capture path in a follow-up commit.
 
 Owner test commands:
 
