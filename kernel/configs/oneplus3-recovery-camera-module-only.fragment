@@ -1,0 +1,7 @@
+# Camera-only module build: keep ath10k firmware in the rootfs.
+#
+# The canonical recovery config embeds ath10k firmware for the full kernel
+# build. That firmware is unrelated to IMX298 and is intentionally disabled
+# here so kbuild does not require source-tree extfw files for a module build.
+CONFIG_EXTRA_FIRMWARE=""
+CONFIG_EXTRA_FIRMWARE_DIR=""

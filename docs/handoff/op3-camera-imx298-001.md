@@ -54,14 +54,23 @@ kernel=$project/source/linux-pmos-msm8996-6.12-camera-imx298
 kout=$project/out/pmos-msm8996-6.12-camera-imx298-probe
 base=$project/kernel/configs/oneplus3-recovery-audio-full.config
 fragment=$project/kernel/configs/oneplus3-recovery-imx298-probe.fragment
+firmware_fragment=$project/kernel/configs/oneplus3-recovery-camera-module-only.fragment
 
 mkdir -p "$kout"
 cp "$base" "$kout/.config"
 "$kernel/scripts/kconfig/merge_config.sh" -m -O "$kout" \
-  "$kout/.config" "$fragment"
+  "$kout/.config" "$fragment" "$firmware_fragment"
 make -C "$kernel" O="$kout" ARCH=arm64 \
   CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
-  olddefconfig Image.gz dtbs modules
+  olddefconfig modules_prepare
+
+make -C "$kernel" O="$kout" ARCH=arm64 \
+  CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
+  M=drivers/media/i2c imx298.ko
+
+make -C "$kernel" O="$kout" ARCH=arm64 \
+  CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
+  arch/arm64/boot/dts/qcom/msm8996-oneplus3.dtb
 
 grep -E '^CONFIG_(VIDEO_IMX298|VIDEO_QCOM_CAMSS|I2C_QCOM_CCI)=' \
   "$kout/.config"
