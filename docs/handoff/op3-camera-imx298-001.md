@@ -74,6 +74,8 @@ kout=$project/out/pmos-msm8996-6.12-camera-imx298-vio-lvs1
 base=$project/kernel/configs/oneplus3-recovery-audio-full.config
 fragment=$project/kernel/configs/oneplus3-recovery-imx298-probe.fragment
 
+git -C "$kernel" log -1 --oneline
+
 mkdir -p "$kout"
 cp "$base" "$kout/.config"
 "$kernel/scripts/kconfig/merge_config.sh" -m -O "$kout" \
