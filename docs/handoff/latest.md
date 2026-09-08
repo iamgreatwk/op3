@@ -1,29 +1,30 @@
 # Latest handoff
 
-## OP3 rear IMX298 probe candidate (VIO remap reboot isolated, 2026-09-08)
+## OP3 rear IMX298 probe candidate (LVS1 node removed after early reboot, 2026-09-08)
 
 GitHub Issue #12 starts the camera layer with one isolated variable: rear Sony
 IMX298 probe support. The dedicated nested kernel worktree is
 `source/linux-pmos-msm8996-6.12-camera-imx298` on
 `agent/implementation/op3-camera-imx298-001`, based on the integrated kernel
 checkpoint `4f8595b13fbd`. The camera branch's control checkpoint ends at
-`a112a6f19fa2` (with the direct-`LVS1` change at `ec5025c75ff4`).
+`306d4a364565` (the direct-`LVS1` change was `ec5025c75ff4`).
 
 The candidate adds a probe-only V4L2 driver, a binding, and OnePlus 3 15801
 CCI0/CAMSS DT wiring. It uses CCI address `0x1a`, GPIO30 reset/XCLR, GPIO13
 MCLK0, 24 MHz, four CSI-2 lanes, and the documented 1.1 V / 1.8 V / 2.6 V
-rails. The latest DTS maps camera VIO to PM8994 `LVS1`, matching the legacy
-OP3 power sequence; the earlier candidate incorrectly used always-on
-`vreg_s4a_1p8`. It does not add Android camera blobs or mode tables, and it
+rails. The current DTS keeps camera VIO on the legacy always-on
+`vreg_s4a_1p8` and removes the experimental PM8994 `lvs1 {}` child node. It
+does not add Android camera blobs or mode tables, and it
 does not touch the front IMX179, OIS, actuator, flash, EEPROM, or camera
 userspace.
 
 The owner-only DTB build for `ec5025c75ff4` passed, but the corresponding
-direct-`LVS1` boot image rebooted before userspace. The old probe image boots on
-the same packaging path, so the failure is isolated to the new DTB rather than
-fastboot packaging. The camera branch now has control commit `a112a6f19fa2`,
-which retains the `lvs1 {}` node but restores the camera VIO mapping to
-`vreg_s4a_1p8`; it is ready for an owner DTB-only build. A direct device test
+direct-`LVS1` boot image rebooted before userspace. The follow-up control image
+from `a112a6f19fa2`, which retained only the `lvs1 {}` node while restoring the
+old camera VIO mapping, also rebooted. The old probe image boots on the same
+packaging path, so the failure is isolated to the new regulator node. The
+camera branch now has `306d4a364565`, which removes that node and is ready for
+an owner DTB-only build. A direct device test
 of the previous DTB loaded the full module closure in dependency order; CAMSS
 created `/dev/video0`–`/dev/video5`, but the sensor still returned I²C error
 `-6` and did not bind. The failed temporary boot image was
