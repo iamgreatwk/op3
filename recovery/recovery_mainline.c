@@ -1303,8 +1303,8 @@ static void switch_tab(int i){
 
 // --- 三段式性能模式（上=性能600 中=均衡601 下=省电602，定义在 draw_statusbar 前供其显示） ---
 static int screen_on=1;   /* 息屏状态（apply_tri_mode 依赖，故放前面） */
-static int tri_mode=1;    /* 0=性能 performance, 1=均衡 interactive, 2=省电 powersave */
-static const char*tri_gov[]={"performance","interactive","powersave"};
+static int tri_mode=1;    /* 0=性能 performance, 1=均衡 schedutil, 2=省电 powersave */
+static const char*tri_gov[]={"performance","schedutil","powersave"};
 static const char*tri_lbl[]={"P","I","S"};  /* 状态栏模式指示 */
 static void set_gov(const char*g){
   for(int c=0;c<4;c++){
