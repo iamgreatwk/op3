@@ -50,10 +50,24 @@ the deep CPU idle state. The PM8941 power-key node reported
 The owner then confirmed a physical power-key press to turn the display off
 and a second press to wake it. The recovery log contains multiple complete
 `KEY_POWER` press/release pairs, and the final backlight value is `255`.
-The device was also connected to a USB host:
-the charger reported `Not charging`, `input_current_limit=500000`, and the
-battery reported about `-444000` uA, so this run is not a clean thermal/charge
-comparison.
+
+A follow-up read-only sample was run with the phone connected to a wall
+charger and SSH kept over Wi-Fi. Before the 30-second screen-off sample,
+`bq27541-0` reported `Charging`, capacity `78`, temperature `353` (35.3 C),
+current `1252000` uA; the USB supply reported `Charging`, `Fast`, online, with
+an input limit of `3000000` uA. The GPU remained `control=auto` and
+`runtime_status=suspended`, and the display backlight was `0`. After 30
+seconds, the phone still reported `Charging`/`Fast`, capacity `78`, battery
+temperature `352` (35.2 C), current `1246000` uA, and the same 3 A input
+limit. Thermal zones 0/5 changed from 43.8/45.1 C to 43.8/45.4 C. The
+`cpu-sleep-0` counter increased by `4506` uses and `29019190` us, about 29.0
+seconds of deep idle during the 30-second interval. Recovery PID `388`
+remained alive.
+
+This is a valid charging-condition sample, but it is not yet a same-condition
+A/B against the previous kernel. The earlier USB-host sample was invalid for
+thermal comparison because it was limited to 500 mA and the battery was
+discharging.
 
 Conclusion: INCONCLUSIVE
 Uncertainties: Firmware previously logged `failed to set PC mode: -1`; the
@@ -61,7 +75,7 @@ driver may register but fail to enter the deepest state. This experiment does
 not enable full system suspend and does not change DRM refresh or userspace
 services.
 
-Recommended next experiment: With the device on a wall charger or with USB
-data disconnected and SSH kept over Wi-Fi, record a longer screen-off thermal
-and current sample against the previous kernel. Do not use
-`echo mem > /sys/power/state` in this first test.
+Recommended next experiment: repeat the same 30-second or longer screen-off
+wall-charger sample on the previous integrated kernel, keeping the charger,
+Wi-Fi SSH session, brightness, and userspace state fixed. Do not use
+`echo mem > /sys/power/state` in this first A/B test.

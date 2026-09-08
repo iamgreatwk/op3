@@ -1,6 +1,6 @@
 # Latest handoff
 
-## OP3 PSCI CPU idle and power-key wake verified (thermal comparison pending, 2026-09-08)
+## OP3 PSCI CPU idle and power-key wake verified (wall-charger sample, 2026-09-08)
 
 The next experiment changes only the formal recovery kernel configuration:
 `CONFIG_ARM_PSCI_CPUIDLE=y`. The OP3 device tree already contains the PSCI
@@ -21,10 +21,15 @@ read-only SSH verification confirmed `current_driver=psci_idle`; the
 `cpu-sleep-0` state accumulated about 14 seconds during a 15-second idle
 sample, and the PM8941 power-key wakeup attribute is `enabled`. The owner then
 confirmed physical power-key息屏/唤醒; the recovery log contains complete
-`KEY_POWER` press/release pairs and the final backlight is `255`. The run was
-connected to a USB host and the battery was still discharging, so thermal
-comparison remains inconclusive. Full system suspend is deliberately not part
-of this experiment.
+`KEY_POWER` press/release pairs and the final backlight is `255`. A valid
+30-second screen-off sample was then run with a wall charger and SSH over
+Wi-Fi: charging remained `Charging`/`Fast` at a 3 A input limit, battery
+temperature changed from 35.3 C to 35.2 C, and the GPU remained
+`auto/suspended`. `cpu-sleep-0` accumulated about 29.0 seconds during the
+30-second interval. This is not yet a same-condition A/B against the previous
+kernel, so heat attribution remains inconclusive. The earlier USB-host sample
+was excluded because it was limited to 500 mA and the battery was discharging.
+Full system suspend is deliberately not part of this experiment.
 
 ## OP3 recovery DRM idle wakeup and S1302 IRQ mitigation packaged (device test pending, 2026-09-08)
 
