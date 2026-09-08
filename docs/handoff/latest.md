@@ -1,5 +1,16 @@
 # Latest handoff
 
+## OP3 recovery balanced CPU governor fix (owner Buildroot build pending, 2026-09-08)
+
+The recovery userspace candidate changes one value only: the three-position
+balanced mode now requests `schedutil` instead of `interactive`. The current
+6.12 device exposes `schedutil` but not `interactive`; before this fix,
+`/root/tri_mode=1` left both cpufreq policies in the screen-off `userspace`
+policy at 307.2 MHz after wake because the failed governor write was ignored.
+The source fix is committed as `4dff12f`. No kernel, DTS, DRM, S1302, or
+Buildroot configuration was changed. Owner Buildroot/recovery build and
+device validation are pending.
+
 ## OP3 S1302 polling interval 100 ms candidate (owner build pending, 2026-09-08)
 
 The formal kernel worktree has one isolated DTS change after the current
