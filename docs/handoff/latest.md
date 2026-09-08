@@ -1,15 +1,26 @@
 # Latest handoff
 
-## OP3 recovery balanced CPU governor fix (owner Buildroot build pending, 2026-09-08)
+## OP3 recovery balanced CPU governor fix (userspace candidate device-tested, Buildroot pending, 2026-09-08)
 
 The recovery userspace candidate changes one value only: the three-position
 balanced mode now requests `schedutil` instead of `interactive`. The current
 6.12 device exposes `schedutil` but not `interactive`; before this fix,
 `/root/tri_mode=1` left both cpufreq policies in the screen-off `userspace`
 policy at 307.2 MHz after wake because the failed governor write was ignored.
-The source fix is committed as `4dff12f`. No kernel, DTS, DRM, S1302, or
-Buildroot configuration was changed. Owner Buildroot/recovery build and
-device validation are pending.
+The source fix is committed as `4dff12f`. A small userspace-only candidate was
+uploaded and atomically replaced on the running device; its SHA256 is
+`de52b2e0e4b8b24a55348547e36c3a91160b64963f337099b32201c264519ae7`. The new
+process was verified from `/newroot/sbin/recovery_mainline`. With
+`/root/tri_mode=1`, both CPU policies reported `schedutil` while the screen
+was on; a physical power-key cycle verified wake restoration to `schedutil` and
+screen-off entry into `userspace` at `307200` kHz for both clusters. The old
+binary remains recoverable at
+`/newroot/sbin/recovery_mainline.before-schedutil-20260908`.
+
+No kernel, DTS, DRM, S1302, or Buildroot configuration was changed. Buildroot
+has deliberately not been rebuilt yet; this transient test binary is not the
+final initramfs artifact. Final Buildroot integration remains pending after the
+remaining test series.
 
 ## OP3 S1302 polling interval 100 ms candidate (owner build pending, 2026-09-08)
 
