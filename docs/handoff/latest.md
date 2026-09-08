@@ -1,6 +1,6 @@
 # Latest handoff
 
-## OP3 PSCI CPU idle configuration prepared (owner build and device test pending, 2026-09-08)
+## OP3 PSCI CPU idle kernel built (device test pending, 2026-09-08)
 
 The next experiment changes only the formal recovery kernel configuration:
 `CONFIG_ARM_PSCI_CPUIDLE=y`. The OP3 device tree already contains the PSCI
@@ -8,11 +8,15 @@ The next experiment changes only the formal recovery kernel configuration:
 image reported `current_driver=none`. No DRM, refresh, input, Wi-Fi, audio, or
 system-suspend behavior was changed.
 
-The experiment is recorded in `docs/handoff/op3-recovery-psci-cpuidle-001.md`.
-The recovery manifest now uses the separate output directory
-`out/pmos-msm8996-6.12-recovery-audio-full-psci-cpuidle` and requires the
-owner-built kernel config, Image.gz, and boot image hashes. The existing
-Buildroot initrd and DTB remain fixed inputs. Device testing must first verify
+The owner build completed from the separate output directory
+`out/pmos-msm8996-6.12-recovery-audio-full-psci-cpuidle`; the generated
+configuration contains both `CONFIG_ARM_PSCI_CPUIDLE=y` and the automatically
+selected `CONFIG_ARM_PSCI_CPUIDLE_DOMAIN=y`. The locked hashes are config
+`6f8efe25de1c7f64af15002f46e180b8cc0a8c214508e880d5008180bc1c23a9`, Image.gz
+`edb7c939018a4ddfaa816adb34971eb57a23c09801e4b04a6e20438bad7eef42`, DTB
+`87aff2df7ef853966f88f9bb07488cffb3315dfe407bef801032deb319ff88bd`, and
+boot image `10e34f455707bac3060f5d58edc6d589c8ba6e7b5578a896350326782a93bbaa`.
+The existing Buildroot initrd remains fixed. Device testing must first verify
 that a PSCI cpuidle driver registers and that the power key wakes recovery;
 full system suspend is deliberately not part of this experiment.
 
