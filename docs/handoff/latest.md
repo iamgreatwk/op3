@@ -1,6 +1,6 @@
 # Latest handoff
 
-## OP3 PSCI CPU idle kernel built (device test pending, 2026-09-08)
+## OP3 PSCI CPU idle verified on device (wake-button test pending, 2026-09-08)
 
 The next experiment changes only the formal recovery kernel configuration:
 `CONFIG_ARM_PSCI_CPUIDLE=y`. The OP3 device tree already contains the PSCI
@@ -16,9 +16,14 @@ selected `CONFIG_ARM_PSCI_CPUIDLE_DOMAIN=y`. The locked hashes are config
 `edb7c939018a4ddfaa816adb34971eb57a23c09801e4b04a6e20438bad7eef42`, DTB
 `87aff2df7ef853966f88f9bb07488cffb3315dfe407bef801032deb319ff88bd`, and
 boot image `10e34f455707bac3060f5d58edc6d589c8ba6e7b5578a896350326782a93bbaa`.
-The existing Buildroot initrd remains fixed. Device testing must first verify
-that a PSCI cpuidle driver registers and that the power key wakes recovery;
-full system suspend is deliberately not part of this experiment.
+The existing Buildroot initrd remains fixed. The owner booted this image and
+read-only SSH verification confirmed `current_driver=psci_idle`; the
+`cpu-sleep-0` state accumulated about 14 seconds during a 15-second idle
+sample, and the PM8941 power-key wakeup attribute is `enabled`. A physical
+power-key press and display restoration have not yet been captured. The run
+was connected to a USB host and the battery was still discharging, so thermal
+comparison remains inconclusive. Full system suspend is deliberately not part
+of this experiment.
 
 ## OP3 recovery DRM idle wakeup and S1302 IRQ mitigation packaged (device test pending, 2026-09-08)
 

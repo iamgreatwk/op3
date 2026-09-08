@@ -36,11 +36,21 @@ The DTB differs from the previous integrated artifact only by the expected
 `polling-interval-ms = <30>` property from the locked S1302 polling patch.
 The previous DTB hash in the manifest was stale and has been corrected.
 
-Device test run by project owner: NOT_RUN
-Device result: NOT_RUN
-Evidence links / log paths: Prior boot showed
-`/sys/devices/system/cpu/cpuidle/current_driver` as `none` and
-`CONFIG_ARM_PSCI_CPUIDLE` disabled.
+Device test run by project owner: YES (partial read-only SSH verification)
+Device result: INCONCLUSIVE
+Evidence links / log paths: The owner booted the new image and the device
+reported Linux `6.12.1-msm8996+ #1 SMP PREEMPT Tue Sep 8 19:21:12 CST 2026`.
+`current_driver=psci_idle` and `current_governor=menu` were present. Over a
+15-second idle sample, `cpu-sleep-0` increased from usage `18751` / time
+`56772772` to usage `23147` / time `70774588`, showing about 14 seconds in
+the deep CPU idle state. The PM8941 power-key node reported
+`power/wakeup=enabled`. The GPU remained `auto/suspended`.
+
+The physical power-key press/resume path and display restoration were not
+captured in this read-only check. The device was also connected to a USB host:
+the charger reported `Not charging`, `input_current_limit=500000`, and the
+battery reported about `-444000` uA, so this run is not a clean thermal/charge
+comparison.
 
 Conclusion: INCONCLUSIVE
 Uncertainties: Firmware previously logged `failed to set PC mode: -1`; the
@@ -48,9 +58,8 @@ driver may register but fail to enter the deepest state. This experiment does
 not enable full system suspend and does not change DRM refresh or userspace
 services.
 
-Recommended next experiment: The owner builds and boots the new kernel with
-the existing Buildroot initrd, then records `current_driver`, every CPU idle
-state's `usage/time`, recovery CPU time, battery current, and thermal zones.
-Press the power key after the device has entered idle and verify that the
-input event wakes recovery and restores the display. Do not use
-`echo mem > /sys/power/state` in this first test.
+Recommended next experiment: With the device on a wall charger or with USB
+data disconnected and SSH kept over Wi-Fi, record a longer screen-off thermal
+and current sample. Press the power key after the device has entered idle and
+verify that the input event wakes recovery and restores the display. Do not
+use `echo mem > /sys/power/state` in this first test.
