@@ -66,7 +66,7 @@ make -C "$kernel" O="$kout" ARCH=arm64 \
 
 make -C "$kernel" O="$kout" ARCH=arm64 \
   CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
-  M=drivers/media/i2c imx298.ko
+  drivers/media/i2c/imx298.ko
 
 make -C "$kernel" O="$kout" ARCH=arm64 \
   CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
