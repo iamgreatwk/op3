@@ -23,13 +23,18 @@ direct-`LVS1` boot image rebooted before userspace. The follow-up control image
 from `a112a6f19fa2`, which retained only the `lvs1 {}` node while restoring the
 old camera VIO mapping, also rebooted. The old probe image boots on the same
 packaging path, so the failure is isolated to the new regulator node. The
-camera branch now has `306d4a364565`, which removes that node and is ready for
-an owner DTB-only build. A direct device test
+camera branch checkpoint `306d4a364565` removes that node and booted
+successfully. A direct device test
 of the previous DTB loaded the full module closure in dependency order; CAMSS
 created `/dev/video0`–`/dev/video5`, but the sensor still returned I²C error
 `-6` and did not bind. The failed temporary boot image was
 `artifacts/boot-oneplus3-pmos612-recovery-imx298-vio-lvs1.img` with SHA256
 `bb71fb07cd3461fdf3bd79ee272779db5f306f4d4c7f8e2497b6eecb36f79c43`. Use the candidate fragment
+The successful no-`LVS1` control boot image has SHA256
+`176885492e91e1ac308bac146fa62f8daa5ad01d27335aa6f85e6fe233e932f4`; its
+DTB SHA256 is
+`51f494ef4f0a20697b0aecd8d4edbdd376a1614eda4959ef934735f4b75f4df3`.
+Use the candidate fragment
 `kernel/configs/oneplus3-recovery-imx298-probe.fragment` and the complete
 handoff at `docs/handoff/op3-camera-imx298-001.md`. The next PASS condition is
 a clean `IMX298 probe passed: chip ID=0x0298` log and a registered V4L2 sensor

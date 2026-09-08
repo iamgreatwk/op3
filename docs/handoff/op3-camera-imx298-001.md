@@ -33,12 +33,11 @@ always-on RPM-request `vreg_s4a_1p8` and removes the experimental PM8994
 retained only the node rebooted before userspace. The vendor Android mode
 tables were not copied.
 
-Build run by project owner: 2026-09-08, DTB-only build from `ec5025c75ff4`
-Build result: PASS for the previous direct-`LVS1` candidate. The resulting
-boot image rebooted immediately and did not reach SSH; `/sys/fs/pstore` was
-empty after booting the known-good control image. The current checkpoint
-The control checkpoint `a112a6f19fa2` also rebooted before userspace. The
-current checkpoint `306d4a364565` has not been built yet.
+Build run by project owner: 2026-09-08. The DTB from `ec5025c75ff4` built
+successfully, but its direct-`LVS1` boot image rebooted immediately and did
+not reach SSH. The control checkpoint `a112a6f19fa2` also rebooted before
+userspace. The current checkpoint `306d4a364565` then built and booted
+successfully with the experimental `lvs1 {}` node removed.
 Artifacts and SHA256: new DTB
 `9718c5f334d778aee57e3f7f3e59e0fd19f228ab68c744944fa8b997c1fdbe97`; reused
 `Image.gz` `5c89259d9340071c9c8684d361042482ca25c8f76b2de4d33cdacf2105f78861`
@@ -49,12 +48,19 @@ temporary boot image
 reused module bundle
 `33918d7cb399894a719f1567091054eaceb2eec8c6d96586ad61f26cdd6739ef`
 
+Current no-`LVS1` control artifacts: DTB
+`51f494ef4f0a20697b0aecd8d4edbdd376a1614eda4959ef934735f4b75f4df3`;
+temporary boot image
+`176885492e91e1ac308bac146fa62f8daa5ad01d27335aa6f85e6fe233e932f4`.
+
 Device test run: first candidate tested 2026-09-08 by direct agent access;
 both the direct-`LVS1` boot image and the `lvs1`-node-only control image
 rebooted before userspace. The known-good probe image booted normally on the
 same packaging path.
-Device result: software camera stack loaded after correcting module order;
-sensor probe still failed with I²C error `-6` on the previous DTB
+Device result: the no-`LVS1` image reached recovery. After temporarily
+uploading the complete archived camera module closure and loading it in the
+correct order, CAMSS loaded and created `/dev/video0` through `/dev/video5`;
+the sensor probe still failed with I²C error `-6`.
 Evidence: `qcom-camss` loaded and `/dev/video0` through `/dev/video5` appeared.
 The clean load order was `mc`, `videodev`, `v4l2-async`, `v4l2-fwnode`,
 `videobuf2-common`, `videobuf2-memops`, `videobuf2-dma-sg`,
@@ -72,13 +78,10 @@ driver convention and must be confirmed on hardware. The first device run
 also showed no sensor I²C acknowledgement after the initial software stack
 was corrected. The driver intentionally does not implement formats, modes,
 or streaming, so this stage cannot produce a capture frame.
-Recommended next experiment: build `306d4a364565` and its DTB, then use the
-same known-good initrd and module closure. This removes the experimental
-`lvs1 {}` node and restores the old DT regulator structure. Do not change the
-clock, reset GPIO, CCI address, or driver in that run. If it boots, the
-remaining camera probe work can proceed without an LVS1 DT change; if it still
-reboots, the cause is elsewhere in the camera DT changes and should be
-isolated before loading camera modules.
+Recommended next experiment: isolate the camera I²C/power sequence while
+keeping `306d4a364565` unchanged. Do not reintroduce `lvs1`, and do not change
+the clock, reset GPIO, CCI address, or driver in the next run. The boot path
+is now PASS; the camera probe remains INCONCLUSIVE.
 
 Owner test commands:
 
