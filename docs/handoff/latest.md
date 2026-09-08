@@ -1,5 +1,20 @@
 # Latest handoff
 
+## OP3 S1302 polling interval 100 ms candidate (owner build pending, 2026-09-08)
+
+The formal kernel worktree has one isolated DTS change after the current
+integrated checkpoint: `polling-interval-ms = <30>` -> `<100>` for the S1302
+capacitive-key controller. Kernel commit `4f8595b13fbd` and tree
+`5633301bb0fa5f05254d0d48d0c55cfed81a40e2` are locked in the manifest, with
+patch 0033 added to the durable restore series. No kernel or Buildroot build
+has been started for this candidate.
+
+The current image reference sample (30 ms polling, screen off) showed CPU
+about 92% idle, recovery at 0% CPU, 5.5 GB available memory, and GPU
+`auto/suspended`. The S1302 BLSP2 I2C2 controller IRQ increased by about 118/s
+over 10 seconds. A real screen-on sample is still pending because the device
+remained at backlight `0` and no remote input-injection utility is available.
+
 ## OP3 PSCI CPU idle and power-key wake verified (wall-charger reference baseline, 2026-09-08)
 
 The next experiment changes only the formal recovery kernel configuration:

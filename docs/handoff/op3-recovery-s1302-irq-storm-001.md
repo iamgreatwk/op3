@@ -45,3 +45,31 @@ produce press/release events at the expected 30 ms polling cadence.
 Recommended next experiment: Build the locked kernel worktree and boot it;
 check the S1302 probe log for `polling=30 ms`, sample IRQ88 before and after
 10 s, and exercise both chin keys while watching recovery's input log.
+
+## Follow-up: reduce S1302 polling to 100 ms
+
+Date: 2026-09-08
+
+The next isolated change is only the device-tree polling interval:
+`polling-interval-ms = <30>` -> `<100>`. The S1302 driver, key mappings,
+reset sequence, recovery userspace, and all other kernel settings are fixed.
+The committed kernel is `4f8595b13fbd` with tree
+`5633301bb0fa5f05254d0d48d0c55cfed81a40e2`; the durable archive is patch
+`0033-arm64-dts-qcom-slow-OP3-S1302-polling.patch`.
+
+Owner kernel build: NOT RUN
+Device test for the 100 ms candidate: NOT RUN
+
+Current-image reference observation before this change (30 ms polling,
+screen off) showed CPU about 92% idle, recovery userspace at 0% CPU, GPU
+`auto/suspended`, and 5.5 GB available memory. Linux IRQ87, the
+`75b6000.i2c` / BLSP2 I2C2 controller used by S1302, increased from 110969 to
+112146 during 10 seconds (about 118 controller IRQs/s). The touch controller's
+I2C line did not increase during the same interval. A true screen-on sample
+was not obtained because the device remained at backlight `0` and the
+recovery image has no remote evdev-injection utility.
+
+Expected PASS condition after the owner build and boot: the probe log reports
+`polling=100 ms`, the S1302 controller IRQ rate is lower than the current
+reference, and both chin keys still generate complete press/release events.
+The screen-on resource sample remains a separate pending observation.

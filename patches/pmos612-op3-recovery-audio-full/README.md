@@ -1,6 +1,6 @@
 # OP3 recovery audio-full kernel archive
 
-This directory is the durable GitHub archive of the 32 source commits between
+This directory is the durable GitHub archive of the 33 source commits between
 the formal pmOS MSM8996 Linux 6.12.1 baseline and the tested integrated kernel
 tree. It is intentionally stored as a `git am` series instead of relying on a
 local kernel repository or on an unpushed kernel branch.
@@ -56,7 +56,7 @@ run the large kernel build, using a new output directory:
 ```bash
 project=/home/kai/src/oneplus3-mainline
 kernel=/home/kai/src/linux-pmos-msm8996-6.12.1-op3-recovery-audio-full
-output=$project/out/pmos-msm8996-6.12-recovery-audio-full-s1302-poll-drm100
+output=$project/out/pmos-msm8996-6.12-recovery-audio-full-s1302-poll100-drm100
 
 mkdir -p "$output"
 cp "$project/kernel/configs/oneplus3-recovery-audio-full.config" \
@@ -72,8 +72,9 @@ make -C "$kernel" O="$output" ARCH=arm64 \
 ```
 
 The resulting `.config` hash must equal `CONFIG_SHA256` in the manifest. The
-S1302 trial should log `polling=30 ms`; check that IRQ88 no longer increases
-while the two chin keys still produce press/release events. The recovery
+S1302 trial should log `polling=100 ms`; check that the BLSP2 I2C2 controller
+IRQ rate is reduced while the two chin keys still produce press/release
+events. The recovery
 userspace trial uses a 100 ms screen-on idle poll timeout. The initrd and boot
 image remain separate ignored build artifacts; use the tracked recovery/initrd
 recipes and `boot/oneplus3-fa5.env` to reproduce those inputs, then run
