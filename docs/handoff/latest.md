@@ -33,7 +33,7 @@ image. This is recorded as a device PASS for the isolated hypothesis, not yet
 as final Integration acceptance: the host-attached RNDIS/ACM regression and a
 clean Buildroot rebuild from the committed source remain pending.
 
-## OP3 rear IMX298 probe candidate (power-on diagnostics completed, 2026-09-09)
+## OP3 rear IMX298 probe candidate (reset-initial-state test prepared, 2026-09-09)
 
 GitHub Issue #12 starts the camera layer with one isolated variable: rear Sony
 IMX298 probe support. The dedicated nested kernel worktree is
@@ -41,7 +41,7 @@ IMX298 probe support. The dedicated nested kernel worktree is
 `agent/implementation/op3-camera-imx298-001`, based on the integrated kernel
 checkpoint `4f8595b13fbd`. The prior no-`LVS1` control checkpoint ends at
 `306d4a364565` (the direct-`LVS1` change was `ec5025c75ff4`); the current
-camera tip is `c79909f9a448`.
+camera tip is `d247ce811242`.
 
 The candidate adds a probe-only V4L2 driver, a binding, and OnePlus 3 15801
 CCI0/CAMSS DT wiring. It uses CCI address `0x1a`, GPIO30 reset/XCLR, GPIO13
@@ -95,9 +95,12 @@ The owner-built module SHA256 is
 `1.8 V`, VANA `2.6 V`, and MCLK `24 MHz`; reset was initially logical `0`
 before assertion and the chip-ID read still returned `-6`. This is a
 diagnostic evidence PASS, not an IMX298 probe PASS. Do not rebuild or
-repackage Buildroot, the DTB, or the boot image. The next isolated behavior
-test is changing only the reset request to
-`GPIOD_OUT_HIGH`; auxiliary `custom1`/`vaf` power and GPIO39 remain deferred.
+repackage Buildroot, the DTB, or the boot image. The reset-initial-state test
+is now prepared as nested-kernel commit
+`d247ce811242`, changing only `GPIOD_OUT_LOW` to `GPIOD_OUT_HIGH` when the
+reset GPIO is requested. Build only its external `imx298.ko` module and test
+it with the existing boot image; no Buildroot, DTB, or boot-image rebuild is
+needed. Auxiliary `custom1`/`vaf` power and GPIO39 remain deferred.
 
 ## OP3 recovery balanced CPU governor fix (userspace candidate device-tested, Buildroot pending, 2026-09-08)
 

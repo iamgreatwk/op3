@@ -1,0 +1,27 @@
+From d247ce81124223e764229aba5020d7a620f206f0 Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Wed, 9 Sep 2026 17:49:25 +0800
+Subject: [PATCH] media: i2c: hold IMX298 in reset during probe setup
+
+Request the active-low reset GPIO asserted while sensor supplies and MCLK
+are being prepared. This isolates the reset-initial-state hypothesis
+without changing the existing power sequence or reset release timing.
+
+Signed-off-by: kai <249905534@qq.com>
+---
+ drivers/media/i2c/imx298.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/media/i2c/imx298.c b/drivers/media/i2c/imx298.c
+index 95bc7a32c7af..6332114c7289 100644
+--- a/drivers/media/i2c/imx298.c
++++ b/drivers/media/i2c/imx298.c
+@@ -245,7 +245,7 @@ static int imx298_probe(struct i2c_client *client)
+ 	if (ret)
+ 		return dev_err_probe(dev, ret, "failed to get sensor supplies\n");
+ 
+-	imx298->reset_gpio = devm_gpiod_get(dev, "reset", GPIOD_OUT_LOW);
++	imx298->reset_gpio = devm_gpiod_get(dev, "reset", GPIOD_OUT_HIGH);
+ 	if (IS_ERR(imx298->reset_gpio))
+ 		return dev_err_probe(dev, PTR_ERR(imx298->reset_gpio),
+ 				    "failed to get reset GPIO\n");

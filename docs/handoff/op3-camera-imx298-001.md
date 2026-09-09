@@ -5,7 +5,7 @@ Role: Implementation Agent
 Baseline commit: `67b0bbc3cbf46bae712a2606a43361756fcbd829`
 Working branch: `agent/implementation/op3-camera-imx298-001`
 Working tree: `source/linux-pmos-msm8996-6.12-camera-imx298`
-Commit SHA: `c79909f9a448` (tip; commits `c37102be3c5b..c79909f9a448`)
+Commit SHA: `d247ce811242` (tip; commits `c37102be3c5b..d247ce811242`)
 
 Layer: kernel camera / CCI / CAMSS
 Hypothesis tested: The OP3 15801 rear IMX298 can be powered and identified on
@@ -100,6 +100,13 @@ confirming that the current VIO source is effectively always-on. This is a
 diagnostic PASS for the power/clock evidence, but the sensor probe remains a
 FAIL because the address still returns `-6`.
 
+Reset-initial-state experiment: commit `d247ce811242` changes exactly one
+behavior variable in `imx298_probe()`: `devm_gpiod_get()` now requests the
+active-low reset GPIO with `GPIOD_OUT_HIGH`, keeping the sensor asserted from
+GPIO acquisition until the existing `imx298_power_on()` release point. DTS,
+regulators, MCLK, delays, CCI400, and chip-ID reads are unchanged. This
+experiment is pending owner module build and device test.
+
 Device test run: first candidate tested 2026-09-08 by direct agent access;
 both the direct-`LVS1` boot image and the `lvs1`-node-only control image
 rebooted before userspace. The known-good probe image booted normally on the
@@ -130,16 +137,17 @@ The old Android OP3 IMX298 node also declares `cam_v_custom1` at 2.15 V,
 `cam_vaf` at 2.8 V, and GPIO39 for the VAF path; those resources remain out
 of scope until the diagnostic run identifies the current rail/reset/clock
 state.
-Recommended next experiment: complete the diagnostic-only module test, then
-change exactly one behavior variable: the reset request from
+Recommended next experiment: run the reset-initial-state module test. It
+changes exactly one behavior variable: the reset request from
 `GPIOD_OUT_LOW` to `GPIOD_OUT_HIGH`. Keep CCI at 400 kHz, reset GPIO30, CCI
 address, sensor MCLK, core rails, endpoint, and chip-ID registers fixed. Do
 not reintroduce `lvs1` or add auxiliary rails in the reset experiment. PASS
 remains a clean
 `IMX298 probe passed: chip ID=0x0298` message with a registered V4L2 sensor
 sub-device and no CAMSS fault; FAIL is the unchanged `-ENXIO`/`-6` probe
-result. The diagnostic revision itself has no PASS/FAIL behavior change; its
-purpose is to select the next falsifiable experiment.
+result. The reset-initial-state experiment remains pending owner module build
+and device test; its diagnostic result will determine whether the next
+one-variable power experiment is justified.
 
 Owner test commands:
 
@@ -153,13 +161,17 @@ a temporary external-module wrapper under the output directory:
 ```sh
 project=/home/kai/src/oneplus3-mainline
 kernel=$project/source/linux-pmos-msm8996-6.12-camera-imx298
-kout=$project/out/pmos-msm8996-6.12-camera-imx298-cci400
+kout=$project/out/pmos-msm8996-6.12-camera-imx298-cci400-reset-high
+baseout=$project/out/pmos-msm8996-6.12-camera-imx298-cci400
 fullout=$project/out/pmos-msm8996-6.12-recovery-audio-full-s1302-poll-drm100
 symvers=$fullout/Module.symvers
 module_build=$kout/imx298-module
 
-test "$(git -C "$kernel" rev-parse --short=12 HEAD)" = c79909f9a448
+test "$(git -C "$kernel" rev-parse --short=12 HEAD)" = d247ce811242
 git -C "$kernel" log -1 --oneline
+test -r "$baseout/.config"
+mkdir -p "$kout"
+cp "$baseout/.config" "$kout/.config"
 grep -qx 'CONFIG_VIDEO_IMX298=m' "$kout/.config"
 test -s "$symvers"
 
