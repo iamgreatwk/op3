@@ -1,5 +1,20 @@
 # Latest handoff
 
+## OP3 PM8994 LVS1 complete-DT declaration candidate (owner DTB build pending, 2026-09-09)
+
+The camera branch has a new nested-kernel commit `c298ff3e7197` that adds
+`vdd_lvs_1_2-supply = <&vreg_s4a_1p8>` and restores the PM8994 `lvs1 {}` child
+node. This is based on the PM8994 SPMI binding and the board's known-good S4
+1.8 V rail. The IMX298 `vio-supply` is intentionally still S4, so this is an
+isolated regulator-registration test, not a camera VIO routing test.
+
+Hypothesis: the prior LVS1 boot failure was caused by the incomplete node
+missing its parent input supply. PASS requires boot to userspace with LVS1
+registered; an early reboot or regulator probe failure is FAIL. Build only the
+DTB, reuse the known-good Image.gz and Buildroot initrd, and use `fastboot
+boot`; do not rebuild Buildroot or unload CAMSS. Full commands and evidence
+requirements are in `docs/handoff/op3-camera-imx298-001.md`.
+
 ## OP3 IMX298 original power-resource sequence candidate (owner build pending, 2026-09-09)
 
 The camera branch now contains commit `7fe1f2f950b2`, archived as patch

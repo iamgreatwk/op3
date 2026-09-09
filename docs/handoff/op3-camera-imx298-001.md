@@ -5,7 +5,7 @@ Role: Implementation Agent
 Baseline commit: `67b0bbc3cbf46bae712a2606a43361756fcbd829`
 Working branch: `agent/implementation/op3-camera-imx298-001`
 Working tree: `source/linux-pmos-msm8996-6.12-camera-imx298`
-Commit SHA: `7fe1f2f950b2` (tip; commits `c37102be3c5b..7fe1f2f950b2`)
+Commit SHA: `c298ff3e7197` (tip; previous candidate `7fe1f2f950b2`)
 
 Layer: kernel camera / CCI / CAMSS
 Hypothesis tested: The OP3 15801 rear IMX298 can be powered and identified on
@@ -242,6 +242,27 @@ registers remain fixed. The `lvs1` node is not reintroduced. PASS remains a
 clean `IMX298 probe passed: chip ID=0x0298` message with a registered V4L2
 sensor sub-device and no CAMSS fault; FAIL is a boot/resource-enable failure
 or the unchanged `-ENXIO`/`-6` probe result.
+
+## PM8994 LVS1 complete-DT declaration candidate
+
+Nested-kernel commit `c298ff3e7197` changes one regulator declaration in
+`arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi`: it adds
+`vdd_lvs_1_2-supply = <&vreg_s4a_1p8>` and restores the
+`pm8994_lvs1: lvs1 {}` child node. This follows the PM8994 SPMI binding and
+the working OP3 board S4 1.8 V rail. The camera sensor's `vio-supply` remains
+`&vreg_s4a_1p8`, so this does not yet test camera VIO routing; it tests only
+whether the correctly declared LVS1 regulator can register without the
+previous early reboot.
+
+Hypothesis: the previous LVS1-only boot failure was caused by an incomplete
+SPMI regulator declaration without its parent input supply. Only variable:
+complete the LVS1 DT declaration. PASS: the owner boots the new DTB to
+userspace and sees a registered `lvs1` regulator without reboot. FAIL: early
+reboot, regulator probe error, or no LVS1 registration. Use UART/pstore if the
+device reboots before SSH. Do not unload CAMSS and do not rebuild Buildroot.
+
+Owner DTB-only build/test is pending. Reuse the known-good Image.gz and
+Buildroot initrd; do not build `imx298.ko` for this regulator-only test.
 
 Owner test commands:
 
