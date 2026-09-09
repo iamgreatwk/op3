@@ -1,0 +1,129 @@
+From c79909f9a448e34c338243460989e328c5d8d8a8 Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Wed, 9 Sep 2026 17:33:44 +0800
+Subject: [PATCH] media: i2c: add IMX298 power-on diagnostics
+
+Record the reset GPIO, sensor rail, MCLK, and chip-ID transaction states
+during probe without changing the existing power-on sequence. These logs
+provide the evidence needed before the one-variable reset polarity
+experiment.
+
+Signed-off-by: kai <249905534@qq.com>
+---
+ drivers/media/i2c/imx298.c | 62 ++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 60 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/media/i2c/imx298.c b/drivers/media/i2c/imx298.c
+index f9559d2f9c19..95bc7a32c7af 100644
+--- a/drivers/media/i2c/imx298.c
++++ b/drivers/media/i2c/imx298.c
+@@ -60,20 +60,49 @@ static inline struct imx298 *to_imx298(struct v4l2_subdev *sd)
+ 	return container_of(sd, struct imx298, sd);
+ }
+ 
++static void imx298_log_supply_state(struct imx298 *imx298,
++				    const char *phase, int bulk_ret)
++{
++	unsigned int i;
++
++	for (i = 0; i < IMX298_NUM_SUPPLIES; i++) {
++		int enabled;
++		int voltage;
++
++		enabled = regulator_is_enabled(imx298->supplies[i].consumer);
++		voltage = regulator_get_voltage(imx298->supplies[i].consumer);
++		dev_info(imx298->dev,
++			 "power: %s %s bulk_enable_rc=%d enabled=%d voltage=%d\n",
++			 phase, imx298_supply_names[i], bulk_ret, enabled, voltage);
++	}
++}
++
+ static int imx298_power_on(struct imx298 *imx298)
+ {
++	int reset;
+ 	int ret;
+ 
++	reset = gpiod_get_value_cansleep(imx298->reset_gpio);
++	dev_info(imx298->dev, "power_on: reset before assert logical=%d\n",
++		 reset);
++
+ 	/* XCLR is active low; keep the sensor in reset while rails settle. */
+ 	gpiod_set_value_cansleep(imx298->reset_gpio, 1);
++	reset = gpiod_get_value_cansleep(imx298->reset_gpio);
++	dev_info(imx298->dev, "power_on: reset asserted logical=%d\n", reset);
+ 
+ 	ret = regulator_bulk_enable(IMX298_NUM_SUPPLIES, imx298->supplies);
++	dev_info(imx298->dev, "power_on: sensor supplies bulk enable rc=%d\n",
++		 ret);
++	imx298_log_supply_state(imx298, "after-bulk-enable", ret);
+ 	if (ret) {
+ 		dev_err(imx298->dev, "failed to enable sensor supplies: %d\n", ret);
+ 		return ret;
+ 	}
+ 
+ 	ret = clk_prepare_enable(imx298->extclk);
++	dev_info(imx298->dev, "power_on: mclk enable rc=%d rate=%lu\n", ret,
++		 clk_get_rate(imx298->extclk));
+ 	if (ret) {
+ 		dev_err(imx298->dev, "failed to enable sensor clock: %d\n", ret);
+ 		regulator_bulk_disable(IMX298_NUM_SUPPLIES, imx298->supplies);
+@@ -82,6 +111,8 @@ static int imx298_power_on(struct imx298 *imx298)
+ 
+ 	/* Release reset only after the 24 MHz clock is running. */
+ 	gpiod_set_value_cansleep(imx298->reset_gpio, 0);
++	reset = gpiod_get_value_cansleep(imx298->reset_gpio);
++	dev_info(imx298->dev, "power_on: reset released logical=%d\n", reset);
+ 	usleep_range(19000, 20000);
+ 
+ 	return 0;
+@@ -89,10 +120,18 @@ static int imx298_power_on(struct imx298 *imx298)
+ 
+ static int imx298_power_off(struct imx298 *imx298)
+ {
++	int ret;
++
+ 	gpiod_set_value_cansleep(imx298->reset_gpio, 1);
++	dev_info(imx298->dev, "power_off: reset asserted logical=%d\n",
++		 gpiod_get_value_cansleep(imx298->reset_gpio));
+ 	clk_disable_unprepare(imx298->extclk);
+ 
+-	return regulator_bulk_disable(IMX298_NUM_SUPPLIES, imx298->supplies);
++	imx298_log_supply_state(imx298, "before-bulk-disable", 0);
++	ret = regulator_bulk_disable(IMX298_NUM_SUPPLIES, imx298->supplies);
++	imx298_log_supply_state(imx298, "after-bulk-disable", ret);
++
++	return ret;
+ }
+ 
+ static int imx298_runtime_suspend(struct device *dev)
+@@ -226,10 +265,29 @@ static int imx298_probe(struct i2c_client *client)
+ 	if (ret)
+ 		return dev_err_probe(dev, ret, "failed to power on sensor\n");
+ 
++	dev_info(dev, "chip-id-high read reg=0x%04x begin\n",
++		 IMX298_REG_CHIP_ID);
+ 	ret = regmap_read(imx298->regmap, IMX298_REG_CHIP_ID, &id_msb);
+-	if (!ret)
++	if (ret)
++		dev_info(dev, "chip-id-high read reg=0x%04x rc=%d\n",
++			 IMX298_REG_CHIP_ID, ret);
++	else
++		dev_info(dev, "chip-id-high read reg=0x%04x rc=0 value=0x%02x\n",
++			 IMX298_REG_CHIP_ID, id_msb);
++
++	if (!ret) {
++		dev_info(dev, "chip-id-low read reg=0x%04x begin\n",
++			 IMX298_REG_CHIP_ID + 1);
+ 		ret = regmap_read(imx298->regmap, IMX298_REG_CHIP_ID + 1,
+ 				  &id_lsb);
++		if (ret)
++			dev_info(dev, "chip-id-low read reg=0x%04x rc=%d\n",
++				 IMX298_REG_CHIP_ID + 1, ret);
++		else
++			dev_info(dev,
++				 "chip-id-low read reg=0x%04x rc=0 value=0x%02x\n",
++				 IMX298_REG_CHIP_ID + 1, id_lsb);
++	}
+ 	if (ret) {
+ 		dev_err(dev, "failed to read chip ID: %d\n", ret);
+ 		goto err_power_off;

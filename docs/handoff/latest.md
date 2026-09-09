@@ -33,7 +33,7 @@ image. This is recorded as a device PASS for the isolated hypothesis, not yet
 as final Integration acceptance: the host-attached RNDIS/ACM regression and a
 clean Buildroot rebuild from the committed source remain pending.
 
-## OP3 rear IMX298 probe candidate (CCI 400 kHz follow-up prepared, 2026-09-09)
+## OP3 rear IMX298 probe candidate (power-on diagnostics prepared, 2026-09-09)
 
 GitHub Issue #12 starts the camera layer with one isolated variable: rear Sony
 IMX298 probe support. The dedicated nested kernel worktree is
@@ -41,7 +41,7 @@ IMX298 probe support. The dedicated nested kernel worktree is
 `agent/implementation/op3-camera-imx298-001`, based on the integrated kernel
 checkpoint `4f8595b13fbd`. The prior no-`LVS1` control checkpoint ends at
 `306d4a364565` (the direct-`LVS1` change was `ec5025c75ff4`); the current
-camera tip is `b0594dbd5bf4`.
+camera tip is `c79909f9a448`.
 
 The candidate adds a probe-only V4L2 driver, a binding, and OnePlus 3 15801
 CCI0/CAMSS DT wiring. It uses CCI address `0x1a`, GPIO30 reset/XCLR, GPIO13
@@ -81,9 +81,18 @@ packaged as
 `ba95c78431c13b681ddb7780bb6bf8412f7566ff7de3a68cefe8f6530e6a5295`; it has
 been tested on the device. All eleven camera modules loaded successfully and
 CAMSS exposed `/dev/video0`–`/dev/video5`, but IMX298 still returned I²C
-`-6` while reading its chip ID. The CCI-speed hypothesis therefore failed;
-the next isolated experiment is the old OP3 auxiliary `custom1`/`vaf` power
-path, including GPIO39, with the other camera variables fixed.
+`-6` while reading its chip ID. The CCI-speed hypothesis therefore failed.
+The next action is a module-only diagnostic run. Nested-kernel commit
+`c79909f9a448` changes only `drivers/media/i2c/imx298.c` logging: reset logical
+state, each rail's enabled/voltage state, bulk-enable result, MCLK result and
+rate, and separate `0x0016`/`0x0017` read results. It leaves the existing
+`GPIOD_OUT_LOW`, power sequence, 400 kHz CCI DTS, and no-`LVS1` configuration
+unchanged. The diagnostic patch is archived as
+`patches/pmos612-op3-camera-imx298/0010-media-i2c-add-imx298-power-on-diagnostics.patch`.
+Build only `imx298.ko` and upload it over SSH; do not rebuild or repackage
+Buildroot, the DTB, or the boot image. After collecting the logs, the next
+isolated behavior test is changing only the reset request to
+`GPIOD_OUT_HIGH`; auxiliary `custom1`/`vaf` power and GPIO39 remain deferred.
 
 ## OP3 recovery balanced CPU governor fix (userspace candidate device-tested, Buildroot pending, 2026-09-08)
 

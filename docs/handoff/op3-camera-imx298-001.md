@@ -5,7 +5,7 @@ Role: Implementation Agent
 Baseline commit: `67b0bbc3cbf46bae712a2606a43361756fcbd829`
 Working branch: `agent/implementation/op3-camera-imx298-001`
 Working tree: `source/linux-pmos-msm8996-6.12-camera-imx298`
-Commit SHA: `b0594dbd5bf4` (tip; commits `c37102be3c5b..b0594dbd5bf4`)
+Commit SHA: `c79909f9a448` (tip; commits `c37102be3c5b..c79909f9a448`)
 
 Layer: kernel camera / CCI / CAMSS
 Hypothesis tested: The OP3 15801 rear IMX298 can be powered and identified on
@@ -72,6 +72,15 @@ but the sensor still reported `imx298 5-001a: failed to read chip ID: -6`;
 no sensor driver binding or chip-ID pass was observed. This is a device FAIL
 for the CCI-speed hypothesis, not a camera-layer acceptance.
 
+The next diagnostic-only revision is commit `c79909f9a448`. It changes only
+`drivers/media/i2c/imx298.c` logging: it records the reset GPIO logical value
+before/after assertion and release, each rail's `regulator_is_enabled()` and
+`regulator_get_voltage()` result, the bulk-enable return value, the MCLK
+enable return value and effective rate, and separate results for the
+`0x0016`/`0x0017` chip-ID reads. It deliberately keeps the existing
+`GPIOD_OUT_LOW`, bulk regulator enable, reset timing, and CCI-400 DTS
+unchanged. No boot image or Buildroot rebuild is required for this revision.
+
 Device test run: first candidate tested 2026-09-08 by direct agent access;
 both the direct-`LVS1` boot image and the `lvs1`-node-only control image
 rebooted before userspace. The known-good probe image booted normally on the
@@ -91,24 +100,27 @@ The direct test also found that unloading `qcom_camss` triggers a device
 kernel unload-time segfault; no further unload or broad I²C scan should be
 used in the next run.
 
-Conclusion: INCONCLUSIVE (the CCI-400 subexperiment failed)
+Conclusion: INCONCLUSIVE (the CCI-400 subexperiment failed; power-on
+diagnostic evidence is pending)
 Uncertainties: The IMX298 ID register layout follows the existing Sony IMX318
 driver convention and must be confirmed on hardware. The first device run
 also showed no sensor I²C acknowledgement after the initial software stack
 was corrected. The driver intentionally does not implement formats, modes,
 or streaming, so this stage cannot produce a capture frame.
 The old Android OP3 IMX298 node also declares `cam_v_custom1` at 2.15 V,
-`cam_vaf` at 2.8 V, and GPIO39 for the VAF path; the current mainline probe
-driver controls only VDIG/VIO/VANA and GPIO30 reset. It is not yet proven that
-these auxiliary resources are required for chip-ID access.
-Recommended next experiment: isolate the documented auxiliary IMX298 power
-path as one follow-up. Add the old OP3 `custom1`/`vaf` resources and their
-power sequencing together, while keeping CCI at 400 kHz, reset GPIO30, CCI
-address, sensor MCLK, core rails, endpoint, and driver ID registers fixed.
-Do not reintroduce `lvs1`. PASS remains a clean
+`cam_vaf` at 2.8 V, and GPIO39 for the VAF path; those resources remain out
+of scope until the diagnostic run identifies the current rail/reset/clock
+state.
+Recommended next experiment: complete the diagnostic-only module test, then
+change exactly one behavior variable: the reset request from
+`GPIOD_OUT_LOW` to `GPIOD_OUT_HIGH`. Keep CCI at 400 kHz, reset GPIO30, CCI
+address, sensor MCLK, core rails, endpoint, and chip-ID registers fixed. Do
+not reintroduce `lvs1` or add auxiliary rails in the reset experiment. PASS
+remains a clean
 `IMX298 probe passed: chip ID=0x0298` message with a registered V4L2 sensor
 sub-device and no CAMSS fault; FAIL is the unchanged `-ENXIO`/`-6` probe
-result. The auxiliary-power experiment has not yet been implemented.
+result. The diagnostic revision itself has no PASS/FAIL behavior change; its
+purpose is to select the next falsifiable experiment.
 
 Owner test commands:
 
@@ -116,45 +128,43 @@ Owner test commands:
 project=/home/kai/src/oneplus3-mainline
 kernel=$project/source/linux-pmos-msm8996-6.12-camera-imx298
 kout=$project/out/pmos-msm8996-6.12-camera-imx298-cci400
-base=$project/kernel/configs/oneplus3-recovery-audio-full.config
-fragment=$project/kernel/configs/oneplus3-recovery-imx298-probe.fragment
 
-test "$(git -C "$kernel" rev-parse --short=12 HEAD)" = b0594dbd5bf4
+test "$(git -C "$kernel" rev-parse --short=12 HEAD)" = c79909f9a448
 git -C "$kernel" log -1 --oneline
-
-mkdir -p "$kout"
-cp "$base" "$kout/.config"
-"$kernel/scripts/kconfig/merge_config.sh" -m -O "$kout" \
-  "$kout/.config" "$fragment"
+grep -qx 'CONFIG_VIDEO_IMX298=m' "$kout/.config"
 
 make -C "$kernel" O="$kout" ARCH=arm64 \
   CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
-  olddefconfig
+  M=drivers/media/i2c imx298.ko
 
-make -C "$kernel" O="$kout" ARCH=arm64 \
-  CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
-  qcom/msm8996-oneplus3.dtb
-
-grep -E '^CONFIG_(VIDEO_IMX298|VIDEO_QCOM_CAMSS|I2C_QCOM_CCI)=' \
-  "$kout/.config"
-sha256sum "$kout/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dtb"
+sha256sum "$kout/drivers/media/i2c/imx298.ko"
 ```
 
-The owner should package this DTB with the existing known-good Buildroot
-initramfs, then boot or flash according to the active test plan. This is a
-DTB-only experiment: do not rebuild the kernel Image.gz or Buildroot.
-The current deployed Buildroot rootfs also lacks the existing camera module
-closure. Reuse the already built and hash-verified
-`artifacts/op3-imx298-probe-modules.tar.gz`; it contains `imx298.ko`,
-`qcom-camss.ko`, `i2c-qcom-cci.ko`, and their V4L2/Media dependencies. Only
-the DTB changes in this experiment, so do not rebuild Buildroot or rebuild
-the module bundle.
+This is a module-only build. Do not rebuild `Image.gz`, the DTB, Buildroot,
+or the boot image. The existing CCI-400 boot image is sufficient because the
+diagnostic revision changes only `imx298.ko`.
 
-After boot, upload and extract the module bundle under `/newroot`. The bundle
-is intentionally a minimal archive and does not contain `modules.dep`; use
-the explicit dependency order below rather than the initramfs `modprobe`:
+The current deployed Buildroot rootfs lacks the camera module closure. Reuse
+the already built and hash-verified `artifacts/op3-imx298-probe-modules.tar.gz`;
+it contains the old `imx298.ko`, `qcom-camss.ko`, `i2c-qcom-cci.ko`, and their
+V4L2/Media dependencies. Upload the newly built module separately so the old
+driver is not loaded:
 
 ```sh
+scp -O "$kout/drivers/media/i2c/imx298.ko" \
+  root@172.16.42.1:/newroot/tmp/imx298-diagnostic.ko
+```
+
+After rebooting the already tested CCI-400 image, extract the dependency
+bundle under `/newroot`. The bundle is intentionally minimal and does not
+contain `modules.dep`; use explicit `insmod` paths. Do not unload
+`qcom-camss`, because the previous device test triggered an unload-time
+kernel segfault.
+
+```sh
+busybox gzip -dc /newroot/tmp/op3-imx298-probe-modules.tar.gz |
+  busybox tar -x -C /newroot
+
 module_root=/newroot/lib/modules/6.12.1-msm8996+/kernel
 insmod "$module_root/drivers/media/mc/mc.ko"
 insmod "$module_root/drivers/media/v4l2-core/videodev.ko"
@@ -166,13 +176,21 @@ insmod "$module_root/drivers/media/common/videobuf2/videobuf2-dma-sg.ko"
 insmod "$module_root/drivers/media/common/videobuf2/videobuf2-v4l2.ko"
 insmod "$module_root/drivers/i2c/busses/i2c-qcom-cci.ko"
 insmod "$module_root/drivers/media/platform/qcom/camss/qcom-camss.ko"
-insmod "$module_root/drivers/media/i2c/imx298.ko"
+insmod /newroot/tmp/imx298-diagnostic.ko
 
 dmesg | grep -iE 'imx298|camss|cci|csiphy|csid|vfe|media'
-find /dev -maxdepth 1 \( -name 'media*' -o -name 'v4l-subdev*' -o -name 'video*' \) -ls
-find /sys/bus/i2c/devices -maxdepth 2 -type f -name name -print -exec cat {} \;
+find /dev -maxdepth 1 \( -name 'media*' -o -name 'v4l-subdev*' -o -name 'video*' \) -print
+cat /sys/bus/i2c/devices/5-001a/name 2>/dev/null || true
 ```
 
-For this probe-only stage, PASS is a clean `IMX298 probe passed` message with
-chip ID `0x0298`, a sensor sub-device, and no CAMSS fault. A video node or
-frame is not expected until the mode/streaming follow-up.
+Collect the complete diagnostic lines, especially:
+
+```sh
+dmesg | grep -iE 'imx298.*(power_on|power_off|power:|mclk|reset|chip-id)|failed to read chip ID|probe passed'
+```
+
+For this probe-only stage, PASS is still a clean `IMX298 probe passed`
+message with chip ID `0x0298`, a sensor sub-device, and no CAMSS fault. A
+video node or frame is not expected until the mode/streaming follow-up. The
+diagnostic revision itself cannot turn the previous `-6` into a PASS; it
+provides the evidence needed to select the next one-variable reset test.
