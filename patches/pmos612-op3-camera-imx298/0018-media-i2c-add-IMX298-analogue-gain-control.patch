@@ -1,0 +1,99 @@
+From 0274f7062cfe0521f67092364ad6cdf9504a1f4a Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Wed, 9 Sep 2026 19:56:55 +0800
+Subject: [PATCH] media: i2c: add IMX298 analogue gain control
+
+---
+ drivers/media/i2c/imx298.c | 39 +++++++++++++++++++++++++++++++++-----
+ 1 file changed, 34 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/media/i2c/imx298.c b/drivers/media/i2c/imx298.c
+index f68a49a7b275..13bee00a3877 100644
+--- a/drivers/media/i2c/imx298.c
++++ b/drivers/media/i2c/imx298.c
+@@ -46,6 +46,10 @@
+ #define IMX298_EXPOSURE_MIN	1
+ #define IMX298_EXPOSURE_MAX	(IMX298_FRAME_LENGTH - 10)
+ #define IMX298_EXPOSURE_DEFAULT	0x037d
++#define IMX298_REG_ANALOG_GAIN	0x0204
++#define IMX298_ANALOG_GAIN_MIN	0
++#define IMX298_ANALOG_GAIN_MAX	960
++#define IMX298_ANALOG_GAIN_DEFAULT	0
+ 
+ enum imx298_supply_index {
+ 	IMX298_SUPPLY_VANA,
+@@ -533,6 +537,19 @@ static int imx298_write_exposure(struct imx298 *imx298, u32 exposure)
+ 			    exposure & 0xff);
+ }
+ 
++static int imx298_write_analog_gain(struct imx298 *imx298, u32 gain)
++{
++	int ret;
++
++	ret = regmap_write(imx298->regmap, IMX298_REG_ANALOG_GAIN,
++			   (gain >> 8) & 0xff);
++	if (ret)
++		return ret;
++
++	return regmap_write(imx298->regmap, IMX298_REG_ANALOG_GAIN + 1,
++			    gain & 0xff);
++}
++
+ static int imx298_set_ctrl(struct v4l2_ctrl *ctrl)
+ {
+ 	struct imx298 *imx298 = container_of(ctrl->handler,
+@@ -540,19 +557,26 @@ static int imx298_set_ctrl(struct v4l2_ctrl *ctrl)
+ 	struct i2c_client *client = v4l2_get_subdevdata(&imx298->sd);
+ 	int ret;
+ 
+-	if (ctrl->id != V4L2_CID_EXPOSURE)
++	if (ctrl->id != V4L2_CID_EXPOSURE &&
++	    ctrl->id != V4L2_CID_ANALOGUE_GAIN)
+ 		return 0;
+ 
+ 	/* Cache control changes while the sensor is powered off. */
+ 	if (!pm_runtime_get_if_in_use(&client->dev))
+ 		return 0;
+ 
+-	ret = imx298_write_exposure(imx298, ctrl->val);
++	if (ctrl->id == V4L2_CID_EXPOSURE)
++		ret = imx298_write_exposure(imx298, ctrl->val);
++	else
++		ret = imx298_write_analog_gain(imx298, ctrl->val);
+ 	pm_runtime_put(&client->dev);
+ 
+ 	if (ret)
+-		dev_err(imx298->dev, "exposure write failed value=%u rc=%d\n",
+-			ctrl->val, ret);
++		dev_err(imx298->dev, "control write failed id=0x%x value=%d rc=%d\n",
++			ctrl->id, ctrl->val, ret);
++	else
++		dev_info(imx298->dev, "control applied id=0x%x value=%d\n",
++			 ctrl->id, ctrl->val);
+ 
+ 	return ret;
+ }
+@@ -742,7 +766,7 @@ static int imx298_init_controls(struct imx298 *imx298)
+ {
+ 	struct v4l2_ctrl *link_freq;
+ 
+-	v4l2_ctrl_handler_init(&imx298->ctrls, 3);
++	v4l2_ctrl_handler_init(&imx298->ctrls, 4);
+ 	link_freq = v4l2_ctrl_new_int_menu(&imx298->ctrls, NULL,
+ 					  V4L2_CID_LINK_FREQ,
+ 					  ARRAY_SIZE(imx298_link_freq_menu) - 1,
+@@ -758,6 +782,11 @@ static int imx298_init_controls(struct imx298 *imx298)
+ 					     IMX298_EXPOSURE_MIN,
+ 					     IMX298_EXPOSURE_MAX, 1,
+ 					     IMX298_EXPOSURE_DEFAULT);
++	v4l2_ctrl_new_std(&imx298->ctrls, &imx298_ctrl_ops,
++				  V4L2_CID_ANALOGUE_GAIN,
++				  IMX298_ANALOG_GAIN_MIN,
++				  IMX298_ANALOG_GAIN_MAX, 1,
++				  IMX298_ANALOG_GAIN_DEFAULT);
+ 
+ 	if (imx298->ctrls.error) {
+ 		int ret = imx298->ctrls.error;
+-- 
+2.53.0
+

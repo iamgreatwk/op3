@@ -17,7 +17,7 @@ git am --3way patches/pmos612-op3-camera-imx298/000*.patch
 ```
 
 The camera series was exported from nested-kernel commits
-`c37102be3c5b..e96efb4b1dd3`. Patch `0012` deliberately removes the
+`c37102be3c5b..0274f7062cfe`. Patch `0012` deliberately removes the
 experimental PM8994 `lvs1 {}` DT child and keeps IMX298 VIO on the known-good
 `vreg_s4a_1p8`; the two preceding direct-SPMI LVS1 experiments rebooted
 before userspace. Patch `0013` is a new, isolated registration-only test using
@@ -42,6 +42,9 @@ required by CAMSS to configure the sensor's four-lane transmitter. It keeps
 the experiment limited to the existing 1476x834 RAW10 mode. Patch `0017` adds
 only the V4L2 exposure control and applies the cached value immediately before
 stream-on; it does not change the mode table, power sequence, DTS, or CAMSS.
+Patch `0018` adds only the V4L2 analogue-gain control and writes the sensor's
+`0x0204/0x0205` gain register pair; it does not change exposure, mode timing,
+power sequencing, DTS, or CAMSS.
 
 | Patch | Original commit | SHA256 | Purpose |
 | --- | --- | --- | --- |
@@ -62,8 +65,9 @@ stream-on; it does not change the mode table, power sequence, DTS, or CAMSS.
 | `0015` | `a059fc816af6` | `0cd6ecb9c66ff05e74abf1f7e2eaec38eaca645be43b5e872d3e4c35a2d0f09c` | Add one minimum 1476x834 RAW10 mode and V4L2 stream operations. |
 | `0016` | `cc609f6d10a1` | `05e09e6786fd9b4825c3251eff66f36cf64fc17a232411f54837225f7f4bac84` | Expose IMX298 CSI-2 link-frequency and pixel-rate controls. |
 | `0017` | `e96efb4b1dd3` | `b093e2213449d0aca6ac8efdfb8bce046f8abbc2cfbcec3eeee280e838b665c2` | Add V4L2 exposure control for the minimum RAW10 mode. |
+| `0018` | `0274f7062cfe` | `e22a369100495a92aeba83c9602eafacff9b9cfaf4bf7bdb6c826077e2c18946` | Add V4L2 analogue-gain control for the minimum RAW10 mode. |
 
-These patches provide one experimental stream mode and exposure control only.
-They do not provide gain control, additional modes, capture userspace, front IMX179,
+These patches provide one experimental stream mode plus exposure and analogue-gain
+controls. They do not provide additional modes, capture userspace, front IMX179,
 OIS, actuator, flash, or EEPROM support. The device result and build commands
 are recorded in `docs/handoff/op3-camera-imx298-001.md`.

@@ -1,5 +1,29 @@
 # Latest handoff
 
+## OP3 IMX298 analogue gain control (device experiment supports hypothesis, 2026-09-09)
+
+The dedicated camera branch now contains nested-kernel commit `0274f7062cfe`,
+archived as
+`patches/pmos612-op3-camera-imx298/0018-media-i2c-add-IMX298-analogue-gain-control.patch`.
+It changes only the IMX298 driver: V4L2 analogue gain `0..960` and writes to
+`0x0204/0x0205`. Exposure, mode timing, DTS, CAMSS, kernel image, initramfs,
+and Buildroot are unchanged.
+
+With exposure fixed at `893`, clean-session gain `0` and `960` captures each
+returned `1541232` bytes and logged `control applied`; chip ID `0x0298` and
+stream start/stop remained normal. Module SHA256:
+`05589e1e4cf4ece7023e162b66cecd7a992d816d89ab1e8deaefd5ee76cb4f89`.
+Helper SHA256:
+`9ce6d6bbdf2e5d62ba54870f2ffb7402411a00298473a5f903b26336f16954bb`.
+Frame hashes: gain `0`,
+`cef61af4bbbe45098f1cdce1b58645da08852883164328d4d854f75ebfa60d88`; gain
+`960`, `8c3343af11f0641a03050728bf07dec072cdc01fe539d390f657ef8bbb53652b`.
+Unpacked RAW10 means were `66.058` and `110.627`, with mean absolute frame
+difference `44.593` and `0.05%` identical pixels. This supports the isolated
+gain-control hypothesis but is not full camera integration acceptance or a
+calibrated gain curve. See `docs/handoff/op3-camera-imx298-001.md` for the
+test details; no Buildroot rebuild is needed for this module-only experiment.
+
 ## OP3 IMX298 exposure control (device experiment supports hypothesis, 2026-09-09)
 
 The dedicated camera branch now contains nested-kernel commit `e96efb4b1dd3`,

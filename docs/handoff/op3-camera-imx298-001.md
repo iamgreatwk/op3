@@ -5,13 +5,61 @@ Role: Implementation Agent
 Baseline commit: `67b0bbc3cbf46bae712a2606a43361756fcbd829`
 Working branch: `agent/implementation/op3-camera-imx298-001`
 Working tree: `source/linux-pmos-msm8996-6.12-camera-imx298`
-Commit SHA: `e96efb4b1dd3` (tip; previous CSI-2 link-control commit
-`cc609f6d10a1`; previous minimum RAW10 stream commit `a059fc816af6`; previous
+Commit SHA: `0274f7062cfe` (tip; previous exposure-control commit
+`e96efb4b1dd3`; previous CSI-2 link-control commit `cc609f6d10a1`; previous
+minimum RAW10 stream commit `a059fc816af6`; previous
 SMD-RPM registration candidate
 `67630ec3b9e5`; previous rejected direct-SPMI LVS1 candidate
 `c298ff3e7197` was reverted by `8cce8d4643b3`)
 
 Layer: kernel camera / CCI / CAMSS
+
+## Current experiment: IMX298 analogue gain control (device experiment supports hypothesis)
+
+The dedicated camera branch now contains nested-kernel commit `0274f7062cfe`,
+archived as
+`patches/pmos612-op3-camera-imx298/0018-media-i2c-add-IMX298-analogue-gain-control.patch`.
+It changes only `drivers/media/i2c/imx298.c`: adds the standard V4L2 analogue
+gain control with range `0..960` and writes the 16-bit sensor register pair
+`0x0204/0x0205`. Exposure, mode table, frame timing, power rails,
+reset/MCLK sequencing, DTS, CAMSS routing, link controls, and Buildroot are
+unchanged.
+
+Hypothesis: the IMX298 analogue-gain register is writable in the confirmed
+1476x834 RAW10 stream, and changing it changes the captured sensor signal
+without destabilizing CSI-2. PASS requires clean-session captures at gain `0`
+and `960`, successful V4L2 control application, and no timeout, I2C, CAMSS,
+SMMU, or reboot failure. The initial range is an isolated device experiment;
+its calibrated gain law is not assumed yet.
+
+The module was built without rebuilding the kernel image, initramfs, or
+Buildroot. Module SHA256:
+`05589e1e4cf4ece7023e162b66cecd7a992d816d89ab1e8deaefd5ee76cb4f89`.
+The static helper with optional exposure and analogue-gain arguments has SHA256
+`9ce6d6bbdf2e5d62ba54870f2ffb7402411a00298473a5f903b26336f16954bb`.
+
+With exposure fixed at `893`, both clean-session runs returned `stream_rc=0`
+and captured `1541232` bytes. The kernel logged the requested controls as
+`control applied id=0x9e0903 value=0` and `value=960`; both runs retained chip
+ID `0x0298` and logged `streaming started/stopped`.
+
+| Analogue gain | Raw frame | SHA256 | Result |
+| ---: | --- | --- | --- |
+| `0` | `/tmp/imx298-gain0.raw` | `cef61af4bbbe45098f1cdce1b58645da08852883164328d4d854f75ebfa60d88` | captured |
+| `960` | `/tmp/imx298-gain960.raw` | `8c3343af11f0641a03050728bf07dec072cdc01fe539d390f657ef8bbb53652b` | captured |
+
+After unpacking the packed RAW10 data, gain `0` had min/max `63..80`, mean
+`66.058`, and 18 levels; gain `960` had min/max `27..199`, mean `110.627`,
+and 162 levels. The paired frames had mean absolute difference `44.593` and
+only `0.05%` identical pixels. A contrast-stretched preview of each frame
+retained the same broad scene structure while the high-gain frame showed the
+expected stronger noise.
+
+Conclusion: this device experiment supports the isolated analogue-gain
+hypothesis. It is not Integration acceptance and does not establish a
+calibrated gain curve, full-resolution mode, ISP processing, or persistent
+capture userspace. The next variable must be tested separately; do not add it
+to this commit.
 
 ## Current experiment: IMX298 exposure control (device experiment supports hypothesis)
 
