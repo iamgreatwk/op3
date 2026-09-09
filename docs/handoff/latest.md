@@ -1,23 +1,35 @@
 # Latest handoff
 
-## OP3 IMX298 minimum RAW10 stream (source committed, module/device test pending, 2026-09-09)
+## OP3 IMX298 minimum RAW10 stream (CSI-2 link controls and frame capture PASS, 2026-09-09)
 
-The dedicated camera kernel branch now contains `a059fc816af6`, archived as
-`patches/pmos612-op3-camera-imx298/0015-media-i2c-add-OP3-IMX298-minimum-RAW10-stream.patch`.
+The dedicated camera kernel branch now contains `cc609f6d10a1`, archived as
+`patches/pmos612-op3-camera-imx298/0016-media-i2c-add-IMX298-CSI-2-link-controls.patch`.
 It changes only the IMX298 driver: one vendor-derived 1476x834 RAW10 RGGB
 register table, V4L2 format/frame-size negotiation, initialized sub-device
-state, and runtime `s_stream` start/stop. No DTS, regulator, CAMSS, Buildroot,
+state, runtime `s_stream` start/stop, and fixed CSI-2 link-frequency/pixel-rate
+controls. No DTS, regulator, CAMSS, Buildroot,
 initramfs, or kernel-image change is included. The chip-ID/VIO PASS remains
-the prior checkpoint; this is a new stream hypothesis and is not accepted.
+the prior checkpoint.
 
-The phone rootfs has `/dev/media0` and `/dev/video0` through `/dev/video5`,
-but no `media-ctl` or `v4l2-ctl`. The next test therefore builds only
-`imx298.ko` and uploads a temporary V4L2 ioctl test helper; no Buildroot
-rebuild is needed. PASS requires `STREAMON` to reach the new driver log
-without mode-write, CSI/CAMSS, I2C, timeout, or kernel-fault evidence. A valid
-image, controls, extra modes, and capture userspace are separate follow-ups.
+The phone rootfs has `/dev/media0` and `/dev/video0` through `/dev/video5`, but
+no `media-ctl` or `v4l2-ctl`. The test therefore built only `imx298.ko` and
+uploaded a temporary static V4L2 ioctl helper. It enabled the four media links
+from `imx298 5-001a` through `msm_vfe0_rdi0`, negotiated 1476x834 RAW10, and
+captured `/tmp/imx298.raw` from `/dev/video0`.
+
+Device evidence: module SHA256
+`9175e16a95ca98dddd4d96017f32fca24ca5078399d06035ce64bb17bfc95ff1`;
+test-helper SHA256
+`491565d844b65155688ca07b55cce417bd9c2235f4d1bfd14cc9a17b1f0b0c1e`;
+captured frame SHA256
+`0e5bba06df7cfeb38e50f39d42aa33dfa42683414c0b6ef90a9402fa831b4e68`, size
+`1541232` bytes. The log showed `streaming started mode=1476x834 code=RG10`,
+`captured buffer=0 bytes=1541232`, and `streaming stopped`, with no CSI/CAMSS
+fault or timeout. This supports the link-control and minimum RAW10 stream
+hypothesis; it is not yet full camera integration. A valid image, exposure,
+gain, extra modes, and persistent capture userspace remain follow-ups.
 See `docs/handoff/op3-camera-imx298-001.md` for the exact module command and
-the required device evidence.
+device evidence.
 
 ## OP3 IMX298 VIO through SMD-RPM LVS1 candidate (device PASS, 2026-09-09)
 

@@ -5,46 +5,62 @@ Role: Implementation Agent
 Baseline commit: `67b0bbc3cbf46bae712a2606a43361756fcbd829`
 Working branch: `agent/implementation/op3-camera-imx298-001`
 Working tree: `source/linux-pmos-msm8996-6.12-camera-imx298`
-Commit SHA: `a059fc816af6` (tip; previous SMD-RPM registration candidate
+Commit SHA: `cc609f6d10a1` (tip; previous minimum RAW10 stream commit
+`a059fc816af6`; previous SMD-RPM registration candidate
 `67630ec3b9e5`; previous rejected direct-SPMI LVS1 candidate
 `c298ff3e7197` was reverted by `8cce8d4643b3`)
 
 Layer: kernel camera / CCI / CAMSS
 
-## Current experiment: minimum IMX298 RAW10 stream (owner build/test pending)
+## Current experiment: minimum IMX298 RAW10 stream (CSI-2 link controls and frame capture PASS)
 
-The camera branch now contains nested-kernel commit `a059fc816af6`, archived
-as patch `patches/pmos612-op3-camera-imx298/0015-media-i2c-add-OP3-IMX298-minimum-RAW10-stream.patch`.
+The camera branch now contains nested-kernel commit `cc609f6d10a1`, archived
+as patch `patches/pmos612-op3-camera-imx298/0016-media-i2c-add-IMX298-CSI-2-link-controls.patch`.
 It changes only `drivers/media/i2c/imx298.c`: one 1476x834 RAW10 RGGB mode
 derived from the OP3 vendor sensor table, V4L2 format enumeration, default
-sub-device state, and runtime `s_stream` start/stop operations. The mode table
-is stored as explicit register writes; no vendor binary is linked into the
-kernel. Regulators, reset/MCLK sequencing, DTS, CAMSS, kernel image,
-initramfs, and Buildroot are unchanged.
+sub-device state, runtime `s_stream` start/stop operations, and fixed CSI-2
+link-frequency/pixel-rate controls. The mode table is stored as explicit
+register writes; no vendor binary is linked into the kernel. Regulators,
+reset/MCLK sequencing, DTS, CAMSS, kernel image, initramfs, and Buildroot are
+unchanged.
 
 Hypothesis: after the confirmed chip-ID read, the IMX298 can emit a minimal
-four-lane CSI-2 RAW10 stream using the 1476x834 mode. PASS requires the module
-to load, the sensor to retain the `0x0298` probe result, and a userspace
-`STREAMON` attempt to reach `streaming started` without an I2C error or kernel
-fault. A failed mode write, CSI/CAMSS start error, timeout, or reboot is FAIL.
-This experiment does not claim a valid captured image; frame capture and
-controls are follow-up work.
+four-lane CSI-2 RAW10 stream using the 1476x834 mode when CAMSS can read the
+sensor link-frequency control. PASS requires the module to load, the sensor
+to retain the `0x0298` probe result, a userspace `STREAMON` attempt to reach
+`streaming started`, and one captured buffer without an I2C/CSI/CAMSS error or
+kernel fault. A failed mode write, timeout, or reboot is FAIL. This experiment
+does not claim a valid color image; exposure, gain, and additional modes are
+follow-up work.
 
 The recovery rootfs currently has no `media-ctl` or `v4l2-ctl`, so the first
 device test needs a temporary V4L2 ioctl test binary uploaded over SSH. Do not
 rebuild Buildroot for this experiment.
+
+Build the temporary helper from the committed top-level source with the
+available cross compiler; static linking keeps it independent of the recovery
+rootfs C library:
+
+```sh
+aarch64-linux-gnu-gcc-11 -static -O2 -Wall -Wextra -Werror \
+  scripts/op3-v4l2-stream-test.c -o /tmp/op3-v4l2-stream-test
+sha256sum /tmp/op3-v4l2-stream-test
+```
+
+The device test used helper SHA256
+`491565d844b65155688ca07b55cce417bd9c2235f4d1bfd14cc9a17b1f0b0c1e`.
 
 Build only the external sensor module from the committed camera branch:
 
 ```sh
 project=/home/kai/src/oneplus3-mainline
 kernel=$project/source/linux-pmos-msm8996-6.12-camera-imx298
-kout=$project/out/pmos-msm8996-6.12-camera-imx298-raw10
+kout=$project/out/pmos-msm8996-6.12-camera-imx298-raw10-linkfreq
 fullout=$project/out/pmos-msm8996-6.12-recovery-audio-full-s1302-poll-drm100
 symvers=$fullout/Module.symvers
 module_build=$kout/imx298-module
 
-test "$(git -C "$kernel" rev-parse --short=12 HEAD)" = a059fc816af6
+test "$(git -C "$kernel" rev-parse --short=12 HEAD)" = cc609f6d10a1
 test -s "$symvers"
 test -r "$kout/.config"
 
@@ -69,7 +85,7 @@ image and dependency bundle. Reboot between tests; do not unload CAMSS. The
 module upload and dependency-loading command is:
 
 ```sh
-scp -O "$module_build/imx298.ko" root@172.16.42.1:/newroot/tmp/imx298-raw10.ko
+scp -O "$module_build/imx298.ko" root@172.16.42.1:/newroot/tmp/imx298-linkfreq.ko
 ssh root@172.16.42.1 '
 set -e
 module_root=/newroot/lib/modules/6.12.1-msm8996+/kernel
@@ -83,14 +99,39 @@ insmod "$module_root/drivers/media/common/videobuf2/videobuf2-dma-sg.ko" 2>/dev/
 insmod "$module_root/drivers/media/common/videobuf2/videobuf2-v4l2.ko" 2>/dev/null || true
 insmod "$module_root/drivers/i2c/busses/i2c-qcom-cci.ko" 2>/dev/null || true
 insmod "$module_root/drivers/media/platform/qcom/camss/qcom-camss.ko" 2>/dev/null || true
-insmod /newroot/tmp/imx298-raw10.ko
+insmod /newroot/tmp/imx298-linkfreq.ko
 dmesg | grep -iE "imx298|camss|cci|csiphy|csid|vfe|media"
 '
 ```
 
-Device result: NOT_RUN. The next handoff must record the temporary test
-binary hash, video node selected, `VIDIOC_S_FMT` result, `VIDIOC_STREAMON`
-result, and the matching `dmesg` excerpt.
+Device result: PASS for the isolated CSI-2 link-control and minimum stream
+hypothesis (2026-09-09). The owner used the known-good image
+`boot-oneplus3-pmos612-recovery-imx298-vio-smd-lvs1.img` with SHA256
+`8809a46d5be7b5f983a0d3acfb27bd33c34b12bcb8951d486d123d8252933e84`, then
+loaded the existing CAMSS/V4L2 dependency closure and the new module without
+rebuilding Buildroot or the kernel image. The module SHA256 was
+`9175e16a95ca98dddd4d96017f32fca24ca5078399d06035ce64bb17bfc95ff1`.
+
+The temporary static V4L2 helper SHA256 was
+`491565d844b65155688ca07b55cce417bd9c2235f4d1bfd14cc9a17b1f0b0c1e`.
+It selected `/dev/video0`, enabled the four links
+`imx298 5-001a -> msm_csiphy0 -> msm_csid0 -> msm_ispif0 -> msm_vfe0_rdi0`,
+negotiated `1476x834` with packed RAW10 (`bytesperline=1848`), and received
+one buffer. The raw frame was `/tmp/imx298.raw`, 1,541,232 bytes, SHA256
+`0e5bba06df7cfeb38e50f39d42aa33dfa42683414c0b6ef90a9402fa831b4e68`.
+The matching kernel messages were `streaming started mode=1476x834 code=RG10`,
+`captured buffer=0 bytes=1541232`, and `streaming stopped`; no CSI/CAMSS
+timeout, I2C error, fault, or reboot occurred.
+
+Conclusion: SUPPORTED for the minimum RAW10 stream and CAMSS link-frequency
+hypothesis. This is not full camera integration acceptance: the frame has not
+yet been validated as a correctly exposed/color-decoded image, and exposure,
+gain, additional modes, front IMX179, OIS, actuator, flash, EEPROM, and
+persistent capture userspace remain out of scope.
+
+Recommended next experiment: keep the current DTS and power sequence fixed;
+add only a userspace RAW10 inspection/conversion step or one sensor control at
+a time. Do not rebuild Buildroot for a kernel-module-only follow-up.
 
 ## Device result: IMX298 chip-ID PASS through SMD-RPM LVS1 (2026-09-09)
 

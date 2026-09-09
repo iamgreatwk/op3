@@ -1,0 +1,119 @@
+From cc609f6d10a1e548a33240404eac6d39ea6d7b45 Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Wed, 9 Sep 2026 19:33:10 +0800
+Subject: [PATCH] media: i2c: expose IMX298 CSI-2 link controls
+
+---
+ drivers/media/i2c/imx298.c | 45 ++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 43 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/media/i2c/imx298.c b/drivers/media/i2c/imx298.c
+index 839ebe3477ca..93dd7d89855b 100644
+--- a/drivers/media/i2c/imx298.c
++++ b/drivers/media/i2c/imx298.c
+@@ -15,7 +15,6 @@
+ #include <linux/gpio/consumer.h>
+ #include <linux/i2c.h>
+ #include <linux/module.h>
+-#include <linux/mutex.h>
+ #include <linux/of.h>
+ #include <linux/pm_runtime.h>
+ #include <linux/regmap.h>
+@@ -24,6 +23,7 @@
+ 
+ #include <media/media-entity.h>
+ #include <media/v4l2-async.h>
++#include <media/v4l2-ctrls.h>
+ #include <media/v4l2-device.h>
+ #include <media/v4l2-fwnode.h>
+ #include <media/v4l2-subdev.h>
+@@ -39,6 +39,8 @@
+ #define IMX298_MODE_WIDTH	1476
+ #define IMX298_MODE_HEIGHT	834
+ #define IMX298_MBUS_CODE	MEDIA_BUS_FMT_SRGGB10_1X10
++#define IMX298_LINK_FREQ	480000000LL
++#define IMX298_PIXEL_RATE	((IMX298_LINK_FREQ * 8LL) / 10)
+ 
+ enum imx298_supply_index {
+ 	IMX298_SUPPLY_VANA,
+@@ -66,6 +68,7 @@ struct imx298 {
+ 	u8 nlanes;
+ 
+ 	struct v4l2_subdev sd;
++	struct v4l2_ctrl_handler ctrls;
+ 	struct media_pad pad;
+ 	bool streaming;
+ };
+@@ -678,6 +681,36 @@ static const struct media_entity_operations imx298_entity_ops = {
+ 	.link_validate = v4l2_subdev_link_validate,
+ };
+ 
++static const s64 imx298_link_freq_menu[] = {
++	IMX298_LINK_FREQ,
++};
++
++static int imx298_init_controls(struct imx298 *imx298)
++{
++	struct v4l2_ctrl *link_freq;
++
++	v4l2_ctrl_handler_init(&imx298->ctrls, 2);
++	link_freq = v4l2_ctrl_new_int_menu(&imx298->ctrls, NULL,
++					  V4L2_CID_LINK_FREQ,
++					  ARRAY_SIZE(imx298_link_freq_menu) - 1,
++					  0, imx298_link_freq_menu);
++	if (link_freq)
++		link_freq->flags |= V4L2_CTRL_FLAG_READ_ONLY;
++	v4l2_ctrl_new_std(&imx298->ctrls, NULL, V4L2_CID_PIXEL_RATE,
++			  IMX298_PIXEL_RATE, IMX298_PIXEL_RATE, 1,
++			  IMX298_PIXEL_RATE);
++
++	if (imx298->ctrls.error) {
++		int ret = imx298->ctrls.error;
++
++		v4l2_ctrl_handler_free(&imx298->ctrls);
++		return ret;
++	}
++
++	imx298->sd.ctrl_handler = &imx298->ctrls;
++	return 0;
++}
++
+ static int imx298_probe(struct i2c_client *client)
+ {
+ 	struct device *dev = &client->dev;
+@@ -734,9 +767,15 @@ static int imx298_probe(struct i2c_client *client)
+ 	imx298->sd.entity.function = MEDIA_ENT_F_CAM_SENSOR;
+ 	imx298->pad.flags = MEDIA_PAD_FL_SOURCE;
+ 
+-	ret = imx298_power_on(imx298);
++	ret = imx298_init_controls(imx298);
+ 	if (ret)
++		return dev_err_probe(dev, ret, "failed to initialize controls\n");
++
++	ret = imx298_power_on(imx298);
++	if (ret) {
++		v4l2_ctrl_handler_free(&imx298->ctrls);
+ 		return dev_err_probe(dev, ret, "failed to power on sensor\n");
++	}
+ 
+ 	dev_info(dev, "chip-id-high read reg=0x%04x begin\n",
+ 		 IMX298_REG_CHIP_ID);
+@@ -802,6 +841,7 @@ static int imx298_probe(struct i2c_client *client)
+ 	media_entity_cleanup(&imx298->sd.entity);
+ err_power_off:
+ 	imx298_power_off(imx298);
++	v4l2_ctrl_handler_free(&imx298->ctrls);
+ 	return ret;
+ }
+ 
+@@ -812,6 +852,7 @@ static void imx298_remove(struct i2c_client *client)
+ 
+ 	v4l2_async_unregister_subdev(&imx298->sd);
+ 	v4l2_subdev_cleanup(&imx298->sd);
++	v4l2_ctrl_handler_free(&imx298->ctrls);
+ 	media_entity_cleanup(&imx298->sd.entity);
+ 
+ 	pm_runtime_disable(&client->dev);
+-- 
+2.53.0
+

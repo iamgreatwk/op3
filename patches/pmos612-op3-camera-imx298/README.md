@@ -17,7 +17,7 @@ git am --3way patches/pmos612-op3-camera-imx298/000*.patch
 ```
 
 The camera series was exported from nested-kernel commits
-`c37102be3c5b..a059fc816af6`. Patch `0012` deliberately removes the
+`c37102be3c5b..cc609f6d10a1`. Patch `0012` deliberately removes the
 experimental PM8994 `lvs1 {}` DT child and keeps IMX298 VIO on the known-good
 `vreg_s4a_1p8`; the two preceding direct-SPMI LVS1 experiments rebooted
 before userspace. Patch `0013` is a new, isolated registration-only test using
@@ -37,6 +37,9 @@ negotiation, and `s_stream` register programming. It is derived from the
 phone's vendor mode data as explicit register writes; no vendor binary is
 linked into the kernel. Exposure, gain, additional modes, and capture
 userspace remain separate tasks.
+Patch `0016` adds the fixed CSI-2 link-frequency and pixel-rate controls
+required by CAMSS to configure the sensor's four-lane transmitter. It keeps
+the experiment limited to the existing 1476x834 RAW10 mode.
 
 | Patch | Original commit | SHA256 | Purpose |
 | --- | --- | --- | --- |
@@ -55,6 +58,7 @@ userspace remain separate tasks.
 | `0013` | `67630ec3b9e5` | `0113d8a19b38670460536dc8103f23d125b8740380d32969a16673491c3eae1e` | Register PM8994 LVS1 through the SMD-RPM topology, without changing camera VIO. |
 | `0014` | `e5332d149d85` | `0b95a97359ffd75e7ec7850eb8c97ebc8c0c6c4dca24a1862d9f2bfd70ca91d9` | Route only IMX298 VIO from S4 to the registered SMD-RPM LVS1 output. |
 | `0015` | `a059fc816af6` | `0cd6ecb9c66ff05e74abf1f7e2eaec38eaca645be43b5e872d3e4c35a2d0f09c` | Add one minimum 1476x834 RAW10 mode and V4L2 stream operations. |
+| `0016` | `cc609f6d10a1` | `05e09e6786fd9b4825c3251eff66f36cf64fc17a232411f54837225f7f4bac84` | Expose IMX298 CSI-2 link-frequency and pixel-rate controls. |
 
 These patches provide one experimental stream mode only. They do not provide
 exposure/gain controls, additional modes, capture userspace, front IMX179,
