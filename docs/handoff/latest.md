@@ -1,5 +1,24 @@
 # Latest handoff
 
+## OP3 recovery USB-host independence A/B candidate (2026-09-09)
+
+The current recovery initramfs candidate removes the USB host from the
+recovery boot critical path. Previously, `init_mainline.sh` synchronously
+configured the configfs RNDIS+ACM gadget, waited up to ten seconds for
+`/dev/ttyGS0`, and started an interactive ACM shell before the inittab
+`run_recovery.sh` entry could execute. The candidate moves that complete
+optional USB debug setup to a background function and removes the direct
+`log()` write to `ttyGS0`, while retaining RNDIS/ACM for debugging when USB is
+available.
+
+Only `boot/initramfs/sbin/init_mainline.sh` changes behavior; kernel, DTS,
+DRM/GPU, recovery, Wi-Fi, audio, Buildroot configuration, and boot cmdline
+are unchanged. Static shell and diff checks pass. The candidate is committed
+in `docs/handoff/op3-recovery-usb-independent-001.md`; Buildroot packaging and
+device validation are pending. The next PASS condition is a visible recovery
+UI after a `fastboot flash` boot with no computer USB host attached, followed
+by successful RNDIS/ACM availability when a host is connected.
+
 ## OP3 rear IMX298 probe candidate (LVS1 node removed after early reboot, 2026-09-08)
 
 GitHub Issue #12 starts the camera layer with one isolated variable: rear Sony

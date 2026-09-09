@@ -12,7 +12,6 @@ LOG_FILE=/root/boot_mainline.log
 log() {
     echo "[init-mainline] $*" > /dev/console 2>/dev/null
     echo "[init-mainline] $*" >> "$LOG_FILE" 2>/dev/null
-    [ -c /dev/ttyGS0 ] && echo "[init-mainline] $*" > /dev/ttyGS0 2>/dev/null   # ACM 串口同步输出
     echo "[init-mainline] $*" > /dev/kmsg 2>/dev/null     # v86: 进 dmesg → recovery 启动画面可见
 }
 
@@ -117,55 +116,65 @@ chmod 700 /var/run/dropbear 2>/dev/null
 mkdir -p /etc/dropbear 2>/dev/null
 
 # ---- 2. USB gadget 网络（usb0，主线 configfs gadget）----
-# initramfs 阶段已配好 gadget；switch_root 后接口保留，这里补 IP。
-# 若 usb0 不存在则尝试用 configfs 重新配置（libcomposite 需内置）。
-mount -t configfs configfs /sys/kernel/config 2>/dev/null
-if [ ! -e /sys/class/net/usb0 ]; then
-    # v82+：configfs 自动创建 RNDIS + ACM 串口（内核 CONFIGFS + F_RNDIS/ACM=y）
-    UDC=$(ls /sys/class/udc/ 2>/dev/null | head -1)
-    if [ -n "$UDC" ] && [ -d /sys/kernel/config/usb_gadget ]; then
-        mkdir -p /sys/kernel/config/usb_gadget/op3
-        cd /sys/kernel/config/usb_gadget/op3 2>/dev/null || true
-        echo 0x1d6b > idVendor 2>/dev/null
-        echo 0x0104 > idProduct 2>/dev/null
-        mkdir -p functions/rndis.usb0 2>/dev/null
-        echo "02:11:22:33:44:55" > functions/rndis.usb0/host_addr 2>/dev/null
-        echo "02:11:22:33:44:66" > functions/rndis.usb0/dev_addr 2>/dev/null
-        mkdir -p functions/acm.usb0 2>/dev/null   # v84 调试串口
-        mkdir -p configs/c.1 2>/dev/null
-        ln -sf functions/rndis.usb0 configs/c.1/ 2>/dev/null
-        ln -sf functions/acm.usb0 configs/c.1/ 2>/dev/null
-        echo "$UDC" > UDC 2>/dev/null && log "USB gadget rndis+acm created (UDC=$UDC)"
-        cd /
-        sleep 2
-    else
-        log "WARN: 无 UDC 或 configfs（USB gadget 不可用）"
+# USB 调试是可选服务，不能成为 recovery 的启动前置条件。
+# 旧逻辑在 sysinit 中同步绑定 UDC、等待 ttyGS0；没有 USB 主机时，DWC3
+# 的 VBUS/extcon/ACM 状态可能让这条路径异常或阻塞，进而连 recovery 也
+# 无法启动。整个 gadget 初始化放到后台，RNDIS/ACM 功能保持不变。
+setup_usb_debug() {
+    # initramfs 阶段已配好 gadget；switch_root 后接口保留，这里补 IP。
+    # 若 usb0 不存在则尝试用 configfs 重新配置（libcomposite 需内置）。
+    mount -t configfs configfs /sys/kernel/config 2>/dev/null
+    if [ ! -e /sys/class/net/usb0 ]; then
+        # v82+：configfs 自动创建 RNDIS + ACM 串口（内核 CONFIGFS + F_RNDIS/ACM=y）
+        UDC=$(ls /sys/class/udc/ 2>/dev/null | head -1)
+        if [ -n "$UDC" ] && [ -d /sys/kernel/config/usb_gadget ]; then
+            mkdir -p /sys/kernel/config/usb_gadget/op3
+            cd /sys/kernel/config/usb_gadget/op3 2>/dev/null || true
+            echo 0x1d6b > idVendor 2>/dev/null
+            echo 0x0104 > idProduct 2>/dev/null
+            mkdir -p functions/rndis.usb0 2>/dev/null
+            echo "02:11:22:33:44:55" > functions/rndis.usb0/host_addr 2>/dev/null
+            echo "02:11:22:33:44:66" > functions/rndis.usb0/dev_addr 2>/dev/null
+            mkdir -p functions/acm.usb0 2>/dev/null   # v84 调试串口
+            mkdir -p configs/c.1 2>/dev/null
+            ln -sf functions/rndis.usb0 configs/c.1/ 2>/dev/null
+            ln -sf functions/acm.usb0 configs/c.1/ 2>/dev/null
+            echo "$UDC" > UDC 2>/dev/null && log "USB gadget rndis+acm created (UDC=$UDC)"
+            cd /
+            sleep 2
+        else
+            log "WARN: 无 UDC 或 configfs（USB gadget 不可用）"
+        fi
     fi
-fi
-if [ -e /sys/class/net/usb0 ]; then
-    ip link set usb0 up 2>/dev/null
-    ip addr add 172.16.42.1/24 dev usb0 2>/dev/null || \
-        ifconfig usb0 172.16.42.1 netmask 255.255.255.0 up 2>/dev/null
-    log "usb0 up: 172.16.42.1"
-else
-    log "WARN: usb0 not present (USB gadget 未配置)"
-    ls /sys/class/net/ >> "$LOG_FILE" 2>/dev/null
-fi
-# ACM 串口调试 shell（v84：Windows 串口终端直连，不依赖 ssh）
-# v85：轮询等待 ttyGS0（UDC 绑定后 tty 创建有延迟）+ 欢迎信息验证通道
-TTYGS0=""
-for i in 1 2 3 4 5 6 7 8 9 10; do
-    [ -e /dev/ttyGS0 ] && { TTYGS0=yes; break; }
-    sleep 1
-done
-if [ -n "$TTYGS0" ]; then
-    ( /bin/sh -i < /dev/ttyGS0 > /dev/ttyGS0 2>&1 & ) 2>/dev/null
-    log "ACM serial shell on /dev/ttyGS0"
-    ( sleep 6; echo "[serial] AgentOS console ready" > /dev/ttyGS0 2>/dev/null ) &
-else
-    log "WARN: /dev/ttyGS0 不存在（ACM 串口未生效）"
-    ls /dev/ttyG* >> "$LOG_FILE" 2>/dev/null
-fi
+    if [ -e /sys/class/net/usb0 ]; then
+        ip link set usb0 up 2>/dev/null
+        ip addr add 172.16.42.1/24 dev usb0 2>/dev/null || \
+            ifconfig usb0 172.16.42.1 netmask 255.255.255.0 up 2>/dev/null
+        log "usb0 up: 172.16.42.1"
+    else
+        log "WARN: usb0 not present (USB gadget 未配置)"
+        ls /sys/class/net/ >> "$LOG_FILE" 2>/dev/null
+    fi
+    # ACM 串口调试 shell（v84：Windows 串口终端直连，不依赖 ssh）
+    # v85：轮询等待 ttyGS0（UDC 绑定后 tty 创建有延迟）+ 欢迎信息验证通道。
+    # 该等待现在位于后台，不再阻塞 recovery。
+    TTYGS0=""
+    for i in 1 2 3 4 5 6 7 8 9 10; do
+        [ -e /dev/ttyGS0 ] && { TTYGS0=yes; break; }
+        sleep 1
+    done
+    if [ -n "$TTYGS0" ]; then
+        ( /bin/sh -i < /dev/ttyGS0 > /dev/ttyGS0 2>&1 & ) 2>/dev/null
+        log "ACM serial shell on /dev/ttyGS0"
+        ( sleep 6; echo "[serial] AgentOS console ready" > /dev/ttyGS0 2>/dev/null ) &
+    else
+        log "WARN: /dev/ttyGS0 不存在（ACM 串口未生效）"
+        ls /dev/ttyG* >> "$LOG_FILE" 2>/dev/null
+    fi
+}
+
+setup_usb_debug </dev/null &
+log "USB debug setup started in background (pid=$!)"
 
 # ---- 3.9 自动诊断推送（v89：独立 netcat，Buildroot busybox 无 nc）----
 # v87 教训：busybox 无 nc applet → 之前 nc 推送全废（手机实测 'nc' 不存在）。
