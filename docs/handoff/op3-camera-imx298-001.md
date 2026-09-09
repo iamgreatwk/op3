@@ -11,14 +11,46 @@ Commit SHA: `e5332d149d85` (tip; previous SMD-RPM registration candidate
 
 Layer: kernel camera / CCI / CAMSS
 
-## Current next step: owner DTB-only test of IMX298 VIO through SMD-RPM LVS1
+## Device result: IMX298 chip-ID PASS through SMD-RPM LVS1 (2026-09-09)
+
+The owner-built DTB-only candidate was booted with `fastboot boot` on the
+OnePlus 3. DTB SHA256 is
+`a53362f960057d7e9d8b8efa2808ea68d84dd82ca15ae6486bf2a227efe49d7a`; the
+temporary boot image SHA256 is
+`8809a46d5be7b5f983a0d3acfb27bd33c34b12bcb8951d486d123d8252933e84`.
+The locked kernel Image.gz and Buildroot initrd were reused. The existing
+camera dependency bundle SHA256 is
+`33918d7cb399894a719f1567091054eaceb2eec8c6d96586ad61f26cdd6739ef`, and
+the compatible original-power-sequence `imx298.ko` used for the test has
+SHA256 `47052972b47ac33611686be017322fb329e9088a9ad18e39466eea9dc4fc2a65`.
+
+After explicit `insmod` of the archived CAMSS/CCI/V4L2 dependencies and the
+module, the device log showed VANA 2.6 V, VDIG 1.1 V, VIO via LVS1 at 1.8 V,
+CUSTOM1 2.15 V, MCLK 24 MHz, and RESET logical `1` to `0`. Reads of `0x0016`
+and `0x0017` returned `0x02` and `0x98`, followed by
+`IMX298 probe passed: chip ID=0x0298, CSI-2 lanes=4`. CAMSS exposed
+`/dev/media0` and `/dev/video0` through `/dev/video5`. The sensor's power-off
+sequence then disabled VIO and the two LVS1 sysfs entries remained registered
+and disabled, as expected after cleanup. No image was flashed.
+
+Result: PASS for the isolated IMX298 VIO-routing hypothesis. This is not yet
+Integration acceptance: no mode table, CSI-2 stream, RAW10 frame, exposure,
+gain, or capture userspace has been implemented.
+
+## Current next step: implement and test the minimum IMX298 RAW10 stream
 
 The SMD-RPM LVS1 registration candidate passed its isolated boot test:
 `vreg_lvs1a_1p8` and `lvs1` appeared in sysfs and the phone reached userspace.
 Commit `e5332d149d85` now changes exactly one downstream connection in the
 camera node: IMX298 `vio-supply` moves from `&vreg_s4a_1p8` to
 `&vreg_lvs1a_1p8`. The sensor driver, all other rails, GPIOs, MCLK, kernel
-image, initramfs, module bundle, and Buildroot remain unchanged.
+image, initramfs, module bundle, and Buildroot remain unchanged for that
+registration test.
+
+The next camera-only hypothesis is that the confirmed sensor can be started
+with one documented OP3 IMX298 mode: four-lane CSI-2, RAW10, one conservative
+preview resolution, and the matching link frequency/pixel rate. Keep this as
+a driver-only change; do not change regulators, DTS, CAMSS, or Buildroot.
 
 Hypothesis: the sensor's VIO must be supplied by the PM8994 LVS1 output rather
 than the always-on S4 rail. PASS requires boot to userspace, successful

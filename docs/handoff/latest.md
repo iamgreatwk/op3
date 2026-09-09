@@ -1,6 +1,6 @@
 # Latest handoff
 
-## OP3 IMX298 VIO through SMD-RPM LVS1 candidate (owner DTB build pending, 2026-09-09)
+## OP3 IMX298 VIO through SMD-RPM LVS1 candidate (device PASS, 2026-09-09)
 
 The camera branch now contains nested-kernel commit `e5332d149d85`, archived as
 `patches/pmos612-op3-camera-imx298/0014-arm64-dts-qcom-route-OP3-IMX298-VIO-through-SMD-RPM-LVS1.patch`.
@@ -12,6 +12,15 @@ Hypothesis: IMX298 VIO is electrically connected to PM8994 LVS1. Build only
 the DTB, reuse the locked Image.gz, initrd, and camera module bundle, and use
 `fastboot boot`; do not flash or rebuild Buildroot. PASS requires a clean
 userspace boot, successful camera resource enable, and chip ID `0x0298`.
+The DTB SHA256 is
+`a53362f960057d7e9d8b8efa2808ea68d84dd82ca15ae6486bf2a227efe49d7a`; the
+temporary boot image SHA256 is
+`8809a46d5be7b5f983a0d3acfb27bd33c34b12bcb8951d486d123d8252933e84`.
+The phone booted, the existing camera module loaded, and the sensor returned
+`0x02`/`0x98`, producing `IMX298 probe passed: chip ID=0x0298`. CAMSS exposed
+`/dev/media0` and `/dev/video0` through `/dev/video5`. This is a device PASS
+for the isolated VIO-routing hypothesis, not Integration acceptance or a
+streaming/capture result. The next layer is a minimum RAW10 mode.
 Commands and evidence requirements are in `docs/handoff/op3-camera-imx298-001.md`.
 
 ## OP3 PM8994 LVS1 SMD-RPM declaration candidate (device PASS, 2026-09-09)
