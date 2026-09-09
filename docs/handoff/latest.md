@@ -1,5 +1,24 @@
 # Latest handoff
 
+## OP3 IMX298 original power-resource sequence candidate (owner build pending, 2026-09-09)
+
+The camera branch now contains commit `7fe1f2f950b2`, archived as patch
+`patches/pmos612-op3-camera-imx298/0012-media-i2c-follow-op3-imx298-power-sequence.patch`.
+This is one isolated kernel-camera hypothesis: the IMX298 still returns I2C
+`-6` because the current mainline driver does not reproduce the original OP3
+Android resource order. Preserved vendor evidence identifies VANA, VDIG, VIO,
+GPIO39/CAM_VAF0, S5/CUSTOM1 at 2.15 V, 24 MHz MCLK, and RESET release with
+2/5 ms delays. The candidate implements that order explicitly and reverses it
+on cleanup. It keeps the known-good always-on `vreg_s4a_1p8` for VIO and does
+not reintroduce the boot-crashing `lvs1` node.
+
+The DTS and external module must be rebuilt by the project owner before this
+can be tested; the prior CCI-400 boot image lacks the new `custom1-supply` and
+`vaf-gpios` properties. Build/package commands and the required PASS/FAIL
+evidence are in `docs/handoff/op3-camera-imx298-001.md`. No Buildroot rebuild
+is needed. Until a device reports `IMX298 probe passed: chip ID=0x0298`, this
+remains a candidate and the camera layer is not accepted.
+
 ## OP3 recovery USB-host independence A/B candidate (2026-09-09)
 
 The current recovery initramfs candidate removes the USB host from the
@@ -33,7 +52,7 @@ image. This is recorded as a device PASS for the isolated hypothesis, not yet
 as final Integration acceptance: the host-attached RNDIS/ACM regression and a
 clean Buildroot rebuild from the committed source remain pending.
 
-## OP3 rear IMX298 probe candidate (reset-initial-state test failed, 2026-09-09)
+## OP3 rear IMX298 probe candidate (original power-sequence test pending, 2026-09-09)
 
 GitHub Issue #12 starts the camera layer with one isolated variable: rear Sony
 IMX298 probe support. The dedicated nested kernel worktree is
@@ -41,7 +60,7 @@ IMX298 probe support. The dedicated nested kernel worktree is
 `agent/implementation/op3-camera-imx298-001`, based on the integrated kernel
 checkpoint `4f8595b13fbd`. The prior no-`LVS1` control checkpoint ends at
 `306d4a364565` (the direct-`LVS1` change was `ec5025c75ff4`); the current
-camera tip is `d247ce811242`.
+camera tip is `7fe1f2f950b2`.
 
 The candidate adds a probe-only V4L2 driver, a binding, and OnePlus 3 15801
 CCI0/CAMSS DT wiring. It uses CCI address `0x1a`, GPIO30 reset/XCLR, GPIO13
@@ -100,10 +119,11 @@ was run as nested-kernel commit
 `d247ce811242`, changing only `GPIOD_OUT_LOW` to `GPIOD_OUT_HIGH` when the
 reset GPIO is requested. On `192.168.1.4`, the module loaded successfully and
 the diagnostic log showed reset-before-assert logical `1`, but the chip-ID
-read still returned `-6`. The reset hypothesis therefore failed. The next
-step is to confirm the old OP3/Android IMX298 power-resource order and delays
-from preserved vendor evidence before changing the driver; auxiliary
-`custom1`/`vaf` power and GPIO39 remain deferred.
+read still returned `-6`. The reset hypothesis therefore failed. Commit
+`7fe1f2f950b2` now implements the preserved old OP3/Android IMX298
+power-resource order, including auxiliary S5/CUSTOM1 and GPIO39/VAF, while
+keeping `vreg_s4a_1p8` for VIO and leaving `lvs1` disabled. The owner build and
+device test are pending; see `docs/handoff/op3-camera-imx298-001.md`.
 
 ## OP3 recovery balanced CPU governor fix (userspace candidate device-tested, Buildroot pending, 2026-09-08)
 

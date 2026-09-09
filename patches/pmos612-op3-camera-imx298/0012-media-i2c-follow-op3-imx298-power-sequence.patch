@@ -1,0 +1,330 @@
+From 7fe1f2f950b276b810146136c36ff1d680799bc8 Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Wed, 9 Sep 2026 18:09:25 +0800
+Subject: [PATCH] media: i2c: follow OP3 IMX298 power sequence
+
+---
+ .../bindings/media/i2c/sony,imx298.yaml       |   9 +
+ arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts |  24 ++-
+ drivers/media/i2c/imx298.c                    | 156 +++++++++++++++---
+ 3 files changed, 164 insertions(+), 25 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/media/i2c/sony,imx298.yaml b/Documentation/devicetree/bindings/media/i2c/sony,imx298.yaml
+index 6fb33442024a..d0894cea859f 100644
+--- a/Documentation/devicetree/bindings/media/i2c/sony,imx298.yaml
++++ b/Documentation/devicetree/bindings/media/i2c/sony,imx298.yaml
+@@ -41,6 +41,13 @@ properties:
+   vana-supply:
+     description: Sensor analog supply, 2.6 V.
+ 
++  custom1-supply:
++    description: Sensor auxiliary 2.15 V supply used by the OP3 autofocus path.
++
++  vaf-gpios:
++    description: Sensor autofocus power-control GPIO, active high.
++    maxItems: 1
++
+   port:
+     $ref: /schemas/graph.yaml#/$defs/port-base
+     additionalProperties: false
+@@ -74,6 +81,8 @@ required:
+   - vdig-supply
+   - vio-supply
+   - vana-supply
++  - custom1-supply
++  - vaf-gpios
+   - port
+ 
+ additionalProperties: false
+diff --git a/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts b/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts
+index 431e82136f40..b287b6c296fc 100644
+--- a/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts
++++ b/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts
+@@ -55,7 +55,7 @@ &panel {
+        compatible = "samsung,s6e3fa5";
+ };
+ 
+-/* OP3 15801 rear camera wiring: MCLK0/GPIO13 and reset/XCLR/GPIO30. */
++/* OP3 15801 rear camera wiring: MCLK0/GPIO13, reset/GPIO30, and VAF/GPIO39. */
+ &tlmm {
+ 	op3_cam_mclk0_default: op3-cam-mclk0-default-state {
+ 		pins = "gpio13";
+@@ -84,6 +84,20 @@ op3_cam_rear_sleep: op3-cam-rear-sleep-state {
+ 		drive-strength = <2>;
+ 		bias-pull-down;
+ 	};
++
++	op3_cam_vaf_default: op3-cam-vaf-default-state {
++		pins = "gpio39";
++		function = "gpio";
++		drive-strength = <2>;
++		bias-disable;
++	};
++
++	op3_cam_vaf_sleep: op3-cam-vaf-sleep-state {
++		pins = "gpio39";
++		function = "gpio";
++		drive-strength = <2>;
++		bias-pull-down;
++	};
+ };
+ 
+ /*
+@@ -150,14 +164,18 @@ imx298: camera-sensor@1a {
+ 		vdig-supply = <&vreg_l3a_1p1>;
+ 		vio-supply = <&vreg_s4a_1p8>;
+ 		vana-supply = <&vreg_l17a_2p6>;
++		custom1-supply = <&vreg_s5a_2p15>;
+ 
+ 		reset-gpios = <&tlmm 30 GPIO_ACTIVE_LOW>;
++		vaf-gpios = <&tlmm 39 GPIO_ACTIVE_HIGH>;
+ 		clocks = <&mmcc CAMSS_MCLK0_CLK>;
+ 		clock-frequency = <24000000>;
+ 
+ 		pinctrl-names = "default", "sleep";
+-		pinctrl-0 = <&op3_cam_rear_default>, <&op3_cam_mclk0_default>;
+-		pinctrl-1 = <&op3_cam_rear_sleep>, <&op3_cam_mclk0_sleep>;
++		pinctrl-0 = <&op3_cam_rear_default>, <&op3_cam_vaf_default>,
++			<&op3_cam_mclk0_default>;
++		pinctrl-1 = <&op3_cam_rear_sleep>, <&op3_cam_vaf_sleep>,
++			<&op3_cam_mclk0_sleep>;
+ 
+ 		port {
+ 			op3_imx298_ep: endpoint {
+diff --git a/drivers/media/i2c/imx298.c b/drivers/media/i2c/imx298.c
+index 6332114c7289..3f96319d0ab1 100644
+--- a/drivers/media/i2c/imx298.c
++++ b/drivers/media/i2c/imx298.c
+@@ -29,19 +29,27 @@
+ #define IMX298_REG_CHIP_ID	0x0016
+ #define IMX298_CHIP_ID		0x0298
+ 
+-static const char * const imx298_supply_names[] = {
+-	"vdig",
+-	"vio",
+-	"vana",
++enum imx298_supply_index {
++	IMX298_SUPPLY_VANA,
++	IMX298_SUPPLY_VDIG,
++	IMX298_SUPPLY_VIO,
++	IMX298_SUPPLY_CUSTOM1,
++	IMX298_NUM_SUPPLIES,
+ };
+ 
+-#define IMX298_NUM_SUPPLIES ARRAY_SIZE(imx298_supply_names)
++static const char * const imx298_supply_names[IMX298_NUM_SUPPLIES] = {
++	[IMX298_SUPPLY_VANA] = "vana",
++	[IMX298_SUPPLY_VDIG] = "vdig",
++	[IMX298_SUPPLY_VIO] = "vio",
++	[IMX298_SUPPLY_CUSTOM1] = "custom1",
++};
+ 
+ struct imx298 {
+ 	struct device *dev;
+ 	struct regmap *regmap;
+ 	struct regulator_bulk_data supplies[IMX298_NUM_SUPPLIES];
+ 	struct gpio_desc *reset_gpio;
++	struct gpio_desc *vaf_gpio;
+ 	struct clk *extclk;
+ 	u32 extclk_rate;
+ 	u8 nlanes;
+@@ -61,7 +69,7 @@ static inline struct imx298 *to_imx298(struct v4l2_subdev *sd)
+ }
+ 
+ static void imx298_log_supply_state(struct imx298 *imx298,
+-				    const char *phase, int bulk_ret)
++					    const char *phase)
+ {
+ 	unsigned int i;
+ 
+@@ -72,13 +80,46 @@ static void imx298_log_supply_state(struct imx298 *imx298,
+ 		enabled = regulator_is_enabled(imx298->supplies[i].consumer);
+ 		voltage = regulator_get_voltage(imx298->supplies[i].consumer);
+ 		dev_info(imx298->dev,
+-			 "power: %s %s bulk_enable_rc=%d enabled=%d voltage=%d\n",
+-			 phase, imx298_supply_names[i], bulk_ret, enabled, voltage);
++			 "power: %s %s enabled=%d voltage=%d\n", phase,
++			 imx298_supply_names[i], enabled, voltage);
+ 	}
+ }
+ 
++static int imx298_enable_supply(struct imx298 *imx298, unsigned int index)
++{
++	int ret;
++
++	ret = regulator_enable(imx298->supplies[index].consumer);
++	dev_info(imx298->dev, "power_on: %s enable rc=%d enabled=%d voltage=%d\n",
++		 imx298_supply_names[index], ret,
++		 regulator_is_enabled(imx298->supplies[index].consumer),
++		 regulator_get_voltage(imx298->supplies[index].consumer));
++
++	return ret;
++}
++
++static int imx298_disable_supply(struct imx298 *imx298, unsigned int index)
++{
++	int ret;
++
++	ret = regulator_disable(imx298->supplies[index].consumer);
++	dev_info(imx298->dev,
++		 "power_off: %s disable rc=%d enabled=%d voltage=%d\n",
++		 imx298_supply_names[index], ret,
++		 regulator_is_enabled(imx298->supplies[index].consumer),
++		 regulator_get_voltage(imx298->supplies[index].consumer));
++
++	return ret;
++}
++
+ static int imx298_power_on(struct imx298 *imx298)
+ {
++	bool custom1_enabled = false;
++	bool vaf_enabled = false;
++	bool vana_enabled = false;
++	bool vdig_enabled = false;
++	bool vio_enabled = false;
++	bool extclk_enabled = false;
+ 	int reset;
+ 	int ret;
+ 
+@@ -90,46 +131,112 @@ static int imx298_power_on(struct imx298 *imx298)
+ 	gpiod_set_value_cansleep(imx298->reset_gpio, 1);
+ 	reset = gpiod_get_value_cansleep(imx298->reset_gpio);
+ 	dev_info(imx298->dev, "power_on: reset asserted logical=%d\n", reset);
++	usleep_range(2000, 2500);
+ 
+-	ret = regulator_bulk_enable(IMX298_NUM_SUPPLIES, imx298->supplies);
+-	dev_info(imx298->dev, "power_on: sensor supplies bulk enable rc=%d\n",
+-		 ret);
+-	imx298_log_supply_state(imx298, "after-bulk-enable", ret);
++	/* Match the OP3 Android IMX298 sensor library's documented order. */
++	ret = imx298_enable_supply(imx298, IMX298_SUPPLY_VANA);
+ 	if (ret) {
+-		dev_err(imx298->dev, "failed to enable sensor supplies: %d\n", ret);
+-		return ret;
++		dev_err(imx298->dev, "failed to enable VANA: %d\n", ret);
++		goto err_reset;
++	}
++	vana_enabled = true;
++	usleep_range(2000, 2500);
++
++	ret = imx298_enable_supply(imx298, IMX298_SUPPLY_VDIG);
++	if (ret) {
++		dev_err(imx298->dev, "failed to enable VDIG: %d\n", ret);
++		goto err_power_off;
+ 	}
++	vdig_enabled = true;
++	usleep_range(2000, 2500);
++
++	ret = imx298_enable_supply(imx298, IMX298_SUPPLY_VIO);
++	if (ret) {
++		dev_err(imx298->dev, "failed to enable VIO: %d\n", ret);
++		goto err_power_off;
++	}
++	vio_enabled = true;
++	usleep_range(2000, 2500);
++
++	/* GPIO39 is the original CAM_VAF0 control, not the VAF regulator. */
++	gpiod_set_value_cansleep(imx298->vaf_gpio, 1);
++	dev_info(imx298->dev, "power_on: VAF GPIO asserted logical=%d\n",
++		 gpiod_get_value_cansleep(imx298->vaf_gpio));
++	vaf_enabled = true;
++
++	ret = imx298_enable_supply(imx298, IMX298_SUPPLY_CUSTOM1);
++	if (ret) {
++		dev_err(imx298->dev, "failed to enable CUSTOM1: %d\n", ret);
++		goto err_power_off;
++	}
++	custom1_enabled = true;
++	usleep_range(5000, 5500);
+ 
+ 	ret = clk_prepare_enable(imx298->extclk);
+ 	dev_info(imx298->dev, "power_on: mclk enable rc=%d rate=%lu\n", ret,
+ 		 clk_get_rate(imx298->extclk));
+ 	if (ret) {
+ 		dev_err(imx298->dev, "failed to enable sensor clock: %d\n", ret);
+-		regulator_bulk_disable(IMX298_NUM_SUPPLIES, imx298->supplies);
+-		return ret;
++		goto err_power_off;
+ 	}
++	extclk_enabled = true;
++	usleep_range(2000, 2500);
+ 
+ 	/* Release reset only after the 24 MHz clock is running. */
+ 	gpiod_set_value_cansleep(imx298->reset_gpio, 0);
+ 	reset = gpiod_get_value_cansleep(imx298->reset_gpio);
+ 	dev_info(imx298->dev, "power_on: reset released logical=%d\n", reset);
+-	usleep_range(19000, 20000);
++	usleep_range(2000, 2500);
+ 
+ 	return 0;
++
++err_power_off:
++	gpiod_set_value_cansleep(imx298->reset_gpio, 1);
++	if (extclk_enabled)
++		clk_disable_unprepare(imx298->extclk);
++	if (custom1_enabled)
++		imx298_disable_supply(imx298, IMX298_SUPPLY_CUSTOM1);
++	if (vaf_enabled)
++		gpiod_set_value_cansleep(imx298->vaf_gpio, 0);
++	if (vio_enabled)
++		imx298_disable_supply(imx298, IMX298_SUPPLY_VIO);
++	if (vdig_enabled)
++		imx298_disable_supply(imx298, IMX298_SUPPLY_VDIG);
++	if (vana_enabled)
++		imx298_disable_supply(imx298, IMX298_SUPPLY_VANA);
++err_reset:
++	dev_info(imx298->dev, "power_on: cleanup reset logical=%d\n",
++		 gpiod_get_value_cansleep(imx298->reset_gpio));
++	return ret;
+ }
+ 
+ static int imx298_power_off(struct imx298 *imx298)
+ {
+-	int ret;
++	int ret = 0;
++	int disable_ret;
+ 
+ 	gpiod_set_value_cansleep(imx298->reset_gpio, 1);
+ 	dev_info(imx298->dev, "power_off: reset asserted logical=%d\n",
+ 		 gpiod_get_value_cansleep(imx298->reset_gpio));
+ 	clk_disable_unprepare(imx298->extclk);
+-
+-	imx298_log_supply_state(imx298, "before-bulk-disable", 0);
+-	ret = regulator_bulk_disable(IMX298_NUM_SUPPLIES, imx298->supplies);
+-	imx298_log_supply_state(imx298, "after-bulk-disable", ret);
++	gpiod_set_value_cansleep(imx298->vaf_gpio, 0);
++	dev_info(imx298->dev, "power_off: VAF GPIO deasserted logical=%d\n",
++		 gpiod_get_value_cansleep(imx298->vaf_gpio));
++
++	/* Reverse the original sensor-library power sequence. */
++	disable_ret = imx298_disable_supply(imx298, IMX298_SUPPLY_CUSTOM1);
++	if (disable_ret && !ret)
++		ret = disable_ret;
++	disable_ret = imx298_disable_supply(imx298, IMX298_SUPPLY_VIO);
++	if (disable_ret && !ret)
++		ret = disable_ret;
++	disable_ret = imx298_disable_supply(imx298, IMX298_SUPPLY_VDIG);
++	if (disable_ret && !ret)
++		ret = disable_ret;
++	disable_ret = imx298_disable_supply(imx298, IMX298_SUPPLY_VANA);
++	if (disable_ret && !ret)
++		ret = disable_ret;
++	imx298_log_supply_state(imx298, "after-sequenced-disable");
+ 
+ 	return ret;
+ }
+@@ -250,6 +357,11 @@ static int imx298_probe(struct i2c_client *client)
+ 		return dev_err_probe(dev, PTR_ERR(imx298->reset_gpio),
+ 				    "failed to get reset GPIO\n");
+ 
++	imx298->vaf_gpio = devm_gpiod_get(dev, "vaf", GPIOD_OUT_LOW);
++	if (IS_ERR(imx298->vaf_gpio))
++		return dev_err_probe(dev, PTR_ERR(imx298->vaf_gpio),
++				    "failed to get VAF GPIO\n");
++
+ 	imx298->regmap = devm_regmap_init_i2c(client, &imx298_regmap_config);
+ 	if (IS_ERR(imx298->regmap))
+ 		return dev_err_probe(dev, PTR_ERR(imx298->regmap),
+-- 
+2.53.0
+

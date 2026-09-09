@@ -5,7 +5,7 @@ Role: Implementation Agent
 Baseline commit: `67b0bbc3cbf46bae712a2606a43361756fcbd829`
 Working branch: `agent/implementation/op3-camera-imx298-001`
 Working tree: `source/linux-pmos-msm8996-6.12-camera-imx298`
-Commit SHA: `d247ce811242` (tip; commits `c37102be3c5b..d247ce811242`)
+Commit SHA: `7fe1f2f950b2` (tip; commits `c37102be3c5b..7fe1f2f950b2`)
 
 Layer: kernel camera / CCI / CAMSS
 Hypothesis tested: The OP3 15801 rear IMX298 can be powered and identified on
@@ -113,6 +113,83 @@ diagnostic log confirmed reset-before-assert logical `1`, but the `0x0016`
 read still returned `-6`; no chip-ID pass occurred. This is a FAIL for the
 reset-initial-state hypothesis.
 
+Original-power-resource sequence experiment: commit `7fe1f2f950b2` changes
+only the documented OP3 Android IMX298 power-resource sequence. The preserved
+`vendor.img` and original OnePlus Android kernel show that the rear sensor
+uses VANA 2.6 V, VDIG 1.1 V, VIO, the S5/CUSTOM1 2.15 V rail, and GPIO39 as
+the CAM_VAF0 control. The recovered `libmmcamera_imx298.so` table gives this
+order and delay: assert RESET for 2 ms; enable VANA, VDIG, and VIO with 2 ms
+between each; set GPIO39 high; enable CUSTOM1 and wait 5 ms; enable 24 MHz
+MCLK and wait 2 ms; release RESET and wait 2 ms. The driver now performs
+that order explicitly with individual regulator calls and exact reverse
+cleanup. The DTS adds `custom1-supply = <&vreg_s5a_2p15>`,
+`vaf-gpios = <&tlmm 39 GPIO_ACTIVE_HIGH>`, and GPIO39 active/sleep states.
+The known-good `vreg_s4a_1p8` remains VIO; the crashing `lvs1` node is not
+reintroduced. No sensor mode table, stream operation, or Buildroot content
+was changed. Static `checkpatch.pl` and `git diff --check` passed; no device
+test or kernel build has been run for this commit.
+
+The next owner build must produce both the new DTB and the new external
+`imx298.ko`; the old CCI-400 image cannot test the new supply/GPIO properties.
+Reuse the existing kernel `Image.gz` and Buildroot initrd when repacking the
+temporary boot image. The falsifiable PASS condition remains a clean
+`IMX298 probe passed: chip ID=0x0298` message. A boot failure, resource
+enable failure, or unchanged I2C `-6` is a FAIL for this power-sequence
+hypothesis.
+
+Owner build and package commands:
+
+```sh
+project=/home/kai/src/oneplus3-mainline
+kernel=$project/source/linux-pmos-msm8996-6.12-camera-imx298
+baseout=$project/out/pmos-msm8996-6.12-camera-imx298-cci400
+kout=$project/out/pmos-msm8996-6.12-camera-imx298-original-power-sequence
+fullout=$project/out/pmos-msm8996-6.12-recovery-audio-full-s1302-poll-drm100
+symvers=$fullout/Module.symvers
+module_build=$kout/imx298-module
+
+test "$(git -C "$kernel" rev-parse --short=12 HEAD)" = 7fe1f2f950b2
+test -r "$baseout/.config"
+test -s "$symvers"
+mkdir -p "$kout"
+cp "$baseout/.config" "$kout/.config"
+grep -qx 'CONFIG_VIDEO_IMX298=m' "$kout/.config"
+
+make -C "$kernel" O="$kout" ARCH=arm64 \
+  CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
+  olddefconfig \
+  arch/arm64/boot/dts/qcom/msm8996-oneplus3.dtb \
+  modules_prepare
+
+mkdir -p "$module_build"
+ln -sfn "$project/scripts/op3-imx298-module.mk" "$module_build/Makefile"
+ln -sfn "$kernel/drivers/media/i2c/imx298.c" "$module_build/imx298.c"
+
+KBUILD_EXTRA_SYMBOLS="$symvers" \
+make -C "$kernel" O="$kout" ARCH=arm64 \
+  CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
+  M="$module_build" modules
+
+sha256sum \
+  "$kout/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dtb" \
+  "$module_build/imx298.ko"
+
+initrd=$project/artifacts/initrd-op3-recovery-buildroot-s1302-poll-drm100.cpio.gz
+bootimg=$project/artifacts/boot-oneplus3-pmos612-recovery-imx298-original-power-sequence.img
+test -f "$fullout/arch/arm64/boot/Image.gz"
+test -f "$initrd"
+"$project/scripts/pack-boot.sh" \
+  "$fullout/arch/arm64/boot/Image.gz" \
+  "$kout/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dtb" \
+  "$initrd" "$bootimg"
+sha256sum "$bootimg"
+```
+
+Do not flash this image yet. First use `fastboot boot` and load the new
+module with the existing camera dependency bundle. Keep `qcom-camss` loaded;
+the previous test found an unload-time kernel segfault. Capture the complete
+`dmesg` lines containing `imx298`, `power_on`, `VAF`, `enable`, and `chip-id`.
+
 Device test run: first candidate tested 2026-09-08 by direct agent access;
 both the direct-`LVS1` boot image and the `lvs1`-node-only control image
 rebooted before userspace. The known-good probe image booted normally on the
@@ -143,17 +220,13 @@ The old Android OP3 IMX298 node also declares `cam_v_custom1` at 2.15 V,
 `cam_vaf` at 2.8 V, and GPIO39 for the VAF path; those resources remain out
 of scope until the diagnostic run identifies the current rail/reset/clock
 state.
-Recommended next experiment: power-sequence validation. Before changing
-driver behavior, confirm the old OP3/Android IMX298 resource order and delays
-from the preserved vendor evidence. Then change only the documented
-power-sequence variable while keeping CCI at 400 kHz, reset GPIO30, CCI
-address, sensor MCLK, endpoint, and chip-ID registers fixed. Do not
-reintroduce `lvs1` or combine an unverified auxiliary rail with this test.
-PASS remains a clean
-`IMX298 probe passed: chip ID=0x0298` message with a registered V4L2 sensor
-sub-device and no CAMSS fault; FAIL is the unchanged `-ENXIO`/`-6` probe
-result. The reset test has now failed, so the next implementation commit must
-be based on a recorded vendor power-order hypothesis.
+The original power-resource order is now implemented in commit
+`7fe1f2f950b2`; its owner build and test instructions are above. CCI remains
+at 400 kHz, reset GPIO30, the CCI address, sensor MCLK, endpoint, and chip-ID
+registers remain fixed. The `lvs1` node is not reintroduced. PASS remains a
+clean `IMX298 probe passed: chip ID=0x0298` message with a registered V4L2
+sensor sub-device and no CAMSS fault; FAIL is a boot/resource-enable failure
+or the unchanged `-ENXIO`/`-6` probe result.
 
 Owner test commands:
 

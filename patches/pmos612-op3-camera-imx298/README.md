@@ -17,7 +17,7 @@ git am --3way patches/pmos612-op3-camera-imx298/000*.patch
 ```
 
 The camera series was exported from nested-kernel commits
-`c37102be3c5b..d247ce811242`. Its final checkpoint deliberately removes the
+`c37102be3c5b..7fe1f2f950b2`. Its final checkpoint deliberately removes the
 experimental PM8994 `lvs1 {}` DT child and keeps IMX298 VIO on the known-good
 `vreg_s4a_1p8`; the two preceding LVS1 experiments rebooted before userspace.
 Patch `0009` is a separate CCI-bus-speed experiment: it changes only CCI0
@@ -25,7 +25,9 @@ from the previous 1 MHz setting to the OP3 Android camera stack's 400 kHz
 fast mode. Patch `0010` is diagnostic-only: it adds power, reset, MCLK, rail,
 and chip-ID read logging without changing the existing behavior. Patch `0011`
 changes only the initial reset request from `GPIOD_OUT_LOW` to
-`GPIOD_OUT_HIGH`.
+`GPIOD_OUT_HIGH`. Patch `0012` follows the original OP3 IMX298
+power-resource order and adds only the documented auxiliary S5 rail and
+GPIO39 VAF control; it does not add the crashing `lvs1` node.
 
 | Patch | Original commit | SHA256 | Purpose |
 | --- | --- | --- | --- |
@@ -40,6 +42,7 @@ changes only the initial reset request from `GPIOD_OUT_LOW` to
 | `0009` | `b0594dbd5bf4` | `8c6a4424aa02e8ee81627e8ca9ba0ba2db6ff7305dff411549ec2dc150555f3b` | Use OP3 IMX298 CCI fast mode at 400 kHz. |
 | `0010` | `c79909f9a448` | `e6c9f869e12545c1875889616fa27668ffb0981efb310c91bc170ffc43e4bd73` | Add power-on, reset, MCLK, rail, and chip-ID diagnostics. |
 | `0011` | `d247ce811242` | `4195cf9be185e6b7cead5baf6a8f56dfb2e61b6ac340772a9a9830a29992ede9` | Hold IMX298 in reset during probe setup. |
+| `0012` | `7fe1f2f950b2` | `5f066b1e2a1870a8142ac7204dfcd6322c56dda6ab020fdd25656214908c0ddf` | Follow the original OP3 IMX298 power order; add S5/CUSTOM1 and GPIO39/VAF. |
 
 These patches provide probe support only. They do not provide camera modes,
 streaming, capture userspace, front IMX179, OIS, actuator, flash, or EEPROM
