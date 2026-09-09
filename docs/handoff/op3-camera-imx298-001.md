@@ -125,26 +125,30 @@ purpose is to select the next falsifiable experiment.
 Owner test commands:
 
 `modules_prepare` creates generated headers but intentionally does not create
-the kernel export table needed by `modpost`. The existing full recovery
-output has the required table and the same `6.12.1-msm8996+` release and
-cross-compiler configuration, so reuse it through `KBUILD_EXTRA_SYMBOLS`:
+the kernel object needed by the in-tree `modpost` target. The existing full
+recovery output has the required `vmlinux.o` and the same
+`6.12.1-msm8996+` release and cross-compiler configuration. The in-tree
+target does not consume `KBUILD_EXTRA_SYMBOLS`, so expose that object in the
+camera output directory with a symlink:
 
 ```sh
 project=/home/kai/src/oneplus3-mainline
 kernel=$project/source/linux-pmos-msm8996-6.12-camera-imx298
 kout=$project/out/pmos-msm8996-6.12-camera-imx298-cci400
-symvers=$project/out/pmos-msm8996-6.12-recovery-audio-full-s1302-poll-drm100/Module.symvers
+fullout=$project/out/pmos-msm8996-6.12-recovery-audio-full-s1302-poll-drm100
+vmlinux_obj=$fullout/vmlinux.o
 
 test "$(git -C "$kernel" rev-parse --short=12 HEAD)" = c79909f9a448
 git -C "$kernel" log -1 --oneline
 grep -qx 'CONFIG_VIDEO_IMX298=m' "$kout/.config"
-test -s "$symvers"
+test -s "$vmlinux_obj"
 
 make -C "$kernel" O="$kout" ARCH=arm64 \
   CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
   modules_prepare
 
-KBUILD_EXTRA_SYMBOLS="$symvers" \
+ln -sfn "$vmlinux_obj" "$kout/vmlinux.o"
+
 make -C "$kernel" O="$kout" ARCH=arm64 \
   CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
   drivers/media/i2c/imx298.ko
