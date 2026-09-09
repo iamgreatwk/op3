@@ -8,6 +8,44 @@ Working tree: `source/linux-pmos-msm8996-6.12-camera-imx298`
 Commit SHA: `8cce8d4643b3` (tip; rejected LVS1 candidate `c298ff3e7197`)
 
 Layer: kernel camera / CCI / CAMSS
+
+## Next step: collect early-reboot evidence before another DTS experiment
+
+The no-`LVS1` camera control boots, and the current 6.12 recovery line already
+has `CONFIG_PSTORE_RAM=y`, `CONFIG_PSTORE_CONSOLE=y`, and the OP3
+`ramoops@ac000000` DT node. Do not change the camera DTS or add `lvs1` again
+until the result of this check is recorded. On the next successful no-`LVS1`
+boot, run the following read-only collection command before testing another
+candidate:
+
+```sh
+host=172.16.42.1
+ssh root@"$host" '
+set +e
+mkdir -p /sys/fs/pstore
+grep -q " /sys/fs/pstore " /proc/mounts || \
+  mount -t pstore pstore /sys/fs/pstore
+echo "--- pstore mount ---"
+grep " /sys/fs/pstore " /proc/mounts
+echo "--- pstore files ---"
+ls -la /sys/fs/pstore
+for f in /sys/fs/pstore/*; do
+    [ -f "$f" ] || continue
+    echo "--- $f ---"
+    sed -n "1,240p" "$f"
+done
+echo "--- ramoops/pstore dmesg ---"
+dmesg | grep -iE "ramoops|pstore|persistent ram"
+'
+```
+
+If the phone returns to fastboot and the next no-`LVS1` boot shows a mounted
+but empty pstore, treat that as evidence that the reset is not a persisted
+kernel oops/panic. The next required diagnostic is a physical MSM8996 UART,
+using the existing `earlycon=msm_hsl_uart,0x75B0000` / `115200 8N1` path; do not
+guess another regulator or camera power mapping. Connect only TX, RX, and GND
+at the board's UART level and do not connect the adapter's VCC.
+
 Hypothesis tested: The OP3 15801 rear IMX298 can be powered and identified on
 the existing MSM8996 CCI/CAMSS path using its documented board wiring.
 Only variable changed: rear IMX298 probe support; front IMX179, OIS, actuator,
