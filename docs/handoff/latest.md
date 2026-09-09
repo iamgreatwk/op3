@@ -1,5 +1,36 @@
 # Latest handoff
 
+## OP3 IMX298 exposure control (device experiment supports hypothesis, 2026-09-09)
+
+The dedicated camera branch now contains nested-kernel commit `e96efb4b1dd3`,
+archived as
+`patches/pmos612-op3-camera-imx298/0017-media-i2c-add-IMX298-exposure-control.patch`.
+It changes only the IMX298 driver: V4L2 exposure range `1..893`, register
+writes to `0x0202/0x0203`, and cached-control application immediately before
+stream-on. DTS, power sequencing, CAMSS routing, link controls, kernel image,
+initramfs, and Buildroot are unchanged.
+
+Clean-session device captures all returned `1541232` bytes with no CSI/CAMSS
+timeout, SMMU fault, I2C error, or reboot. The module SHA256 is
+`9445708eba46cc17951df077f62c02261c46bae98806112237b88745ef5d7b29`; the
+static helper SHA256 is
+`14fc31619c1f9a0fe6a7816d792068b94828551682131a327194dba50052b9a6`.
+Raw frame hashes are exposure `1`:
+`c9432031184e224012352f9f0f1cea1ddcff7194980bb624926aee0c66770a8e`,
+driver default/max `0x037d` (`893`):
+`2ae702e807486f6cdd57f19b9e373a370ac6cdbf10ad6e81c50cb7e83f156f0e`, and
+an explicit `893` capture (same control value):
+`b3f9522a469f63ff1870b33b99c76e1402d0553ba47b473facdd367cfb1e29bb`.
+Unpacked RAW10 means were `64.105`, `64.339`, and `65.563`, respectively. The
+default is already the maximum (`893`), so the two max-value captures are
+separate frames rather than a three-level monotonic series. The explicit-max
+frame contained visible large-scale brightness structure after contrast
+stretching. This supports the exposure-control hypothesis but is not full
+camera integration acceptance or a calibrated color-image result.
+See `docs/handoff/op3-camera-imx298-001.md` for the exact module-only build
+and test details. The next variable must be tested separately (gain or sensor
+mode/timing), without a Buildroot rebuild.
+
 ## OP3 IMX298 minimum RAW10 stream (CSI-2 link controls and frame capture PASS, 2026-09-09)
 
 The dedicated camera kernel branch now contains `cc609f6d10a1`, archived as

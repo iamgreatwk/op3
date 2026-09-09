@@ -1,0 +1,119 @@
+From e96efb4b1dd39dbd6f5bfcda0d2ebcdc5a125b40 Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Wed, 9 Sep 2026 19:42:28 +0800
+Subject: [PATCH] media: i2c: add IMX298 exposure control
+
+---
+ drivers/media/i2c/imx298.c | 61 +++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 60 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/media/i2c/imx298.c b/drivers/media/i2c/imx298.c
+index 93dd7d89855b..f68a49a7b275 100644
+--- a/drivers/media/i2c/imx298.c
++++ b/drivers/media/i2c/imx298.c
+@@ -41,6 +41,11 @@
+ #define IMX298_MBUS_CODE	MEDIA_BUS_FMT_SRGGB10_1X10
+ #define IMX298_LINK_FREQ	480000000LL
+ #define IMX298_PIXEL_RATE	((IMX298_LINK_FREQ * 8LL) / 10)
++#define IMX298_REG_EXPOSURE	0x0202
++#define IMX298_FRAME_LENGTH	0x0387
++#define IMX298_EXPOSURE_MIN	1
++#define IMX298_EXPOSURE_MAX	(IMX298_FRAME_LENGTH - 10)
++#define IMX298_EXPOSURE_DEFAULT	0x037d
+ 
+ enum imx298_supply_index {
+ 	IMX298_SUPPLY_VANA,
+@@ -69,6 +74,7 @@ struct imx298 {
+ 
+ 	struct v4l2_subdev sd;
+ 	struct v4l2_ctrl_handler ctrls;
++	struct v4l2_ctrl *exposure;
+ 	struct media_pad pad;
+ 	bool streaming;
+ };
+@@ -514,6 +520,47 @@ static int imx298_write_mode(struct imx298 *imx298)
+ 	return 0;
+ }
+ 
++static int imx298_write_exposure(struct imx298 *imx298, u32 exposure)
++{
++	int ret;
++
++	ret = regmap_write(imx298->regmap, IMX298_REG_EXPOSURE,
++			   (exposure >> 8) & 0xff);
++	if (ret)
++		return ret;
++
++	return regmap_write(imx298->regmap, IMX298_REG_EXPOSURE + 1,
++			    exposure & 0xff);
++}
++
++static int imx298_set_ctrl(struct v4l2_ctrl *ctrl)
++{
++	struct imx298 *imx298 = container_of(ctrl->handler,
++					    struct imx298, ctrls);
++	struct i2c_client *client = v4l2_get_subdevdata(&imx298->sd);
++	int ret;
++
++	if (ctrl->id != V4L2_CID_EXPOSURE)
++		return 0;
++
++	/* Cache control changes while the sensor is powered off. */
++	if (!pm_runtime_get_if_in_use(&client->dev))
++		return 0;
++
++	ret = imx298_write_exposure(imx298, ctrl->val);
++	pm_runtime_put(&client->dev);
++
++	if (ret)
++		dev_err(imx298->dev, "exposure write failed value=%u rc=%d\n",
++			ctrl->val, ret);
++
++	return ret;
++}
++
++static const struct v4l2_ctrl_ops imx298_ctrl_ops = {
++	.s_ctrl = imx298_set_ctrl,
++};
++
+ static int imx298_start_streaming(struct imx298 *imx298)
+ {
+ 	int ret;
+@@ -522,6 +569,12 @@ static int imx298_start_streaming(struct imx298 *imx298)
+ 	if (ret)
+ 		return ret;
+ 
++	ret = __v4l2_ctrl_handler_setup(imx298->sd.ctrl_handler);
++	if (ret) {
++		dev_err(imx298->dev, "failed to apply controls rc=%d\n", ret);
++		return ret;
++	}
++
+ 	ret = regmap_write(imx298->regmap, IMX298_REG_MODE_SELECT,
+ 			   IMX298_MODE_STREAMING);
+ 	if (ret) {
+@@ -689,7 +742,7 @@ static int imx298_init_controls(struct imx298 *imx298)
+ {
+ 	struct v4l2_ctrl *link_freq;
+ 
+-	v4l2_ctrl_handler_init(&imx298->ctrls, 2);
++	v4l2_ctrl_handler_init(&imx298->ctrls, 3);
+ 	link_freq = v4l2_ctrl_new_int_menu(&imx298->ctrls, NULL,
+ 					  V4L2_CID_LINK_FREQ,
+ 					  ARRAY_SIZE(imx298_link_freq_menu) - 1,
+@@ -699,6 +752,12 @@ static int imx298_init_controls(struct imx298 *imx298)
+ 	v4l2_ctrl_new_std(&imx298->ctrls, NULL, V4L2_CID_PIXEL_RATE,
+ 			  IMX298_PIXEL_RATE, IMX298_PIXEL_RATE, 1,
+ 			  IMX298_PIXEL_RATE);
++	imx298->exposure = v4l2_ctrl_new_std(&imx298->ctrls,
++					     &imx298_ctrl_ops,
++					     V4L2_CID_EXPOSURE,
++					     IMX298_EXPOSURE_MIN,
++					     IMX298_EXPOSURE_MAX, 1,
++					     IMX298_EXPOSURE_DEFAULT);
+ 
+ 	if (imx298->ctrls.error) {
+ 		int ret = imx298->ctrls.error;
+-- 
+2.53.0
+

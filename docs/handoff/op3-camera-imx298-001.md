@@ -5,12 +5,68 @@ Role: Implementation Agent
 Baseline commit: `67b0bbc3cbf46bae712a2606a43361756fcbd829`
 Working branch: `agent/implementation/op3-camera-imx298-001`
 Working tree: `source/linux-pmos-msm8996-6.12-camera-imx298`
-Commit SHA: `cc609f6d10a1` (tip; previous minimum RAW10 stream commit
-`a059fc816af6`; previous SMD-RPM registration candidate
+Commit SHA: `e96efb4b1dd3` (tip; previous CSI-2 link-control commit
+`cc609f6d10a1`; previous minimum RAW10 stream commit `a059fc816af6`; previous
+SMD-RPM registration candidate
 `67630ec3b9e5`; previous rejected direct-SPMI LVS1 candidate
 `c298ff3e7197` was reverted by `8cce8d4643b3`)
 
 Layer: kernel camera / CCI / CAMSS
+
+## Current experiment: IMX298 exposure control (device experiment supports hypothesis)
+
+The dedicated camera branch now contains nested-kernel commit `e96efb4b1dd3`,
+archived as
+`patches/pmos612-op3-camera-imx298/0017-media-i2c-add-IMX298-exposure-control.patch`.
+It changes only `drivers/media/i2c/imx298.c`: adds the standard V4L2 exposure
+control with range `1..893`, writes registers `0x0202/0x0203`, and reapplies the
+cached value after the minimum mode table and before `STREAMON`. Power rails,
+reset/MCLK sequencing, DTS, CAMSS routing, CSI-2 link controls, frame size,
+and Buildroot are unchanged.
+
+Hypothesis: the IMX298 exposure register is writable in the confirmed
+1476x834 RAW10 stream, and changing it changes captured sensor data without
+destabilizing CSI-2. PASS requires clean-session captures at low and maximum
+exposure, with the requested V4L2 control accepted and no timeout, I2C, CAMSS,
+SMMU, or reboot failure. A useful color image is not required for this
+control-only experiment; image quality remains a separate task.
+
+The module was built without rebuilding the kernel image, initramfs, or
+Buildroot. Module SHA256:
+`9445708eba46cc17951df077f62c02261c46bae98806112237b88745ef5d7b29`.
+The temporary static helper with the optional exposure argument has SHA256
+`14fc31619c1f9a0fe6a7816d792068b94828551682131a327194dba50052b9a6`.
+The known-good test boot image was
+`boot-oneplus3-pmos612-recovery-imx298-vio-smd-lvs1.img`, SHA256
+`8809a46d5be7b5f983a0d3acfb27bd33c34b12bcb8951d486d123d8252933e84`.
+
+After a clean reboot for each capture, the helper returned `stream_rc=0` and
+captured `1541232` bytes at each setting. The requested values were visible
+through `/dev/v4l-subdev17` as `exposure=1` and `exposure=893`; the default run
+used the driver's `0x037d` default. The raw frame hashes were:
+
+| Requested exposure | Raw frame | SHA256 | Result |
+| ---: | --- | --- | --- |
+| `1` | `/tmp/imx298-exp1.raw` | `c9432031184e224012352f9f0f1cea1ddcff7194980bb624926aee0c66770a8e` | captured |
+| driver default `0x037d` (`893`) | `/tmp/imx298-exp-default2.raw` | `2ae702e807486f6cdd57f19b9e373a370ac6cdbf10ad6e81c50cb7e83f156f0e` | captured |
+| explicit `893` (same as default) | `/tmp/imx298-exp893.raw` | `b3f9522a469f63ff1870b33b99c76e1402d0553ba47b473facdd367cfb1e29bb` | captured |
+
+Packed-RAW10 host-side statistics after unpacking the four pixels per five
+bytes were: exposure `1`, mean `64.105` and 5 levels; the default/max value,
+mean `64.339` and 6 levels; and the separate explicit-`893` capture, mean
+`65.563` and 13 levels. Because the default is already the maximum (`893`),
+the two max-value captures are separate noisy frames, not a low/default/high
+series. The explicit-`893` frame showed clear large-scale brightness
+structure when contrast-stretched for inspection. All clean runs retained
+chip ID `0x0298`, logged `streaming started/stopped`, and had no CSI/CAMSS
+timeout, SMMU fault, I2C error, or reboot.
+
+Conclusion: this device experiment supports the isolated exposure-control
+hypothesis: the control is accepted, writes complete, and low/max captures are
+stable. It is not Integration acceptance and does not claim a calibrated image
+or exposure linearity. The next camera variable should be gain or a sensor
+mode/timing issue, but it must remain a separate experiment; do not add it to
+this commit.
 
 ## Current experiment: minimum IMX298 RAW10 stream (CSI-2 link controls and frame capture PASS)
 
