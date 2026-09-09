@@ -9,7 +9,12 @@ This file is mandatory reading for every human or AI agent before making a chang
    patch it without an explicit `LEGACY-6.3.1` task. The Linux 7.x line is
    shelved research, not a default build or patch target; require an explicit
    `SHELVED-7X` task and a physical-UART evidence plan before resuming it.
-2. The project owner alone runs kernel, Buildroot, Mesa, WebKit, WPE, and other large compilations. Agents may prepare source, configuration, scripts, and exact commands, but must not start those builds.
+2. Kernel, Buildroot, Mesa, WebKit, WPE, and other large compilations require
+   explicit authorization from the project owner. After that authorization, the
+   assigned agent may start the build on the assigned clean, committed branch
+   and must record the exact source commit, output directory, command, and
+   resulting artifact hashes. Without explicit authorization, agents may only
+   prepare source, configuration, scripts, and exact commands.
 3. One task has one layer, one falsifiable hypothesis, and one changed variable. Do not mix kernel, DTS, DRM/GPU, and userspace changes.
 4. Do not run device flashing, destructive device actions, or publish releases without explicit owner authorization.
 5. Do not modify another agent's branch. Work only on `agent/<role>/<topic>` or the branch assigned in the GitHub Issue.
