@@ -65,6 +65,13 @@ The packaged test image is
 `artifacts/boot-oneplus3-pmos612-recovery-imx298-cci400.img` with SHA256
 `ba95c78431c13b681ddb7780bb6bf8412f7566ff7de3a68cefe8f6530e6a5295`.
 
+CCI-400 device test: 2026-09-09 over SSH at `172.16.42.1`. The module
+archive was extracted and all eleven modules loaded successfully with
+explicit `insmod` paths. CAMSS exposed `/dev/video0` through `/dev/video5`,
+but the sensor still reported `imx298 5-001a: failed to read chip ID: -6`;
+no sensor driver binding or chip-ID pass was observed. This is a device FAIL
+for the CCI-speed hypothesis, not a camera-layer acceptance.
+
 Device test run: first candidate tested 2026-09-08 by direct agent access;
 both the direct-`LVS1` boot image and the `lvs1`-node-only control image
 rebooted before userspace. The known-good probe image booted normally on the
@@ -84,22 +91,24 @@ The direct test also found that unloading `qcom_camss` triggers a device
 kernel unload-time segfault; no further unload or broad I²C scan should be
 used in the next run.
 
-Conclusion: INCONCLUSIVE (the prior 1 MHz CCI checkpoint)
+Conclusion: INCONCLUSIVE (the CCI-400 subexperiment failed)
 Uncertainties: The IMX298 ID register layout follows the existing Sony IMX318
 driver convention and must be confirmed on hardware. The first device run
 also showed no sensor I²C acknowledgement after the initial software stack
 was corrected. The driver intentionally does not implement formats, modes,
 or streaming, so this stage cannot produce a capture frame.
-Recommended next experiment: build and test `b0594dbd5bf4`, which changes only
-the CCI0 bus rate from 1 MHz to 400 kHz. The old Android source defines I2C
-fast mode as 400 kHz and the OP3 camera configuration selects that mode;
-mainline `i2c-qcom-cci` maps the DT `clock-frequency` to the same controller
-mode. Do not reintroduce `lvs1`, or change the reset GPIO, CCI address, sensor
-MCLK, power rails, endpoint, or driver. PASS remains a clean
+The old Android OP3 IMX298 node also declares `cam_v_custom1` at 2.15 V,
+`cam_vaf` at 2.8 V, and GPIO39 for the VAF path; the current mainline probe
+driver controls only VDIG/VIO/VANA and GPIO30 reset. It is not yet proven that
+these auxiliary resources are required for chip-ID access.
+Recommended next experiment: isolate the documented auxiliary IMX298 power
+path as one follow-up. Add the old OP3 `custom1`/`vaf` resources and their
+power sequencing together, while keeping CCI at 400 kHz, reset GPIO30, CCI
+address, sensor MCLK, core rails, endpoint, and driver ID registers fixed.
+Do not reintroduce `lvs1`. PASS remains a clean
 `IMX298 probe passed: chip ID=0x0298` message with a registered V4L2 sensor
 sub-device and no CAMSS fault; FAIL is the unchanged `-ENXIO`/`-6` probe
-result. The CCI-400 image has been built and packaged but has not yet been
-tested on the device.
+result. The auxiliary-power experiment has not yet been implemented.
 
 Owner test commands:
 

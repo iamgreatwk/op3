@@ -79,7 +79,11 @@ been built with SHA256
 packaged as
 `artifacts/boot-oneplus3-pmos612-recovery-imx298-cci400.img` with SHA256
 `ba95c78431c13b681ddb7780bb6bf8412f7566ff7de3a68cefe8f6530e6a5295`; it has
-not yet been tested on the device.
+been tested on the device. All eleven camera modules loaded successfully and
+CAMSS exposed `/dev/video0`–`/dev/video5`, but IMX298 still returned I²C
+`-6` while reading its chip ID. The CCI-speed hypothesis therefore failed;
+the next isolated experiment is the old OP3 auxiliary `custom1`/`vaf` power
+path, including GPIO39, with the other camera variables fixed.
 
 ## OP3 recovery balanced CPU governor fix (userspace candidate device-tested, Buildroot pending, 2026-09-08)
 
