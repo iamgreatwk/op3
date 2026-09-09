@@ -74,7 +74,12 @@ CCI0 to 400 kHz for the next test. Use the candidate fragment
 handoff at `docs/handoff/op3-camera-imx298-001.md`. The next PASS condition is
 a clean `IMX298 probe passed: chip ID=0x0298` log and a registered V4L2 sensor
 sub-device; capture is deliberately a separate follow-up. The 400 kHz DTB has
-not yet been built or tested on the device.
+been built with SHA256
+`067f4788407299dfe4dca1014a666e0e383036276b928848e7a06f87b0482588` and
+packaged as
+`artifacts/boot-oneplus3-pmos612-recovery-imx298-cci400.img` with SHA256
+`ba95c78431c13b681ddb7780bb6bf8412f7566ff7de3a68cefe8f6530e6a5295`; it has
+not yet been tested on the device.
 
 ## OP3 recovery balanced CPU governor fix (userspace candidate device-tested, Buildroot pending, 2026-09-08)
 

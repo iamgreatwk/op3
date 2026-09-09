@@ -53,6 +53,18 @@ Current no-`LVS1` control artifacts: DTB
 temporary boot image
 `176885492e91e1ac308bac146fa62f8daa5ad01d27335aa6f85e6fe233e932f4`.
 
+CCI-400 follow-up build by project owner: 2026-09-09. The DTB SHA256 is
+`067f4788407299dfe4dca1014a666e0e383036276b928848e7a06f87b0482588`.
+It reuses the locked Image.gz
+`aac420e188dd2ede0e0ade0e42fb110af6f5d03643d2d22be2581c9cdc03233a`,
+Buildroot initrd
+`27736d1d662158bedd5170c033f9b73d807d559a564d3fd6c9090438b6d0f968`, and
+camera module bundle
+`33918d7cb399894a719f1567091054eaceb2eec8c6d96586ad61f26cdd6739ef`.
+The packaged test image is
+`artifacts/boot-oneplus3-pmos612-recovery-imx298-cci400.img` with SHA256
+`ba95c78431c13b681ddb7780bb6bf8412f7566ff7de3a68cefe8f6530e6a5295`.
+
 Device test run: first candidate tested 2026-09-08 by direct agent access;
 both the direct-`LVS1` boot image and the `lvs1`-node-only control image
 rebooted before userspace. The known-good probe image booted normally on the
@@ -86,7 +98,8 @@ mode. Do not reintroduce `lvs1`, or change the reset GPIO, CCI address, sensor
 MCLK, power rails, endpoint, or driver. PASS remains a clean
 `IMX298 probe passed: chip ID=0x0298` message with a registered V4L2 sensor
 sub-device and no CAMSS fault; FAIL is the unchanged `-ENXIO`/`-6` probe
-result. This experiment has not yet been built or tested on the device.
+result. The CCI-400 image has been built and packaged but has not yet been
+tested on the device.
 
 Owner test commands:
 
