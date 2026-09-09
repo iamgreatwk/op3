@@ -183,6 +183,58 @@ static int configure_camera_subdevs(void)
 	return configured;
 }
 
+static int set_camera_exposure(int exposure)
+{
+	char path[32];
+	char name_path[96];
+	char name[128];
+	FILE *name_file;
+	struct v4l2_control ctrl = {
+		.id = V4L2_CID_EXPOSURE,
+		.value = exposure,
+	};
+	int fd;
+	int i;
+
+	for (i = 0; i < 32; i++) {
+		snprintf(path, sizeof(path), "/dev/v4l-subdev%d", i);
+		if (access(path, R_OK | W_OK) != 0)
+			continue;
+
+		snprintf(name_path, sizeof(name_path),
+			 "/sys/class/video4linux/v4l-subdev%d/name", i);
+		name_file = fopen(name_path, "r");
+		if (!name_file)
+			continue;
+		if (!fgets(name, sizeof(name), name_file)) {
+			fclose(name_file);
+			continue;
+		}
+		fclose(name_file);
+		name[strcspn(name, "\r\n")] = '\0';
+
+		if (!strstr(name, "imx298"))
+			continue;
+
+		fd = open(path, O_RDWR);
+		if (fd < 0)
+			return -errno;
+		if (xioctl(fd, VIDIOC_S_CTRL, &ctrl) < 0) {
+			int ret = -errno;
+
+			fprintf(stderr, "%s: exposure=%d failed: %s\n", path,
+				exposure, strerror(errno));
+			close(fd);
+			return ret;
+		}
+		close(fd);
+		printf("%s: exposure=%d\n", path, exposure);
+		return 0;
+	}
+
+	return -ENODEV;
+}
+
 static int media_graph_open(struct media_graph *graph, const char *path)
 {
 	struct media_v2_topology topology = { 0 };
@@ -481,7 +533,7 @@ static int list_nodes(void)
 	return found ? 0 : ENODEV;
 }
 
-static int stream_node(const char *path, const char *output)
+static int stream_node(const char *path, const char *output, int exposure)
 {
 	struct mapped_buffer buffers[4] = { 0 };
 	struct v4l2_requestbuffers req = {
@@ -519,6 +571,10 @@ static int stream_node(const char *path, const char *output)
 	if (configure_camera_subdevs() <= 0) {
 		ret = ENODEV;
 		fprintf(stderr, "no camera subdevice format was configured\n");
+		goto out;
+	}
+	if (exposure >= 0 && set_camera_exposure(exposure) < 0) {
+		ret = EINVAL;
 		goto out;
 	}
 
@@ -675,18 +731,30 @@ out:
 
 int main(int argc, char **argv)
 {
+	char *end;
+	long exposure;
 	int ret;
 
 	if (argc == 2 && !strcmp(argv[1], "list"))
 		return list_nodes();
 	if (argc == 3 && !strcmp(argv[1], "media-list"))
 		return media_list(argv[2]);
-	if (argc != 3) {
-		fprintf(stderr, "usage: %s list | %s media-list /dev/media0 | %s /dev/videoX output.raw\n",
+	if (argc != 3 && argc != 4) {
+		fprintf(stderr, "usage: %s list | %s media-list /dev/media0 | %s /dev/videoX output.raw [exposure]\n",
 			argv[0], argv[0], argv[0]);
 		return EINVAL;
 	}
+	if (argc == 4) {
+		exposure = strtol(argv[3], &end, 0);
+		if (*argv[3] == '\0' || *end != '\0' || exposure < 1 ||
+		    exposure > 893) {
+			fprintf(stderr, "exposure must be an integer in 1..893\n");
+			return EINVAL;
+		}
+	} else {
+		exposure = -1;
+	}
 
-	ret = stream_node(argv[1], argv[2]);
+	ret = stream_node(argv[1], argv[2], (int)exposure);
 	return ret ? 1 : 0;
 }
