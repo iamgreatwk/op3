@@ -183,16 +183,12 @@ static int configure_camera_subdevs(void)
 	return configured;
 }
 
-static int set_camera_exposure(int exposure)
+static int set_camera_controls(int exposure, int gain)
 {
 	char path[32];
 	char name_path[96];
 	char name[128];
 	FILE *name_file;
-	struct v4l2_control ctrl = {
-		.id = V4L2_CID_EXPOSURE,
-		.value = exposure,
-	};
 	int fd;
 	int i;
 
@@ -219,16 +215,39 @@ static int set_camera_exposure(int exposure)
 		fd = open(path, O_RDWR);
 		if (fd < 0)
 			return -errno;
-		if (xioctl(fd, VIDIOC_S_CTRL, &ctrl) < 0) {
-			int ret = -errno;
+		if (exposure >= 0) {
+			struct v4l2_control ctrl = {
+				.id = V4L2_CID_EXPOSURE,
+				.value = exposure,
+			};
 
-			fprintf(stderr, "%s: exposure=%d failed: %s\n", path,
-				exposure, strerror(errno));
-			close(fd);
-			return ret;
+			if (xioctl(fd, VIDIOC_S_CTRL, &ctrl) < 0) {
+				int ret = -errno;
+
+				fprintf(stderr, "%s: exposure=%d failed: %s\n", path,
+					exposure, strerror(errno));
+				close(fd);
+				return ret;
+			}
+			printf("%s: exposure=%d\n", path, exposure);
+		}
+		if (gain >= 0) {
+			struct v4l2_control ctrl = {
+				.id = V4L2_CID_ANALOGUE_GAIN,
+				.value = gain,
+			};
+
+			if (xioctl(fd, VIDIOC_S_CTRL, &ctrl) < 0) {
+				int ret = -errno;
+
+				fprintf(stderr, "%s: analogue_gain=%d failed: %s\n", path,
+					gain, strerror(errno));
+				close(fd);
+				return ret;
+			}
+			printf("%s: analogue_gain=%d\n", path, gain);
 		}
 		close(fd);
-		printf("%s: exposure=%d\n", path, exposure);
 		return 0;
 	}
 
@@ -533,7 +552,8 @@ static int list_nodes(void)
 	return found ? 0 : ENODEV;
 }
 
-static int stream_node(const char *path, const char *output, int exposure)
+static int stream_node(const char *path, const char *output, int exposure,
+		       int gain)
 {
 	struct mapped_buffer buffers[4] = { 0 };
 	struct v4l2_requestbuffers req = {
@@ -573,7 +593,8 @@ static int stream_node(const char *path, const char *output, int exposure)
 		fprintf(stderr, "no camera subdevice format was configured\n");
 		goto out;
 	}
-	if (exposure >= 0 && set_camera_exposure(exposure) < 0) {
+	if ((exposure >= 0 || gain >= 0) &&
+	    set_camera_controls(exposure, gain) < 0) {
 		ret = EINVAL;
 		goto out;
 	}
@@ -733,14 +754,15 @@ int main(int argc, char **argv)
 {
 	char *end;
 	long exposure;
+	long gain;
 	int ret;
 
 	if (argc == 2 && !strcmp(argv[1], "list"))
 		return list_nodes();
 	if (argc == 3 && !strcmp(argv[1], "media-list"))
 		return media_list(argv[2]);
-	if (argc != 3 && argc != 4) {
-		fprintf(stderr, "usage: %s list | %s media-list /dev/media0 | %s /dev/videoX output.raw [exposure]\n",
+	if (argc < 3 || argc > 5) {
+		fprintf(stderr, "usage: %s list | %s media-list /dev/media0 | %s /dev/videoX output.raw [exposure [analogue_gain]]\n",
 			argv[0], argv[0], argv[0]);
 		return EINVAL;
 	}
@@ -754,7 +776,16 @@ int main(int argc, char **argv)
 	} else {
 		exposure = -1;
 	}
+	if (argc == 5) {
+		gain = strtol(argv[4], &end, 0);
+		if (*argv[4] == '\0' || *end != '\0' || gain < 0 || gain > 960) {
+			fprintf(stderr, "analogue_gain must be an integer in 0..960\n");
+			return EINVAL;
+		}
+	} else {
+		gain = -1;
+	}
 
-	ret = stream_node(argv[1], argv[2], (int)exposure);
+	ret = stream_node(argv[1], argv[2], (int)exposure, (int)gain);
 	return ret ? 1 : 0;
 }
