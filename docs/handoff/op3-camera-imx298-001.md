@@ -100,12 +100,18 @@ confirming that the current VIO source is effectively always-on. This is a
 diagnostic PASS for the power/clock evidence, but the sensor probe remains a
 FAIL because the address still returns `-6`.
 
-Reset-initial-state experiment: commit `d247ce811242` changes exactly one
+Reset-initial-state experiment: commit `d247ce811242` changed exactly one
 behavior variable in `imx298_probe()`: `devm_gpiod_get()` now requests the
 active-low reset GPIO with `GPIOD_OUT_HIGH`, keeping the sensor asserted from
 GPIO acquisition until the existing `imx298_power_on()` release point. DTS,
 regulators, MCLK, delays, CCI400, and chip-ID reads are unchanged. This
-experiment is pending owner module build and device test.
+experiment was tested on 2026-09-09 over SSH at `192.168.1.4` with module
+SHA256
+`33afe61c5fc19aaf32a51285476731af77b2775575c8acbc5b66244f958fa24a`.
+`rmmod imx298` and insertion of the reset-high module both returned 0. The
+diagnostic log confirmed reset-before-assert logical `1`, but the `0x0016`
+read still returned `-6`; no chip-ID pass occurred. This is a FAIL for the
+reset-initial-state hypothesis.
 
 Device test run: first candidate tested 2026-09-08 by direct agent access;
 both the direct-`LVS1` boot image and the `lvs1`-node-only control image
@@ -137,17 +143,17 @@ The old Android OP3 IMX298 node also declares `cam_v_custom1` at 2.15 V,
 `cam_vaf` at 2.8 V, and GPIO39 for the VAF path; those resources remain out
 of scope until the diagnostic run identifies the current rail/reset/clock
 state.
-Recommended next experiment: run the reset-initial-state module test. It
-changes exactly one behavior variable: the reset request from
-`GPIOD_OUT_LOW` to `GPIOD_OUT_HIGH`. Keep CCI at 400 kHz, reset GPIO30, CCI
-address, sensor MCLK, core rails, endpoint, and chip-ID registers fixed. Do
-not reintroduce `lvs1` or add auxiliary rails in the reset experiment. PASS
-remains a clean
+Recommended next experiment: power-sequence validation. Before changing
+driver behavior, confirm the old OP3/Android IMX298 resource order and delays
+from the preserved vendor evidence. Then change only the documented
+power-sequence variable while keeping CCI at 400 kHz, reset GPIO30, CCI
+address, sensor MCLK, endpoint, and chip-ID registers fixed. Do not
+reintroduce `lvs1` or combine an unverified auxiliary rail with this test.
+PASS remains a clean
 `IMX298 probe passed: chip ID=0x0298` message with a registered V4L2 sensor
 sub-device and no CAMSS fault; FAIL is the unchanged `-ENXIO`/`-6` probe
-result. The reset-initial-state experiment remains pending owner module build
-and device test; its diagnostic result will determine whether the next
-one-variable power experiment is justified.
+result. The reset test has now failed, so the next implementation commit must
+be based on a recorded vendor power-order hypothesis.
 
 Owner test commands:
 

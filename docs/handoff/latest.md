@@ -33,7 +33,7 @@ image. This is recorded as a device PASS for the isolated hypothesis, not yet
 as final Integration acceptance: the host-attached RNDIS/ACM regression and a
 clean Buildroot rebuild from the committed source remain pending.
 
-## OP3 rear IMX298 probe candidate (reset-initial-state test prepared, 2026-09-09)
+## OP3 rear IMX298 probe candidate (reset-initial-state test failed, 2026-09-09)
 
 GitHub Issue #12 starts the camera layer with one isolated variable: rear Sony
 IMX298 probe support. The dedicated nested kernel worktree is
@@ -96,11 +96,14 @@ The owner-built module SHA256 is
 before assertion and the chip-ID read still returned `-6`. This is a
 diagnostic evidence PASS, not an IMX298 probe PASS. Do not rebuild or
 repackage Buildroot, the DTB, or the boot image. The reset-initial-state test
-is now prepared as nested-kernel commit
+was run as nested-kernel commit
 `d247ce811242`, changing only `GPIOD_OUT_LOW` to `GPIOD_OUT_HIGH` when the
-reset GPIO is requested. Build only its external `imx298.ko` module and test
-it with the existing boot image; no Buildroot, DTB, or boot-image rebuild is
-needed. Auxiliary `custom1`/`vaf` power and GPIO39 remain deferred.
+reset GPIO is requested. On `192.168.1.4`, the module loaded successfully and
+the diagnostic log showed reset-before-assert logical `1`, but the chip-ID
+read still returned `-6`. The reset hypothesis therefore failed. The next
+step is to confirm the old OP3/Android IMX298 power-resource order and delays
+from preserved vendor evidence before changing the driver; auxiliary
+`custom1`/`vaf` power and GPIO39 remain deferred.
 
 ## OP3 recovery balanced CPU governor fix (userspace candidate device-tested, Buildroot pending, 2026-09-08)
 
