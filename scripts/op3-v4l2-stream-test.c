@@ -557,7 +557,7 @@ static int stream_node(const char *path, const char *output, int exposure,
 {
 	struct mapped_buffer buffers[4] = { 0 };
 	struct v4l2_requestbuffers req = {
-		.count = 4,
+		.count = 2,
 		.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE,
 		.memory = V4L2_MEMORY_MMAP,
 	};
