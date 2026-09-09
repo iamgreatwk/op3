@@ -19,6 +19,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <linux/v4l2-mediabus.h>
+#include <linux/v4l2-subdev.h>
 #include <linux/videodev2.h>
 
 struct mapped_buffer {
@@ -86,6 +88,92 @@ static int inspect_node(const char *path)
 	return 0;
 }
 
+static int configure_subdev(const char *path, const char *name)
+{
+	struct v4l2_subdev_format fmt;
+	char code[5];
+	int fd;
+	int configured = 0;
+	unsigned int pad;
+
+	fd = open(path, O_RDWR);
+	if (fd < 0)
+		return -errno;
+
+	printf("%s (%s):\n", path, name);
+	for (pad = 0; pad < 8; pad++) {
+		memset(&fmt, 0, sizeof(fmt));
+		fmt.which = V4L2_SUBDEV_FORMAT_ACTIVE;
+		fmt.pad = pad;
+		if (xioctl(fd, VIDIOC_SUBDEV_G_FMT, &fmt) < 0)
+			continue;
+
+		fourcc(code, fmt.format.code);
+		printf("  pad=%u before=%ux%u code=0x%08x(%s)\n", pad,
+		       fmt.format.width, fmt.format.height, fmt.format.code, code);
+		fmt.format.width = 1476;
+		fmt.format.height = 834;
+		fmt.format.code = MEDIA_BUS_FMT_SRGGB10_1X10;
+		fmt.format.field = V4L2_FIELD_NONE;
+		fmt.format.colorspace = V4L2_COLORSPACE_RAW;
+		fmt.format.ycbcr_enc = V4L2_YCBCR_ENC_DEFAULT;
+		fmt.format.quantization = V4L2_QUANTIZATION_FULL_RANGE;
+		fmt.format.xfer_func = V4L2_XFER_FUNC_NONE;
+		if (xioctl(fd, VIDIOC_SUBDEV_S_FMT, &fmt) < 0) {
+			printf("  pad=%u S_FMT failed: %s\n", pad, strerror(errno));
+			continue;
+		}
+
+		fourcc(code, fmt.format.code);
+		printf("  pad=%u after=%ux%u code=0x%08x(%s)\n", pad,
+		       fmt.format.width, fmt.format.height, fmt.format.code, code);
+		configured++;
+	}
+
+	close(fd);
+	return configured;
+}
+
+static int configure_camera_subdevs(void)
+{
+	char path[32];
+	char name_path[96];
+	char name[128];
+	FILE *name_file;
+	int configured = 0;
+	int fd;
+	int i;
+
+	for (i = 0; i < 32; i++) {
+		snprintf(path, sizeof(path), "/dev/v4l-subdev%d", i);
+		if (access(path, R_OK | W_OK) != 0)
+			continue;
+
+		snprintf(name_path, sizeof(name_path),
+			 "/sys/class/video4linux/v4l-subdev%d/name", i);
+		name_file = fopen(name_path, "r");
+		if (!name_file)
+			continue;
+		if (!fgets(name, sizeof(name), name_file)) {
+			fclose(name_file);
+			continue;
+		}
+		fclose(name_file);
+		name[strcspn(name, "\r\n")] = '\0';
+
+		if (!strstr(name, "msm_csiphy0") && !strstr(name, "msm_csid0") &&
+		    !strstr(name, "msm_ispif0") && !strstr(name, "msm_vfe0_rdi0") &&
+		    !strstr(name, "imx298"))
+			continue;
+
+		fd = configure_subdev(path, name);
+		if (fd > 0)
+			configured += fd;
+	}
+
+	return configured;
+}
+
 static int list_nodes(void)
 {
 	char path[32];
@@ -130,6 +218,12 @@ static int stream_node(const char *path, const char *output)
 	fd = open(path, O_RDWR | O_NONBLOCK);
 	if (fd < 0)
 		return -errno;
+
+	if (configure_camera_subdevs() <= 0) {
+		ret = ENODEV;
+		fprintf(stderr, "no camera subdevice format was configured\n");
+		goto out;
+	}
 
 	fmt.fmt.pix_mp.width = 1476;
 	fmt.fmt.pix_mp.height = 834;
