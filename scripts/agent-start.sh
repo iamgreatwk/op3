@@ -22,4 +22,4 @@ source "$project_root/BASELINE.env"
 printf 'Baseline: %s (%s)\n' "${TARGET_KERNEL_RELEASE:-$TARGET_KERNEL_VERSION}" "$TARGET_KERNEL_TREE"
 printf '%s\n' 'Read before changing files:'
 printf '%s\n' AGENTS.md BASELINE.env docs/handoff/latest.md docs/bringup-status.md docs/test-matrix.md docs/decisions.md docs/build-environment.md docs/collaboration-framework.md
-printf '%s\n' 'Boundary: agents do not run large builds or device flashing.'
+printf '%s\n' 'Boundary: large builds and device flashing require explicit owner authorization.'
