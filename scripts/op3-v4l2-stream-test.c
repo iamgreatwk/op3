@@ -553,7 +553,7 @@ static int list_nodes(void)
 }
 
 static int stream_node(const char *path, const char *output, int exposure,
-		       int gain)
+		       int gain, unsigned int frame_count)
 {
 	struct mapped_buffer buffers[4] = { 0 };
 	struct v4l2_requestbuffers req = {
@@ -691,32 +691,6 @@ static int stream_node(const char *path, const char *output, int exposure,
 		goto out_unmap;
 	}
 
-	pfd.fd = fd;
-	pfd.events = POLLIN;
-	{
-		int poll_ret = poll(&pfd, 1, 3000);
-
-		if (poll_ret <= 0) {
-			ret = poll_ret == 0 ? ETIMEDOUT : errno;
-		fprintf(stderr, "%s: frame wait failed: %s\n", path,
-			strerror(ret));
-		goto out_streamoff;
-		}
-	}
-
-	memset(&buf, 0, sizeof(buf));
-	memset(planes, 0, sizeof(planes));
-	buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
-	buf.memory = V4L2_MEMORY_MMAP;
-	buf.length = 1;
-	buf.m.planes = planes;
-	if (xioctl(fd, VIDIOC_DQBUF, &buf) < 0) {
-		ret = -errno;
-		fprintf(stderr, "%s: DQBUF failed: %s\n", path,
-			strerror(errno));
-		goto out_streamoff;
-	}
-
 	output_fd = open(output, O_WRONLY | O_CREAT | O_TRUNC, 0600);
 	if (output_fd < 0) {
 		ret = -errno;
@@ -724,16 +698,60 @@ static int stream_node(const char *path, const char *output, int exposure,
 			strerror(errno));
 		goto out_streamoff;
 	}
-	if (write(output_fd, buffers[buf.index].address,
-		  planes[0].bytesused) != (ssize_t)planes[0].bytesused) {
-		ret = errno ? errno : EIO;
-		fprintf(stderr, "%s: output write failed: %s\n", output,
-			strerror(ret));
+	pfd.fd = fd;
+	pfd.events = POLLIN;
+	for (unsigned int frame = 0; frame < frame_count; frame++) {
+		int poll_ret = poll(&pfd, 1, 3000);
+
+		if (poll_ret <= 0) {
+			ret = poll_ret == 0 ? ETIMEDOUT : errno;
+			fprintf(stderr, "%s: frame %u wait failed: %s\n", path,
+				frame, strerror(ret));
+			goto out_streamoff;
+		}
+
+		memset(&buf, 0, sizeof(buf));
+		memset(planes, 0, sizeof(planes));
+		buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+		buf.memory = V4L2_MEMORY_MMAP;
+		buf.length = 1;
+		buf.m.planes = planes;
+		if (xioctl(fd, VIDIOC_DQBUF, &buf) < 0) {
+			ret = -errno;
+			fprintf(stderr, "%s: DQBUF %u failed: %s\n", path,
+				frame, strerror(errno));
+			goto out_streamoff;
+		}
+
+		if (write(output_fd, buffers[buf.index].address,
+			  planes[0].bytesused) != (ssize_t)planes[0].bytesused) {
+			ret = errno ? errno : EIO;
+			fprintf(stderr, "%s: output write failed: %s\n", output,
+				strerror(ret));
+			goto out_streamoff;
+		}
+		printf("%s: captured frame=%u buffer=%u bytes=%u to %s\n", path,
+		       frame, buf.index, planes[0].bytesused, output);
+
+		if (frame + 1 < frame_count) {
+			struct v4l2_buffer queue = {
+				.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE,
+				.memory = V4L2_MEMORY_MMAP,
+				.index = buf.index,
+				.length = 1,
+				.m.planes = planes,
+			};
+
+			if (xioctl(fd, VIDIOC_QBUF, &queue) < 0) {
+				ret = -errno;
+				fprintf(stderr, "%s: re-QBUF %u failed: %s\n", path,
+					frame, strerror(errno));
+				goto out_streamoff;
+			}
+		}
 	}
 	close(output_fd);
 	output_fd = -1;
-	printf("%s: captured buffer=%u bytes=%u to %s\n", path, buf.index,
-	       planes[0].bytesused, output);
 
 out_streamoff:
 	if (xioctl(fd, VIDIOC_STREAMOFF, &type) < 0 && !ret)
@@ -761,12 +779,12 @@ int main(int argc, char **argv)
 		return list_nodes();
 	if (argc == 3 && !strcmp(argv[1], "media-list"))
 		return media_list(argv[2]);
-	if (argc < 3 || argc > 5) {
-		fprintf(stderr, "usage: %s list | %s media-list /dev/media0 | %s /dev/videoX output.raw [exposure [analogue_gain]]\n",
+	if (argc < 3 || argc > 6) {
+		fprintf(stderr, "usage: %s list | %s media-list /dev/media0 | %s /dev/videoX output.raw [exposure [analogue_gain [frames]]]\n",
 			argv[0], argv[0], argv[0]);
 		return EINVAL;
 	}
-	if (argc == 4) {
+	if (argc >= 4) {
 		exposure = strtol(argv[3], &end, 0);
 		if (*argv[3] == '\0' || *end != '\0' || exposure < 1 ||
 		    exposure > 893) {
@@ -776,7 +794,7 @@ int main(int argc, char **argv)
 	} else {
 		exposure = -1;
 	}
-	if (argc == 5) {
+	if (argc >= 5) {
 		gain = strtol(argv[4], &end, 0);
 		if (*argv[4] == '\0' || *end != '\0' || gain < 0 || gain > 960) {
 			fprintf(stderr, "analogue_gain must be an integer in 0..960\n");
@@ -785,7 +803,19 @@ int main(int argc, char **argv)
 	} else {
 		gain = -1;
 	}
+	if (argc == 6) {
+		long frames = strtol(argv[5], &end, 0);
 
-	ret = stream_node(argv[1], argv[2], (int)exposure, (int)gain);
+		if (*argv[5] == '\0' || *end != '\0' || frames < 1 ||
+		    frames > 4) {
+			fprintf(stderr, "frames must be an integer in 1..4\n");
+			return EINVAL;
+		}
+		ret = stream_node(argv[1], argv[2], (int)exposure, (int)gain,
+				  (unsigned int)frames);
+		return ret ? 1 : 0;
+	}
+
+	ret = stream_node(argv[1], argv[2], (int)exposure, (int)gain, 1);
 	return ret ? 1 : 0;
 }
