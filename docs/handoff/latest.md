@@ -1,5 +1,24 @@
 # Latest handoff
 
+## OP3 IMX298 minimum RAW10 stream (source committed, module/device test pending, 2026-09-09)
+
+The dedicated camera kernel branch now contains `a059fc816af6`, archived as
+`patches/pmos612-op3-camera-imx298/0015-media-i2c-add-OP3-IMX298-minimum-RAW10-stream.patch`.
+It changes only the IMX298 driver: one vendor-derived 1476x834 RAW10 RGGB
+register table, V4L2 format/frame-size negotiation, initialized sub-device
+state, and runtime `s_stream` start/stop. No DTS, regulator, CAMSS, Buildroot,
+initramfs, or kernel-image change is included. The chip-ID/VIO PASS remains
+the prior checkpoint; this is a new stream hypothesis and is not accepted.
+
+The phone rootfs has `/dev/media0` and `/dev/video0` through `/dev/video5`,
+but no `media-ctl` or `v4l2-ctl`. The next test therefore builds only
+`imx298.ko` and uploads a temporary V4L2 ioctl test helper; no Buildroot
+rebuild is needed. PASS requires `STREAMON` to reach the new driver log
+without mode-write, CSI/CAMSS, I2C, timeout, or kernel-fault evidence. A valid
+image, controls, extra modes, and capture userspace are separate follow-ups.
+See `docs/handoff/op3-camera-imx298-001.md` for the exact module command and
+the required device evidence.
+
 ## OP3 IMX298 VIO through SMD-RPM LVS1 candidate (device PASS, 2026-09-09)
 
 The camera branch now contains nested-kernel commit `e5332d149d85`, archived as

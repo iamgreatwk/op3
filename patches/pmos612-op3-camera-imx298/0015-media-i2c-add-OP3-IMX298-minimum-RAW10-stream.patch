@@ -1,0 +1,464 @@
+From a059fc816af6c9625314f8ed1bf5f751c77595a4 Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Wed, 9 Sep 2026 19:13:21 +0800
+Subject: [PATCH] media: i2c: add OP3 IMX298 minimum RAW10 stream
+
+---
+ drivers/media/i2c/imx298.c | 374 ++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 371 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/media/i2c/imx298.c b/drivers/media/i2c/imx298.c
+index 3f96319d0ab1..839ebe3477ca 100644
+--- a/drivers/media/i2c/imx298.c
++++ b/drivers/media/i2c/imx298.c
+@@ -15,19 +15,30 @@
+ #include <linux/gpio/consumer.h>
+ #include <linux/i2c.h>
+ #include <linux/module.h>
++#include <linux/mutex.h>
+ #include <linux/of.h>
+ #include <linux/pm_runtime.h>
+ #include <linux/regmap.h>
+ #include <linux/regulator/consumer.h>
++#include <linux/videodev2.h>
+ 
+ #include <media/media-entity.h>
+ #include <media/v4l2-async.h>
++#include <media/v4l2-device.h>
+ #include <media/v4l2-fwnode.h>
+ #include <media/v4l2-subdev.h>
+ 
+ #define IMX298_XCLK_RATE	24000000
+ #define IMX298_REG_CHIP_ID	0x0016
+ #define IMX298_CHIP_ID		0x0298
++#define IMX298_REG_MODE_SELECT	0x0100
++#define IMX298_MODE_STANDBY	0x00
++#define IMX298_MODE_STREAMING	0x01
++
++/* One conservative mode for the first CSI-2 stream experiment. */
++#define IMX298_MODE_WIDTH	1476
++#define IMX298_MODE_HEIGHT	834
++#define IMX298_MBUS_CODE	MEDIA_BUS_FMT_SRGGB10_1X10
+ 
+ enum imx298_supply_index {
+ 	IMX298_SUPPLY_VANA,
+@@ -56,6 +67,7 @@ struct imx298 {
+ 
+ 	struct v4l2_subdev sd;
+ 	struct media_pad pad;
++	bool streaming;
+ };
+ 
+ static const struct regmap_config imx298_regmap_config = {
+@@ -63,6 +75,168 @@ static const struct regmap_config imx298_regmap_config = {
+ 	.val_bits = 8,
+ };
+ 
++struct imx298_reg {
++	u16 address;
++	u8 value;
++};
++
++/*
++ * 1476x834 RAW10 mode, derived from the OP3 IMX298 vendor sensor data.
++ *
++ * The vendor table is represented here as ordinary 16-bit-address/8-bit-value
++ * writes.  No vendor binary is linked into the kernel.  This is deliberately
++ * the only mode in the first streaming experiment; controls and additional
++ * resolutions are separate follow-up work.
++ */
++static const struct imx298_reg imx298_mode_1476x834[] = {
++	{ 0x0114, 0x03 },
++	{ 0x0220, 0x00 },
++	{ 0x0221, 0x11 },
++	{ 0x0222, 0x10 },
++	{ 0x0340, 0x03 },
++	{ 0x0341, 0x87 },
++	{ 0x0342, 0x15 },
++	{ 0x0343, 0xa0 },
++	{ 0x0344, 0x00 },
++	{ 0x0345, 0x00 },
++	{ 0x0346, 0x03 },
++	{ 0x0347, 0x84 },
++	{ 0x0348, 0x12 },
++	{ 0x0349, 0x2f },
++	{ 0x034a, 0x0a },
++	{ 0x034b, 0x23 },
++	{ 0x0381, 0x01 },
++	{ 0x0383, 0x01 },
++	{ 0x0385, 0x01 },
++	{ 0x0387, 0x01 },
++	{ 0x0900, 0x01 },
++	{ 0x0901, 0x22 },
++	{ 0x0902, 0x02 },
++	{ 0x3010, 0x65 },
++	{ 0x3011, 0x01 },
++	{ 0x30c0, 0x11 },
++	{ 0x300d, 0x00 },
++	{ 0x30fd, 0x00 },
++	{ 0x8493, 0x00 },
++	{ 0x8863, 0x00 },
++	{ 0x90d7, 0x19 },
++	{ 0x0112, 0x0a },
++	{ 0x0113, 0x0a },
++	{ 0x034c, 0x05 },
++	{ 0x034d, 0xc4 },
++	{ 0x034e, 0x03 },
++	{ 0x034f, 0x42 },
++	{ 0x0401, 0x00 },
++	{ 0x0404, 0x00 },
++	{ 0x0405, 0x10 },
++	{ 0x0408, 0x01 },
++	{ 0x0409, 0xaa },
++	{ 0x040a, 0x00 },
++	{ 0x040b, 0x06 },
++	{ 0x040c, 0x05 },
++	{ 0x040d, 0xc4 },
++	{ 0x040e, 0x03 },
++	{ 0x040f, 0x42 },
++	{ 0x0301, 0x05 },
++	{ 0x0303, 0x02 },
++	{ 0x0305, 0x04 },
++	{ 0x0306, 0x00 },
++	{ 0x0307, 0xfa },
++	{ 0x0309, 0x0a },
++	{ 0x030b, 0x01 },
++	{ 0x030d, 0x0f },
++	{ 0x030e, 0x03 },
++	{ 0x030f, 0x41 },
++	{ 0x0310, 0x00 },
++	{ 0x0820, 0x17 },
++	{ 0x0821, 0x70 },
++	{ 0x0822, 0x00 },
++	{ 0x0823, 0x00 },
++	{ 0x0202, 0x03 },
++	{ 0x0203, 0x7d },
++	{ 0x0224, 0x01 },
++	{ 0x0225, 0xf4 },
++	{ 0x0204, 0x00 },
++	{ 0x0205, 0x00 },
++	{ 0x0216, 0x00 },
++	{ 0x0217, 0x00 },
++	{ 0x020e, 0x01 },
++	{ 0x020f, 0x00 },
++	{ 0x0210, 0x01 },
++	{ 0x0211, 0x00 },
++	{ 0x0212, 0x01 },
++	{ 0x0213, 0x00 },
++	{ 0x0214, 0x01 },
++	{ 0x0215, 0x00 },
++	{ 0x3058, 0x00 },
++	{ 0x3103, 0x00 },
++	{ 0x3108, 0x00 },
++	{ 0x3109, 0x1b },
++	{ 0x310a, 0x00 },
++	{ 0x310b, 0x11 },
++	{ 0x310c, 0x01 },
++	{ 0x310d, 0x0a },
++	{ 0x310e, 0x00 },
++	{ 0x310f, 0xc8 },
++	{ 0x3110, 0x02 },
++	{ 0x3111, 0x31 },
++	{ 0x3112, 0x01 },
++	{ 0x3113, 0x1e },
++	{ 0x3114, 0x03 },
++	{ 0x3115, 0x0e },
++	{ 0x3116, 0x01 },
++	{ 0x3117, 0xc5 },
++	{ 0x3118, 0x02 },
++	{ 0x3119, 0xb5 },
++	{ 0x311a, 0x01 },
++	{ 0x311b, 0x1e },
++	{ 0x311c, 0x03 },
++	{ 0x311d, 0x92 },
++	{ 0x311e, 0x01 },
++	{ 0x311f, 0xc5 },
++	{ 0x3120, 0x02 },
++	{ 0x3121, 0x31 },
++	{ 0x3122, 0x01 },
++	{ 0x3123, 0x82 },
++	{ 0x3124, 0x03 },
++	{ 0x3125, 0x0e },
++	{ 0x3126, 0x02 },
++	{ 0x3127, 0x29 },
++	{ 0x3128, 0x02 },
++	{ 0x3129, 0xb5 },
++	{ 0x312a, 0x01 },
++	{ 0x312b, 0x82 },
++	{ 0x312c, 0x03 },
++	{ 0x312d, 0x92 },
++	{ 0x312e, 0x02 },
++	{ 0x312f, 0x29 },
++	{ 0x3130, 0x02 },
++	{ 0x3131, 0x31 },
++	{ 0x3132, 0x01 },
++	{ 0x3133, 0x1e },
++	{ 0x3134, 0x03 },
++	{ 0x3135, 0x92 },
++	{ 0x3136, 0x02 },
++	{ 0x3137, 0x29 },
++	{ 0x3138, 0x01 },
++	{ 0x3139, 0xba },
++	{ 0x313a, 0x00 },
++	{ 0x313b, 0xfc },
++	{ 0x313c, 0x04 },
++	{ 0x313d, 0x08 },
++	{ 0x313e, 0x02 },
++	{ 0x313f, 0x4c },
++	{ 0x3140, 0x00 },
++	{ 0x3141, 0x66 },
++	{ 0x3142, 0x00 },
++	{ 0x3143, 0x33 },
++	{ 0x3144, 0x05 },
++	{ 0x3145, 0x5d },
++	{ 0x3146, 0x03 },
++	{ 0x3147, 0x15 },
++	{ 0x3165, 0x02 },
++};
++
+ static inline struct imx298 *to_imx298(struct v4l2_subdev *sd)
+ {
+ 	return container_of(sd, struct imx298, sd);
+@@ -316,8 +490,193 @@ static int imx298_init_regulators(struct imx298 *imx298)
+ 				       imx298->supplies);
+ }
+ 
+-/* No streaming operations are exposed until a clean IMX298 mode is added. */
+-static const struct v4l2_subdev_ops imx298_subdev_ops = { };
++static int imx298_write_mode(struct imx298 *imx298)
++{
++	unsigned int i;
++	int ret;
++
++	for (i = 0; i < ARRAY_SIZE(imx298_mode_1476x834); i++) {
++		ret = regmap_write(imx298->regmap,
++				   imx298_mode_1476x834[i].address,
++				   imx298_mode_1476x834[i].value);
++		if (ret) {
++			dev_err(imx298->dev,
++				"mode write failed reg=0x%04x value=0x%02x rc=%d\n",
++				imx298_mode_1476x834[i].address,
++				imx298_mode_1476x834[i].value, ret);
++			return ret;
++		}
++	}
++
++	return 0;
++}
++
++static int imx298_start_streaming(struct imx298 *imx298)
++{
++	int ret;
++
++	ret = imx298_write_mode(imx298);
++	if (ret)
++		return ret;
++
++	ret = regmap_write(imx298->regmap, IMX298_REG_MODE_SELECT,
++			   IMX298_MODE_STREAMING);
++	if (ret) {
++		dev_err(imx298->dev, "stream-on write failed rc=%d\n", ret);
++		return ret;
++	}
++
++	usleep_range(10000, 12000);
++	imx298->streaming = true;
++	dev_info(imx298->dev, "streaming started mode=%ux%u code=RG10\n",
++		 IMX298_MODE_WIDTH, IMX298_MODE_HEIGHT);
++
++	return 0;
++}
++
++static int imx298_stop_streaming(struct imx298 *imx298)
++{
++	int ret;
++
++	ret = regmap_write(imx298->regmap, IMX298_REG_MODE_SELECT,
++			   IMX298_MODE_STANDBY);
++	if (ret)
++		dev_err(imx298->dev, "stream-off write failed rc=%d\n", ret);
++	else
++		dev_info(imx298->dev, "streaming stopped\n");
++
++	imx298->streaming = false;
++	return ret;
++}
++
++static int imx298_s_stream(struct v4l2_subdev *sd, int enable)
++{
++	struct imx298 *imx298 = to_imx298(sd);
++	struct v4l2_subdev_state *state;
++	int ret = 0;
++
++	state = v4l2_subdev_lock_and_get_active_state(sd);
++	if (!state)
++		return -EINVAL;
++
++	if (!enable) {
++		if (!imx298->streaming)
++			goto unlock;
++
++		ret = imx298_stop_streaming(imx298);
++		pm_runtime_mark_last_busy(imx298->dev);
++		pm_runtime_put(imx298->dev);
++		goto unlock;
++	}
++
++	if (imx298->streaming) {
++		ret = 0;
++		goto unlock;
++	}
++
++	ret = pm_runtime_resume_and_get(imx298->dev);
++	if (ret < 0)
++		goto unlock;
++
++	ret = imx298_start_streaming(imx298);
++	if (ret)
++		pm_runtime_put_sync(imx298->dev);
++
++unlock:
++	v4l2_subdev_unlock_state(state);
++	return ret;
++}
++
++static int imx298_enum_mbus_code(struct v4l2_subdev *sd,
++				 struct v4l2_subdev_state *state,
++				 struct v4l2_subdev_mbus_code_enum *code)
++{
++	if (code->pad != 0 || code->index != 0)
++		return -EINVAL;
++
++	code->code = IMX298_MBUS_CODE;
++	return 0;
++}
++
++static int imx298_enum_frame_size(struct v4l2_subdev *sd,
++				  struct v4l2_subdev_state *state,
++				  struct v4l2_subdev_frame_size_enum *fse)
++{
++	if (fse->pad != 0 || fse->index != 0 ||
++	    fse->code != IMX298_MBUS_CODE)
++		return -EINVAL;
++
++	fse->min_width = IMX298_MODE_WIDTH;
++	fse->max_width = IMX298_MODE_WIDTH;
++	fse->min_height = IMX298_MODE_HEIGHT;
++	fse->max_height = IMX298_MODE_HEIGHT;
++	return 0;
++}
++
++static void imx298_fill_format(struct v4l2_mbus_framefmt *format)
++{
++	format->width = IMX298_MODE_WIDTH;
++	format->height = IMX298_MODE_HEIGHT;
++	format->code = IMX298_MBUS_CODE;
++	format->field = V4L2_FIELD_NONE;
++	format->colorspace = V4L2_COLORSPACE_RAW;
++	format->ycbcr_enc = V4L2_YCBCR_ENC_DEFAULT;
++	format->quantization = V4L2_QUANTIZATION_FULL_RANGE;
++	format->xfer_func = V4L2_XFER_FUNC_NONE;
++}
++
++static int imx298_set_fmt(struct v4l2_subdev *sd,
++			  struct v4l2_subdev_state *state,
++			  struct v4l2_subdev_format *fmt)
++{
++	struct imx298 *imx298 = to_imx298(sd);
++	struct v4l2_mbus_framefmt *format;
++
++	if (fmt->pad != 0)
++		return -EINVAL;
++	if (fmt->which == V4L2_SUBDEV_FORMAT_ACTIVE && imx298->streaming)
++		return -EBUSY;
++
++	format = v4l2_subdev_state_get_format(state, fmt->pad);
++	imx298_fill_format(format);
++	fmt->format = *format;
++
++	return 0;
++}
++
++static int imx298_init_state(struct v4l2_subdev *sd,
++			     struct v4l2_subdev_state *state)
++{
++	struct v4l2_mbus_framefmt *format;
++
++	format = v4l2_subdev_state_get_format(state, 0);
++	imx298_fill_format(format);
++	return 0;
++}
++
++static const struct v4l2_subdev_video_ops imx298_video_ops = {
++	.s_stream = imx298_s_stream,
++};
++
++static const struct v4l2_subdev_pad_ops imx298_pad_ops = {
++	.enum_mbus_code = imx298_enum_mbus_code,
++	.enum_frame_size = imx298_enum_frame_size,
++	.get_fmt = v4l2_subdev_get_fmt,
++	.set_fmt = imx298_set_fmt,
++};
++
++static const struct v4l2_subdev_ops imx298_subdev_ops = {
++	.video = &imx298_video_ops,
++	.pad = &imx298_pad_ops,
++};
++
++static const struct v4l2_subdev_internal_ops imx298_internal_ops = {
++	.init_state = imx298_init_state,
++};
++
++static const struct media_entity_operations imx298_entity_ops = {
++	.link_validate = v4l2_subdev_link_validate,
++};
+ 
+ static int imx298_probe(struct i2c_client *client)
+ {
+@@ -368,8 +727,10 @@ static int imx298_probe(struct i2c_client *client)
+ 				    "failed to initialize register map\n");
+ 
+ 	v4l2_i2c_subdev_init(&imx298->sd, client, &imx298_subdev_ops);
++	imx298->sd.internal_ops = &imx298_internal_ops;
+ 	imx298->sd.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
+ 	imx298->sd.dev = dev;
++	imx298->sd.entity.ops = &imx298_entity_ops;
+ 	imx298->sd.entity.function = MEDIA_ENT_F_CAM_SENSOR;
+ 	imx298->pad.flags = MEDIA_PAD_FL_SOURCE;
+ 
+@@ -419,10 +780,14 @@ static int imx298_probe(struct i2c_client *client)
+ 	if (ret)
+ 		goto err_power_off;
+ 
++	ret = v4l2_subdev_init_finalize(&imx298->sd);
++	if (ret)
++		goto err_entity_cleanup;
++
+ 	ret = v4l2_async_register_subdev_sensor(&imx298->sd);
+ 	if (ret) {
+ 		dev_err(dev, "failed to register V4L2 sensor: %d\n", ret);
+-		goto err_entity_cleanup;
++		goto err_subdev_cleanup;
+ 	}
+ 
+ 	pm_runtime_set_active(dev);
+@@ -431,6 +796,8 @@ static int imx298_probe(struct i2c_client *client)
+ 
+ 	return 0;
+ 
++err_subdev_cleanup:
++	v4l2_subdev_cleanup(&imx298->sd);
+ err_entity_cleanup:
+ 	media_entity_cleanup(&imx298->sd.entity);
+ err_power_off:
+@@ -444,6 +811,7 @@ static void imx298_remove(struct i2c_client *client)
+ 	struct imx298 *imx298 = to_imx298(sd);
+ 
+ 	v4l2_async_unregister_subdev(&imx298->sd);
++	v4l2_subdev_cleanup(&imx298->sd);
+ 	media_entity_cleanup(&imx298->sd.entity);
+ 
+ 	pm_runtime_disable(&client->dev);
+-- 
+2.53.0
+

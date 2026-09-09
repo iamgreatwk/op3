@@ -17,7 +17,7 @@ git am --3way patches/pmos612-op3-camera-imx298/000*.patch
 ```
 
 The camera series was exported from nested-kernel commits
-`c37102be3c5b..e5332d149d85`. Patch `0012` deliberately removes the
+`c37102be3c5b..a059fc816af6`. Patch `0012` deliberately removes the
 experimental PM8994 `lvs1 {}` DT child and keeps IMX298 VIO on the known-good
 `vreg_s4a_1p8`; the two preceding direct-SPMI LVS1 experiments rebooted
 before userspace. Patch `0013` is a new, isolated registration-only test using
@@ -32,6 +32,11 @@ changes only the initial reset request from `GPIOD_OUT_LOW` to
 `GPIOD_OUT_HIGH`. Patch `0012` follows the original OP3 IMX298
 power-resource order and adds only the documented auxiliary S5 rail and
 GPIO39 VAF control; it does not add the crashing `lvs1` node.
+Patch `0015` adds one minimum 1476x834 RAW10 RGGB mode, V4L2 format
+negotiation, and `s_stream` register programming. It is derived from the
+phone's vendor mode data as explicit register writes; no vendor binary is
+linked into the kernel. Exposure, gain, additional modes, and capture
+userspace remain separate tasks.
 
 | Patch | Original commit | SHA256 | Purpose |
 | --- | --- | --- | --- |
@@ -49,8 +54,9 @@ GPIO39 VAF control; it does not add the crashing `lvs1` node.
 | `0012` | `7fe1f2f950b2` | `5f066b1e2a1870a8142ac7204dfcd6322c56dda6ab020fdd25656214908c0ddf` | Follow the original OP3 IMX298 power order; add S5/CUSTOM1 and GPIO39/VAF. |
 | `0013` | `67630ec3b9e5` | `0113d8a19b38670460536dc8103f23d125b8740380d32969a16673491c3eae1e` | Register PM8994 LVS1 through the SMD-RPM topology, without changing camera VIO. |
 | `0014` | `e5332d149d85` | `0b95a97359ffd75e7ec7850eb8c97ebc8c0c6c4dca24a1862d9f2bfd70ca91d9` | Route only IMX298 VIO from S4 to the registered SMD-RPM LVS1 output. |
+| `0015` | `a059fc816af6` | `0cd6ecb9c66ff05e74abf1f7e2eaec38eaca645be43b5e872d3e4c35a2d0f09c` | Add one minimum 1476x834 RAW10 mode and V4L2 stream operations. |
 
-These patches provide probe support only. They do not provide camera modes,
-streaming, capture userspace, front IMX179, OIS, actuator, flash, or EEPROM
-support. The device result and owner-only build commands are recorded in
-`docs/handoff/op3-camera-imx298-001.md`.
+These patches provide one experimental stream mode only. They do not provide
+exposure/gain controls, additional modes, capture userspace, front IMX179,
+OIS, actuator, flash, or EEPROM support. The device result and build commands
+are recorded in `docs/handoff/op3-camera-imx298-001.md`.

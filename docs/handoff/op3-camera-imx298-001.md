@@ -5,11 +5,92 @@ Role: Implementation Agent
 Baseline commit: `67b0bbc3cbf46bae712a2606a43361756fcbd829`
 Working branch: `agent/implementation/op3-camera-imx298-001`
 Working tree: `source/linux-pmos-msm8996-6.12-camera-imx298`
-Commit SHA: `e5332d149d85` (tip; previous SMD-RPM registration candidate
+Commit SHA: `a059fc816af6` (tip; previous SMD-RPM registration candidate
 `67630ec3b9e5`; previous rejected direct-SPMI LVS1 candidate
 `c298ff3e7197` was reverted by `8cce8d4643b3`)
 
 Layer: kernel camera / CCI / CAMSS
+
+## Current experiment: minimum IMX298 RAW10 stream (owner build/test pending)
+
+The camera branch now contains nested-kernel commit `a059fc816af6`, archived
+as patch `patches/pmos612-op3-camera-imx298/0015-media-i2c-add-OP3-IMX298-minimum-RAW10-stream.patch`.
+It changes only `drivers/media/i2c/imx298.c`: one 1476x834 RAW10 RGGB mode
+derived from the OP3 vendor sensor table, V4L2 format enumeration, default
+sub-device state, and runtime `s_stream` start/stop operations. The mode table
+is stored as explicit register writes; no vendor binary is linked into the
+kernel. Regulators, reset/MCLK sequencing, DTS, CAMSS, kernel image,
+initramfs, and Buildroot are unchanged.
+
+Hypothesis: after the confirmed chip-ID read, the IMX298 can emit a minimal
+four-lane CSI-2 RAW10 stream using the 1476x834 mode. PASS requires the module
+to load, the sensor to retain the `0x0298` probe result, and a userspace
+`STREAMON` attempt to reach `streaming started` without an I2C error or kernel
+fault. A failed mode write, CSI/CAMSS start error, timeout, or reboot is FAIL.
+This experiment does not claim a valid captured image; frame capture and
+controls are follow-up work.
+
+The recovery rootfs currently has no `media-ctl` or `v4l2-ctl`, so the first
+device test needs a temporary V4L2 ioctl test binary uploaded over SSH. Do not
+rebuild Buildroot for this experiment.
+
+Build only the external sensor module from the committed camera branch:
+
+```sh
+project=/home/kai/src/oneplus3-mainline
+kernel=$project/source/linux-pmos-msm8996-6.12-camera-imx298
+kout=$project/out/pmos-msm8996-6.12-camera-imx298-raw10
+fullout=$project/out/pmos-msm8996-6.12-recovery-audio-full-s1302-poll-drm100
+symvers=$fullout/Module.symvers
+module_build=$kout/imx298-module
+
+test "$(git -C "$kernel" rev-parse --short=12 HEAD)" = a059fc816af6
+test -s "$symvers"
+test -r "$kout/.config"
+
+make -C "$kernel" O="$kout" ARCH=arm64 \
+  CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
+  modules_prepare
+
+mkdir -p "$module_build"
+ln -sfn "$project/scripts/op3-imx298-module.mk" "$module_build/Makefile"
+ln -sfn "$kernel/drivers/media/i2c/imx298.c" "$module_build/imx298.c"
+
+KBUILD_EXTRA_SYMBOLS="$symvers" \
+make -C "$kernel" O="$kout" ARCH=arm64 \
+  CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
+  M="$module_build" modules
+
+sha256sum "$module_build/imx298.ko"
+```
+
+The module-only device test must reuse the already tested SMD-RPM LVS1 boot
+image and dependency bundle. Reboot between tests; do not unload CAMSS. The
+module upload and dependency-loading command is:
+
+```sh
+scp -O "$module_build/imx298.ko" root@172.16.42.1:/newroot/tmp/imx298-raw10.ko
+ssh root@172.16.42.1 '
+set -e
+module_root=/newroot/lib/modules/6.12.1-msm8996+/kernel
+insmod "$module_root/drivers/media/mc/mc.ko" 2>/dev/null || true
+insmod "$module_root/drivers/media/v4l2-core/videodev.ko" 2>/dev/null || true
+insmod "$module_root/drivers/media/v4l2-core/v4l2-async.ko" 2>/dev/null || true
+insmod "$module_root/drivers/media/v4l2-core/v4l2-fwnode.ko" 2>/dev/null || true
+insmod "$module_root/drivers/media/common/videobuf2/videobuf2-common.ko" 2>/dev/null || true
+insmod "$module_root/drivers/media/common/videobuf2/videobuf2-memops.ko" 2>/dev/null || true
+insmod "$module_root/drivers/media/common/videobuf2/videobuf2-dma-sg.ko" 2>/dev/null || true
+insmod "$module_root/drivers/media/common/videobuf2/videobuf2-v4l2.ko" 2>/dev/null || true
+insmod "$module_root/drivers/i2c/busses/i2c-qcom-cci.ko" 2>/dev/null || true
+insmod "$module_root/drivers/media/platform/qcom/camss/qcom-camss.ko" 2>/dev/null || true
+insmod /newroot/tmp/imx298-raw10.ko
+dmesg | grep -iE "imx298|camss|cci|csiphy|csid|vfe|media"
+'
+```
+
+Device result: NOT_RUN. The next handoff must record the temporary test
+binary hash, video node selected, `VIDIOC_S_FMT` result, `VIDIOC_STREAMON`
+result, and the matching `dmesg` excerpt.
 
 ## Device result: IMX298 chip-ID PASS through SMD-RPM LVS1 (2026-09-09)
 
