@@ -19,6 +19,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <linux/media.h>
 #include <linux/v4l2-mediabus.h>
 #include <linux/v4l2-subdev.h>
 #include <linux/videodev2.h>
@@ -26,6 +27,14 @@
 struct mapped_buffer {
 	void *address;
 	size_t length;
+};
+
+struct media_graph {
+	int fd;
+	struct media_v2_topology topology;
+	struct media_v2_entity *entities;
+	struct media_v2_pad *pads;
+	struct media_v2_link *links;
 };
 
 static int xioctl(int fd, unsigned long request, void *arg)
@@ -174,6 +183,287 @@ static int configure_camera_subdevs(void)
 	return configured;
 }
 
+static int media_graph_open(struct media_graph *graph, const char *path)
+{
+	struct media_v2_topology topology = { 0 };
+	int saved_errno;
+
+	memset(graph, 0, sizeof(*graph));
+	graph->fd = open(path, O_RDWR);
+	if (graph->fd < 0)
+		return -errno;
+
+	if (xioctl(graph->fd, MEDIA_IOC_G_TOPOLOGY, &topology) < 0)
+		goto error;
+
+	graph->entities = calloc(topology.num_entities, sizeof(*graph->entities));
+	graph->pads = calloc(topology.num_pads, sizeof(*graph->pads));
+	graph->links = calloc(topology.num_links, sizeof(*graph->links));
+	if ((!graph->entities && topology.num_entities) ||
+	    (!graph->pads && topology.num_pads) ||
+	    (!graph->links && topology.num_links))
+		goto error;
+
+	graph->topology = topology;
+	topology.ptr_entities = (uintptr_t)graph->entities;
+	topology.ptr_pads = (uintptr_t)graph->pads;
+	topology.ptr_links = (uintptr_t)graph->links;
+	if (xioctl(graph->fd, MEDIA_IOC_G_TOPOLOGY, &topology) < 0)
+		goto error;
+	graph->topology = topology;
+	return 0;
+
+error:
+	saved_errno = errno;
+	free(graph->entities);
+	free(graph->pads);
+	free(graph->links);
+	if (graph->fd >= 0)
+		close(graph->fd);
+	memset(graph, 0, sizeof(*graph));
+	graph->fd = -1;
+	return -saved_errno;
+}
+
+static void media_graph_close(struct media_graph *graph)
+{
+	free(graph->entities);
+	free(graph->pads);
+	free(graph->links);
+	if (graph->fd >= 0)
+		close(graph->fd);
+	memset(graph, 0, sizeof(*graph));
+	graph->fd = -1;
+}
+
+static const struct media_v2_entity *media_find_entity(
+		const struct media_graph *graph, uint32_t id)
+{
+	uint32_t i;
+
+	for (i = 0; i < graph->topology.num_entities; i++)
+		if (graph->entities[i].id == id)
+			return &graph->entities[i];
+
+	return NULL;
+}
+
+static const struct media_v2_pad *media_find_pad(const struct media_graph *graph,
+						 uint32_t id)
+{
+	uint32_t i;
+
+	for (i = 0; i < graph->topology.num_pads; i++)
+		if (graph->pads[i].id == id)
+			return &graph->pads[i];
+
+	return NULL;
+}
+
+static int media_entity_index(const struct media_graph *graph, uint32_t id)
+{
+	uint32_t i;
+
+	for (i = 0; i < graph->topology.num_entities; i++)
+		if (graph->entities[i].id == id)
+			return (int)i;
+
+	return -1;
+}
+
+static int media_list(const char *path)
+{
+	struct media_graph graph;
+	uint32_t i;
+	int ret;
+
+	ret = media_graph_open(&graph, path);
+	if (ret)
+		return ret;
+
+	printf("%s: entities=%u pads=%u links=%u\n", path,
+	       graph.topology.num_entities, graph.topology.num_pads,
+	       graph.topology.num_links);
+	for (i = 0; i < graph.topology.num_entities; i++)
+		printf("entity id=%u function=0x%x name=%s\n",
+		       graph.entities[i].id, graph.entities[i].function,
+		       graph.entities[i].name);
+	for (i = 0; i < graph.topology.num_links; i++) {
+		const struct media_v2_pad *source;
+		const struct media_v2_pad *sink;
+		const struct media_v2_entity *source_entity;
+		const struct media_v2_entity *sink_entity;
+
+		source = media_find_pad(&graph, graph.links[i].source_id);
+		sink = media_find_pad(&graph, graph.links[i].sink_id);
+		if (!source || !sink)
+			continue;
+		source_entity = media_find_entity(&graph, source->entity_id);
+		sink_entity = media_find_entity(&graph, sink->entity_id);
+		if (!source_entity || !sink_entity)
+			continue;
+		printf("link %s:%u -> %s:%u flags=0x%x\n",
+		       source_entity->name, source->index, sink_entity->name,
+		       sink->index, graph.links[i].flags);
+	}
+
+	media_graph_close(&graph);
+	return 0;
+}
+
+static int media_graph_enable_path(const char *path)
+{
+	struct media_graph graph;
+	int *queue = NULL;
+	int *previous_entity = NULL;
+	int *previous_link = NULL;
+	int *path_links = NULL;
+	unsigned char *visited = NULL;
+	int start = -1;
+	int target = -1;
+	unsigned int head = 0;
+	unsigned int tail = 0;
+	unsigned int path_length = 0;
+	unsigned int i;
+	int ret;
+
+	ret = media_graph_open(&graph, path);
+	if (ret)
+		return ret;
+
+	for (i = 0; i < graph.topology.num_entities; i++) {
+		if (strstr(graph.entities[i].name, "imx298"))
+			start = (int)i;
+		if (strstr(graph.entities[i].name, "msm_vfe0_rdi0"))
+			target = (int)i;
+	}
+	if (start < 0 || target < 0) {
+		fprintf(stderr, "media path endpoints not found: imx298=%d vfe0_rdi0=%d\n",
+			start, target);
+		ret = -ENODEV;
+		goto out;
+	}
+
+	queue = calloc(graph.topology.num_entities, sizeof(*queue));
+	previous_entity = calloc(graph.topology.num_entities,
+					 sizeof(*previous_entity));
+	previous_link = calloc(graph.topology.num_entities,
+				       sizeof(*previous_link));
+	visited = calloc(graph.topology.num_entities, sizeof(*visited));
+	path_links = calloc(graph.topology.num_entities, sizeof(*path_links));
+	if ((!queue && graph.topology.num_entities) ||
+	    (!previous_entity && graph.topology.num_entities) ||
+	    (!previous_link && graph.topology.num_entities) ||
+	    (!visited && graph.topology.num_entities) ||
+	    (!path_links && graph.topology.num_entities)) {
+		ret = -ENOMEM;
+		goto out;
+	}
+
+	for (i = 0; i < graph.topology.num_entities; i++) {
+		previous_entity[i] = -1;
+		previous_link[i] = -1;
+	}
+	queue[tail++] = start;
+	visited[start] = 1;
+
+	while (head < tail && !visited[target]) {
+		int current = queue[head++];
+
+		for (i = 0; i < graph.topology.num_links; i++) {
+			const struct media_v2_pad *source;
+			const struct media_v2_pad *sink;
+			int source_index;
+			int sink_index;
+
+			if ((graph.links[i].flags & MEDIA_LNK_FL_LINK_TYPE) !=
+			    MEDIA_LNK_FL_DATA_LINK)
+				continue;
+			source = media_find_pad(&graph, graph.links[i].source_id);
+			sink = media_find_pad(&graph, graph.links[i].sink_id);
+			if (!source || !sink)
+				continue;
+			source_index = media_entity_index(&graph, source->entity_id);
+			sink_index = media_entity_index(&graph, sink->entity_id);
+			if (source_index != current || sink_index < 0 ||
+			    visited[sink_index])
+				continue;
+			visited[sink_index] = 1;
+			previous_entity[sink_index] = current;
+			previous_link[sink_index] = (int)i;
+			queue[tail++] = sink_index;
+		}
+	}
+
+	if (!visited[target]) {
+		fprintf(stderr, "no media data path from %s to %s\n",
+			graph.entities[start].name, graph.entities[target].name);
+		ret = -ENOLINK;
+		goto out;
+	}
+
+	for (i = target; i != (unsigned int)start; i = previous_entity[i])
+		path_links[path_length++] = previous_link[i];
+
+	printf("media path %s -> %s links=%u\n", graph.entities[start].name,
+	       graph.entities[target].name, path_length);
+	for (i = path_length; i > 0; i--) {
+		struct media_v2_link *link = &graph.links[path_links[i - 1]];
+		const struct media_v2_pad *source = media_find_pad(&graph,
+									 link->source_id);
+		const struct media_v2_pad *sink = media_find_pad(&graph,
+									 link->sink_id);
+		const struct media_v2_entity *source_entity = source ?
+			media_find_entity(&graph, source->entity_id) : NULL;
+		const struct media_v2_entity *sink_entity = sink ?
+			media_find_entity(&graph, sink->entity_id) : NULL;
+
+		if (!source || !sink || !source_entity || !sink_entity) {
+			ret = -EINVAL;
+			goto out;
+		}
+		printf("  link %s:%u -> %s:%u flags=0x%x\n",
+		       source_entity->name, source->index, sink_entity->name,
+		       sink->index, link->flags);
+		if (link->flags & MEDIA_LNK_FL_ENABLED)
+			continue;
+		if (link->flags & MEDIA_LNK_FL_IMMUTABLE) {
+			fprintf(stderr, "  link is immutable but disabled\n");
+			ret = -EINVAL;
+			goto out;
+		}
+
+		{
+			struct media_link_desc desc = { 0 };
+
+			desc.source.entity = source->entity_id;
+			desc.source.index = source->index;
+			desc.source.flags = source->flags;
+			desc.sink.entity = sink->entity_id;
+			desc.sink.index = sink->index;
+			desc.sink.flags = sink->flags;
+			desc.flags = link->flags | MEDIA_LNK_FL_ENABLED;
+			if (xioctl(graph.fd, MEDIA_IOC_SETUP_LINK, &desc) < 0) {
+				ret = -errno;
+				fprintf(stderr, "  SETUP_LINK failed: %s\n",
+					strerror(errno));
+				goto out;
+			}
+			printf("  link enabled\n");
+		}
+	}
+
+	ret = 0;
+out:
+	free(queue);
+	free(previous_entity);
+	free(previous_link);
+	free(visited);
+	free(path_links);
+	media_graph_close(&graph);
+	return ret;
+}
+
 static int list_nodes(void)
 {
 	char path[32];
@@ -218,6 +508,13 @@ static int stream_node(const char *path, const char *output)
 	fd = open(path, O_RDWR | O_NONBLOCK);
 	if (fd < 0)
 		return -errno;
+
+	ret = media_graph_enable_path("/dev/media0");
+	if (ret) {
+		ret = -ret;
+		fprintf(stderr, "media graph setup failed: %s\n", strerror(ret));
+		goto out;
+	}
 
 	if (configure_camera_subdevs() <= 0) {
 		ret = ENODEV;
@@ -319,11 +616,15 @@ static int stream_node(const char *path, const char *output)
 
 	pfd.fd = fd;
 	pfd.events = POLLIN;
-	if (poll(&pfd, 1, 3000) <= 0) {
-		ret = errno ? errno : ETIMEDOUT;
+	{
+		int poll_ret = poll(&pfd, 1, 3000);
+
+		if (poll_ret <= 0) {
+			ret = poll_ret == 0 ? ETIMEDOUT : errno;
 		fprintf(stderr, "%s: frame wait failed: %s\n", path,
 			strerror(ret));
 		goto out_streamoff;
+		}
 	}
 
 	memset(&buf, 0, sizeof(buf));
@@ -378,9 +679,11 @@ int main(int argc, char **argv)
 
 	if (argc == 2 && !strcmp(argv[1], "list"))
 		return list_nodes();
+	if (argc == 3 && !strcmp(argv[1], "media-list"))
+		return media_list(argv[2]);
 	if (argc != 3) {
-		fprintf(stderr, "usage: %s list | %s /dev/videoX output.raw\n",
-			argv[0], argv[0]);
+		fprintf(stderr, "usage: %s list | %s media-list /dev/media0 | %s /dev/videoX output.raw\n",
+			argv[0], argv[0], argv[0]);
 		return EINVAL;
 	}
 
