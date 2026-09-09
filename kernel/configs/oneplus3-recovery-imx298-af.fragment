@@ -1,0 +1,6 @@
+# OP3 rear Sony IMX298 with the ROHM BU63165GWL voice-coil actuator.
+#
+# Merge this fragment with the camera module-only fragment for an external
+# module build.  The focus control is deliberately separate from the
+# integrated recovery config until the device test confirms lens movement.
+CONFIG_VIDEO_BU63165GWL=m

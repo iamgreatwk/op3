@@ -13,11 +13,11 @@ this camera series in lexical order:
 
 ```bash
 git am --3way patches/pmos612-op3-recovery-audio-full/00*.patch
-git am --3way patches/pmos612-op3-camera-imx298/000*.patch
+git am --3way patches/pmos612-op3-camera-imx298/*.patch
 ```
 
 The camera series was exported from nested-kernel commits
-`c37102be3c5b..0274f7062cfe`. Patch `0012` deliberately removes the
+`c37102be3c5b..7b2a25d7cbb8`. Patch `0012` deliberately removes the
 experimental PM8994 `lvs1 {}` DT child and keeps IMX298 VIO on the known-good
 `vreg_s4a_1p8`; the two preceding direct-SPMI LVS1 experiments rebooted
 before userspace. Patch `0013` is a new, isolated registration-only test using
@@ -45,6 +45,11 @@ stream-on; it does not change the mode table, power sequence, DTS, or CAMSS.
 Patch `0018` adds only the V4L2 analogue-gain control and writes the sensor's
 `0x0204/0x0205` gain register pair; it does not change exposure, mode timing,
 power sequencing, DTS, or CAMSS.
+Patch `0019` adds the OP3-specific ROHM BU63165GWL lens actuator. It uses the
+original CCI address `0x1c`, enables the PM8994 L23 2.8 V VAF supply only while
+the lens sub-device is open, and exposes `V4L2_CID_FOCUS_ABSOLUTE` over the
+original four-register position sequence. It does not claim calibrated
+infinity/macro positions or implement a closed-loop autofocus algorithm.
 
 | Patch | Original commit | SHA256 | Purpose |
 | --- | --- | --- | --- |
@@ -66,8 +71,73 @@ power sequencing, DTS, or CAMSS.
 | `0016` | `cc609f6d10a1` | `05e09e6786fd9b4825c3251eff66f36cf64fc17a232411f54837225f7f4bac84` | Expose IMX298 CSI-2 link-frequency and pixel-rate controls. |
 | `0017` | `e96efb4b1dd3` | `b093e2213449d0aca6ac8efdfb8bce046f8abbc2cfbcec3eeee280e838b665c2` | Add V4L2 exposure control for the minimum RAW10 mode. |
 | `0018` | `0274f7062cfe` | `e22a369100495a92aeba83c9602eafacff9b9cfaf4bf7bdb6c826077e2c18946` | Add V4L2 analogue-gain control for the minimum RAW10 mode. |
+| `0019` | `7b2a25d7cbb8` | `3ece2ac35ccd5f8b47e39c620d24e455271873617f1814bbfc0c9c53c987b72b` | Add the OP3 BU63165GWL VCM and L23 VAF power control. |
 
-These patches provide one experimental stream mode plus exposure and analogue-gain
-controls. They do not provide additional modes, capture userspace, front IMX179,
-OIS, actuator, flash, or EEPROM support. The device result and build commands
+These patches provide one experimental stream mode, exposure and analogue-gain
+controls, and the OP3 rear VCM control. They do not provide additional modes,
+closed-loop capture autofocus, front IMX179, OIS, flash, or EEPROM calibration
+support. The device result and build commands
 are recorded in `docs/handoff/op3-camera-imx298-001.md`.
+
+## VCM module-only build and motor sweep
+
+The AF experiment needs the new DTB node as well as the external actuator
+module. Merge `kernel/configs/oneplus3-recovery-imx298-af.fragment` with the
+camera module-only fragment, then build the DTB from the same camera kernel
+branch. The module itself can be built without relinking the kernel image:
+
+```bash
+project=/home/kai/src/oneplus3-mainline
+kernel=$project/source/linux-pmos-msm8996-6.12-camera-imx298
+kout=$project/out/pmos-msm8996-6.12-camera-imx298-af
+fullout=$project/out/pmos-msm8996-6.12-recovery-audio-full-s1302-poll-drm100
+symvers=$fullout/Module.symvers
+module_build=$kout/bu63165gwl-module
+
+test "$(git -C "$kernel" rev-parse --short=12 HEAD)" = 7b2a25d7cbb8
+test -s "$symvers"
+test -r "$kout/.config"
+
+make -C "$kernel" O="$kout" ARCH=arm64 \
+  CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
+  modules_prepare
+
+mkdir -p "$module_build"
+ln -sfn "$project/scripts/op3-camera-vcm-module.mk" "$module_build/Makefile"
+ln -sfn "$kernel/drivers/media/i2c/bu63165gwl.c" "$module_build/bu63165gwl.c"
+
+KBUILD_EXTRA_SYMBOLS="$symvers" \
+make -C "$kernel" O="$kout" ARCH=arm64 \
+  CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
+  M="$module_build" modules
+
+sha256sum "$module_build/bu63165gwl.ko"
+```
+
+Build the temporary static sweep helper:
+
+```bash
+aarch64-linux-gnu-gcc-11 -static -O2 -Wall -Wextra -Werror \
+  scripts/op3-v4l2-focus-test.c -o /tmp/op3-v4l2-focus-test
+sha256sum /tmp/op3-v4l2-focus-test
+```
+
+After booting the matching DTB and uploading the module/helper, locate the
+lens sub-device and run:
+
+```bash
+for n in /sys/class/video4linux/v4l-subdev*; do
+  printf '%s: ' "$(basename "$n")"
+  cat "$n/name"
+done
+
+modprobe bu63165gwl
+/newroot/tmp/op3-v4l2-focus-test /dev/v4l-subdevX 0 256 512 768 1023 512
+dmesg | grep -iE 'bu63165|vcm|focus|VAF|i2c'
+```
+
+The motor sweep PASS condition is a successful `VIDIOC_S_CTRL` at several
+positions with `VAF enabled voltage=2800000` and no I2C error, reboot, or
+camera-stream fault. This only proves lens movement. A later userspace
+contrast-measurement loop must capture frames and select the sharpest position
+before the feature can be called closed-loop autofocus.

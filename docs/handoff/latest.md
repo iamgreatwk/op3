@@ -1,5 +1,23 @@
 # Latest handoff
 
+## OP3 IMX298 BU63165GWL VCM autofocus actuator (owner build pending, 2026-09-09)
+
+The dedicated camera branch now contains nested-kernel commit `7b2a25d7cbb8`,
+archived as
+`patches/pmos612-op3-camera-imx298/0019-media-i2c-add-OP3-BU63165GWL-VCM-autofocus.patch`.
+The source adds a standard V4L2 lens sub-device at the original OP3 CCI0
+address `0x1c`, enables PM8994 L23 at 2.8 V while the lens is open, and uses
+the downstream four-byte position sequence `f0=0x90`, `f1=0`, `f2=position[15:8]`,
+`f3=position[7:0]`. It also links the lens from the IMX298 node with
+`lens-focus` and keeps OIS out of scope.
+
+This is intentionally only an actuator-control candidate: the module/DTB have
+not yet been built or device-tested, and it does not implement closed-loop
+autofocus or EEPROM infinity/macro calibration. The next PASS requires a
+multi-position V4L2 sweep, `VAF enabled voltage=2800000`, and no I2C, camera,
+SMMU, reboot, or thermal fault. Build/test details are in
+`docs/handoff/op3-camera-imx298-001.md`.
+
 ## OP3 IMX298 continuous RAW capture (device PASS, 2026-09-09)
 
 The temporary static V4L2 helper now supports an optional frame count and

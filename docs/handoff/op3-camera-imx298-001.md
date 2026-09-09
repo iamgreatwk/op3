@@ -5,7 +5,8 @@ Role: Implementation Agent
 Baseline commit: `67b0bbc3cbf46bae712a2606a43361756fcbd829`
 Working branch: `agent/implementation/op3-camera-imx298-001`
 Working tree: `source/linux-pmos-msm8996-6.12-camera-imx298`
-Commit SHA: `0274f7062cfe` (tip; previous exposure-control commit
+Commit SHA: `7b2a25d7cbb8` (tip; previous analogue-gain commit
+`0274f7062cfe`; previous exposure-control commit
 `e96efb4b1dd3`; previous CSI-2 link-control commit `cc609f6d10a1`; previous
 minimum RAW10 stream commit `a059fc816af6`; previous
 SMD-RPM registration candidate
@@ -13,6 +14,36 @@ SMD-RPM registration candidate
 `c298ff3e7197` was reverted by `8cce8d4643b3`)
 
 Layer: kernel camera / CCI / CAMSS
+
+## Current experiment: OP3 BU63165GWL VCM autofocus actuator (owner build pending)
+
+The dedicated camera branch now contains nested-kernel commit `7b2a25d7cbb8`,
+archived as
+`patches/pmos612-op3-camera-imx298/0019-media-i2c-add-OP3-BU63165GWL-VCM-autofocus.patch`.
+It adds an independent V4L2 lens sub-device for the ROHM BU63165GWL actuator
+found in the original OP3 IMX298 module. The device-tree node uses CCI0
+address `0x1c`, requests the existing PM8994 `vreg_l23a_2p8` regulator, and
+associates the lens through `lens-focus`.
+
+The write protocol is derived from the original OP3 downstream actuator
+configuration and `msm_actuator.c`: for a 10-bit position `p`, the driver sends
+`f0=0x90`, `f1=0`, `f2=p>>8`, and `f3=p&0xff`. The VAF rail is enabled only
+while the lens sub-device is open. This keeps the known-good IMX298 sensor
+power sequence unchanged and does not add the old OIS node.
+
+Hypothesis: the IMX298 module's BU63165GWL responds at CCI address `0x1c` when
+the missing 2.8 V VAF rail is enabled, and the original four-register sequence
+moves the lens. PASS requires the actuator module to probe, the temporary
+focus helper to apply multiple positions successfully, a `2800000` microvolt
+VAF log, and no I2C error, camera-stream fault, reboot, or thermal instability.
+This is a motor-control experiment, not yet a closed-loop autofocus result;
+infinity/macro EEPROM calibration and image-sharpness search remain separate.
+
+The module and DTB have not been built or tested on the device in this
+checkpoint. No Buildroot or integrated recovery image change is included.
+The external module config fragment is
+`kernel/configs/oneplus3-recovery-imx298-af.fragment`, and the motor-test
+helper source is `scripts/op3-v4l2-focus-test.c`.
 
 ## Device result: continuous RAW capture is stable (2026-09-09)
 
