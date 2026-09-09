@@ -149,7 +149,7 @@ make -C "$kernel" O="$kout" ARCH=arm64 \
   modules_prepare
 
 mkdir -p "$module_build"
-ln -sfn "$kernel/drivers/media/i2c/Makefile" "$module_build/Makefile"
+ln -sfn "$project/scripts/op3-imx298-module.mk" "$module_build/Makefile"
 ln -sfn "$kernel/drivers/media/i2c/imx298.c" "$module_build/imx298.c"
 
 KBUILD_EXTRA_SYMBOLS="$symvers" \
