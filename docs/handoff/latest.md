@@ -1,8 +1,22 @@
 # Latest handoff
 
+## OP3 IMX298 VIO through SMD-RPM LVS1 candidate (owner DTB build pending, 2026-09-09)
+
+The camera branch now contains nested-kernel commit `e5332d149d85`, archived as
+`patches/pmos612-op3-camera-imx298/0014-arm64-dts-qcom-route-OP3-IMX298-VIO-through-SMD-RPM-LVS1.patch`.
+It changes only the IMX298 `vio-supply` phandle from `vreg_s4a_1p8` to the
+SMD-RPM `vreg_lvs1a_1p8` output whose registration already passed a device
+boot test. All other camera resources and userspace inputs are unchanged.
+
+Hypothesis: IMX298 VIO is electrically connected to PM8994 LVS1. Build only
+the DTB, reuse the locked Image.gz, initrd, and camera module bundle, and use
+`fastboot boot`; do not flash or rebuild Buildroot. PASS requires a clean
+userspace boot, successful camera resource enable, and chip ID `0x0298`.
+Commands and evidence requirements are in `docs/handoff/op3-camera-imx298-001.md`.
+
 ## OP3 PM8994 LVS1 SMD-RPM declaration candidate (device PASS, 2026-09-09)
 
-The camera branch now contains nested-kernel commit `67630ec3b9e5`, archived as
+The camera branch contains nested-kernel commit `67630ec3b9e5`, archived as
 `patches/pmos612-op3-camera-imx298/0013-arm64-dts-qcom-register-OP3-LVS1-via-SMD-RPM.patch`.
 It registers PM8994 LVS1 below the OP3 board's actual
 `&rpm_requests` / `qcom,rpm-pm8994-regulators` SMD-RPM provider, adds the

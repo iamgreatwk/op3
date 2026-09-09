@@ -1,0 +1,25 @@
+From e5332d149d8591460f940974e26cca76d8d05d45 Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Wed, 9 Sep 2026 18:56:13 +0800
+Subject: [PATCH] arm64: dts: qcom: route OP3 IMX298 VIO through SMD RPM LVS1
+
+---
+ arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts b/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts
+index b287b6c296fc..c44df4d0f75c 100644
+--- a/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts
++++ b/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts
+@@ -162,7 +162,7 @@ imx298: camera-sensor@1a {
+ 		reg = <0x1a>;
+ 
+ 		vdig-supply = <&vreg_l3a_1p1>;
+-		vio-supply = <&vreg_s4a_1p8>;
++		vio-supply = <&vreg_lvs1a_1p8>;
+ 		vana-supply = <&vreg_l17a_2p6>;
+ 		custom1-supply = <&vreg_s5a_2p15>;
+ 
+-- 
+2.53.0
+

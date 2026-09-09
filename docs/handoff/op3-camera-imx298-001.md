@@ -5,12 +5,89 @@ Role: Implementation Agent
 Baseline commit: `67b0bbc3cbf46bae712a2606a43361756fcbd829`
 Working branch: `agent/implementation/op3-camera-imx298-001`
 Working tree: `source/linux-pmos-msm8996-6.12-camera-imx298`
-Commit SHA: `67630ec3b9e5` (tip; previous rejected direct-SPMI LVS1 candidate
+Commit SHA: `e5332d149d85` (tip; previous SMD-RPM registration candidate
+`67630ec3b9e5`; previous rejected direct-SPMI LVS1 candidate
 `c298ff3e7197` was reverted by `8cce8d4643b3`)
 
 Layer: kernel camera / CCI / CAMSS
 
-## Current next step: owner DTB-only test of the SMD-RPM LVS1 declaration
+## Current next step: owner DTB-only test of IMX298 VIO through SMD-RPM LVS1
+
+The SMD-RPM LVS1 registration candidate passed its isolated boot test:
+`vreg_lvs1a_1p8` and `lvs1` appeared in sysfs and the phone reached userspace.
+Commit `e5332d149d85` now changes exactly one downstream connection in the
+camera node: IMX298 `vio-supply` moves from `&vreg_s4a_1p8` to
+`&vreg_lvs1a_1p8`. The sensor driver, all other rails, GPIOs, MCLK, kernel
+image, initramfs, module bundle, and Buildroot remain unchanged.
+
+Hypothesis: the sensor's VIO must be supplied by the PM8994 LVS1 output rather
+than the always-on S4 rail. PASS requires boot to userspace, successful
+IMX298 resource enable, and a chip-ID read of `0x0298`; an early reboot, rail
+enable failure, or unchanged I2C `-6` is FAIL. Do not flash this candidate;
+use `fastboot boot` only.
+
+Owner build and package commands (DTB only; reuse the existing camera module
+bundle; no kernel image, module, or Buildroot rebuild):
+
+```sh
+project=/home/kai/src/oneplus3-mainline
+kernel=$project/source/linux-pmos-msm8996-6.12-camera-imx298
+baseout=$project/out/pmos-msm8996-6.12-camera-imx298-cci400
+kout=$project/out/pmos-msm8996-6.12-camera-imx298-vio-smd-lvs1
+fullout=$project/out/pmos-msm8996-6.12-recovery-audio-full-s1302-poll-drm100
+initrd=$project/artifacts/initrd-op3-recovery-buildroot-s1302-poll-drm100.cpio.gz
+bootimg=$project/artifacts/boot-oneplus3-pmos612-recovery-imx298-vio-smd-lvs1.img
+
+test "$(git -C "$kernel" rev-parse --short=12 HEAD)" = e5332d149d85
+test -r "$baseout/.config"
+mkdir -p "$kout"
+cp "$baseout/.config" "$kout/.config"
+
+make -C "$kernel" O="$kout" ARCH=arm64 \
+  CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
+  olddefconfig qcom/msm8996-oneplus3.dtb
+
+dtb=$kout/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dtb
+sha256sum "$dtb"
+test -r "$fullout/arch/arm64/boot/Image.gz"
+test -r "$initrd"
+
+"$project/scripts/pack-boot.sh" \
+  "$fullout/arch/arm64/boot/Image.gz" "$dtb" "$initrd" "$bootimg"
+sha256sum "$bootimg"
+fastboot boot "$bootimg"
+```
+
+After boot, upload and load the already hash-verified dependency bundle with
+explicit `insmod` paths. It contains the probe-only `imx298.ko`; do not
+unload `qcom-camss`:
+
+```sh
+scp -O "$project/artifacts/op3-imx298-probe-modules.tar.gz" \
+  root@172.16.42.1:/newroot/tmp/
+ssh root@172.16.42.1 '
+busybox gzip -dc /newroot/tmp/op3-imx298-probe-modules.tar.gz |
+  busybox tar -x -C /newroot
+module_root=/newroot/lib/modules/6.12.1-msm8996+/kernel
+insmod "$module_root/drivers/media/mc/mc.ko"
+insmod "$module_root/drivers/media/v4l2-core/videodev.ko"
+insmod "$module_root/drivers/media/v4l2-core/v4l2-async.ko"
+insmod "$module_root/drivers/media/v4l2-core/v4l2-fwnode.ko"
+insmod "$module_root/drivers/media/common/videobuf2/videobuf2-common.ko"
+insmod "$module_root/drivers/media/common/videobuf2/videobuf2-memops.ko"
+insmod "$module_root/drivers/media/common/videobuf2/videobuf2-dma-sg.ko"
+insmod "$module_root/drivers/media/common/videobuf2/videobuf2-v4l2.ko"
+insmod "$module_root/drivers/i2c/busses/i2c-qcom-cci.ko"
+insmod "$module_root/drivers/media/platform/qcom/camss/qcom-camss.ko"
+insmod "$module_root/drivers/media/i2c/imx298.ko"
+dmesg | grep -iE "imx298|camss|cci|csiphy|csid|vfe|media|lvs1|regulator"
+'
+```
+
+If the module path or kernel release differs, stop and inspect the archive
+layout; do not substitute a module built for another kernel release.
+
+## Previous next step: owner DTB-only test of the SMD-RPM LVS1 declaration
 
 The previous LVS1 attempt used the wrong DT topology: it added the node below
 `&pm8994_spmi_regulators`, while this OP3 board registers PM8994 switch rails
