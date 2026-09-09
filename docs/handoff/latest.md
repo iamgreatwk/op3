@@ -1,5 +1,25 @@
 # Latest handoff
 
+## OP3 IMX298 continuous RAW capture (device PASS, 2026-09-09)
+
+The temporary static V4L2 helper now supports an optional frame count and
+keeps one `STREAMON` active while dequeuing/requeueing buffers. Top-level
+commit `a8db609`; helper SHA256
+`d3617121452826dc5942b6364af656753820227b8784d9792fd2588d82b926d0`.
+
+On a clean CCI-400/SMD-RPM-LVS1 boot, exposure `893` and analogue gain `240`
+produced two complete consecutive `1476x834` RAW10 frames in one stream:
+`3082464` bytes total, SHA256
+`4ebe464ee5dccae7612b62560ebec5853faf372853a9bb301963d3ab0b4b325c`.
+The kernel showed normal stream start/stop and no VFE overflow or SMMU fault;
+temporal mean absolute difference was `0.781` RAW levels. A two-buffer
+one-frame restart experiment failed on the second start and was reverted in
+`feb6d85`, so the failure is associated with repeated stream lifecycle rather
+than buffer count. The next camera userspace should keep `STREAMON` active for
+preview/burst capture. The averaged diagnostic colour preview is
+`/tmp/op3-color-burst240-wb.png`, SHA256
+`36cf75f68b724027a1b07a8c9d35c1013d9fe402da689d65011044c7765c50f0`.
+
 ## OP3 IMX298 analogue gain control (device experiment supports hypothesis, 2026-09-09)
 
 The dedicated camera branch now contains nested-kernel commit `0274f7062cfe`,

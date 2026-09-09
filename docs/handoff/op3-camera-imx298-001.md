@@ -14,6 +14,33 @@ SMD-RPM registration candidate
 
 Layer: kernel camera / CCI / CAMSS
 
+## Device result: continuous RAW capture is stable (2026-09-09)
+
+The temporary V4L2 helper now accepts an optional frame count and keeps one
+`STREAMON` active while it dequeues and requeues buffers. The change is
+top-level commit `a8db609` and does not alter the kernel, DTS, camera module,
+Buildroot, or boot image. Helper SHA256:
+`d3617121452826dc5942b6364af656753820227b8784d9792fd2588d82b926d0`.
+
+On a clean boot, the helper captured two consecutive frames at exposure
+`893`, analogue gain `240`, and `1476x834` RAW10. Both frames were complete;
+the concatenated output was `3082464` bytes with SHA256
+`4ebe464ee5dccae7612b62560ebec5853faf372853a9bb301963d3ab0b4b325c`.
+The temporal mean absolute difference was `0.781` RAW levels, and the
+kernel logged normal stream start/stop with no VFE overflow or SMMU fault.
+
+This isolates the instability to the repeated one-frame `STREAMON` /
+`STREAMOFF` lifecycle. Changing the request from four MMAP buffers to two was
+also tested and failed on the second start, so that change was reverted in
+`feb6d85`. Camera userspace should keep the stream active for preview or a
+burst and only stop it when the camera session closes.
+
+The averaged host-side colour preview is `/tmp/op3-color-burst240-wb.png`
+(RAW10 unpack, RGGB bilinear demosaic, provisional black-level subtraction,
+and gray-world white balance), SHA256
+`36cf75f68b724027a1b07a8c9d35c1013d9fe402da689d65011044c7765c50f0`. It is
+still a diagnostic preview rather than calibrated ISP/JPEG output.
+
 ## Device result: first colour RAW preview (2026-09-09)
 
 The confirmed CCI-400/SMD-RPM-LVS1 boot image captured one complete frame
