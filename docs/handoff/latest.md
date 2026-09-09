@@ -1,6 +1,6 @@
 # Latest handoff
 
-## OP3 PM8994 LVS1 SMD-RPM declaration candidate (owner DTB build pending, 2026-09-09)
+## OP3 PM8994 LVS1 SMD-RPM declaration candidate (device PASS, 2026-09-09)
 
 The camera branch now contains nested-kernel commit `67630ec3b9e5`, archived as
 `patches/pmos612-op3-camera-imx298/0013-arm64-dts-qcom-register-OP3-LVS1-via-SMD-RPM.patch`.
@@ -14,8 +14,14 @@ Hypothesis: the earlier complete-DT LVS1 candidate rebooted because it used
 the direct SPMI provider instead of the board's SMD-RPM topology. Build only
 the DTB, reuse the locked Image.gz and Buildroot initrd, and use `fastboot
 boot`; do not flash, rebuild Buildroot, or unload CAMSS. PASS requires boot to
-userspace with an LVS1 regulator entry. Full commands and UART/pstore evidence
-requirements are in `docs/handoff/op3-camera-imx298-001.md`.
+userspace with an LVS1 regulator entry. The DTB SHA256 is
+`cc1a046822cf867b6deaf082458a64f3eeb98c38358b30ad9bc8d0aefa3d39cd` and the
+temporary boot image SHA256 is
+`4933bbeec5631113c2a7311ee68524ed31fc78bae39f9a3da7d9cc01025b5e63`.
+The phone reached userspace and exposed both `vreg_lvs1a_1p8` and `lvs1`.
+This is a device PASS for isolated regulator registration, not Integration
+acceptance and not an IMX298 chip-ID pass. Full commands and UART/pstore
+evidence requirements are in `docs/handoff/op3-camera-imx298-001.md`.
 
 ## OP3 PM8994 LVS1 complete-DT declaration test rejected (2026-09-09)
 

@@ -59,6 +59,24 @@ sha256sum "$bootimg"
 fastboot boot "$bootimg"
 ```
 
+Owner DTB-only build and device test: 2026-09-09. The candidate DTB SHA256
+is `cc1a046822cf867b6deaf082458a64f3eeb98c38358b30ad9bc8d0aefa3d39cd` and
+the temporary boot image SHA256 is
+`4933bbeec5631113c2a7311ee68524ed31fc78bae39f9a3da7d9cc01025b5e63`.
+`fastboot boot` reached userspace; the phone reported kernel
+`6.12.1-msm8996+` and remained up for at least two minutes. The device showed
+both `/sys/class/regulator/regulator.32` (`vreg_lvs1a_1p8`) and
+`/sys/class/regulator/regulator.76` (`lvs1`), each with `state=disabled` as
+expected for a registration-only test. The first evidence command also
+exposed that the recovery BusyBox `find` lacks `-printf`; the compatible loop
+in the handoff was used for the final result. No camera module was loaded and
+no image was flashed.
+
+Result: PASS for the isolated SMD-RPM LVS1 registration hypothesis; this is
+not Integration acceptance and does not establish IMX298 detection. The
+camera sensor still needs a separate VIO-routing or hardware-wiring
+experiment, with the current no-LVS1 DT remaining the safe control.
+
 After a successful boot, collect only the registration evidence:
 
 ```sh
