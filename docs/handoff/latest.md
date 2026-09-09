@@ -28,6 +28,11 @@ visible recovery UI after a `fastboot flash` boot with no computer USB host
 attached, followed by successful RNDIS/ACM availability when a host is
 connected.
 
+Owner then reported the no-USB-host condition working with the transient A/B
+image. This is recorded as a device PASS for the isolated hypothesis, not yet
+as final Integration acceptance: the host-attached RNDIS/ACM regression and a
+clean Buildroot rebuild from the committed source remain pending.
+
 ## OP3 rear IMX298 probe candidate (LVS1 node removed after early reboot, 2026-09-08)
 
 GitHub Issue #12 starts the camera layer with one isolated variable: rear Sony

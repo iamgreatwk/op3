@@ -30,27 +30,27 @@ Artifacts and SHA256:
   `sbin/init_mainline.sh` was replaced; it is an A/B test artifact, not yet a
   Buildroot reproducibility artifact.
 
-Device test run by project owner: NOT_RUN
-Device result: NOT_RUN
-Evidence links / log paths: source inspection found USB setup, ttyGS0 wait,
-  and ACM shell startup in init_mainline.sh before the inittab recovery
-  respawn. A no-USB boot log is still required to distinguish a USB-stage
-  stall from a bootloader/power or display failure.
+Device test run by project owner: YES (owner report, 2026-09-09)
+Device result: PASS for the no-USB-host boot condition; recovery became
+  visible with the A/B image after the computer USB was removed. Host-attached
+  RNDIS/ACM regression check is not recorded yet.
+Evidence links / log paths: owner reported that the candidate now boots and
+  displays recovery without a computer USB host. The candidate image and
+  hashes are recorded above; detailed device logs were not supplied.
 
 Conclusion: INCONCLUSIVE
 Uncertainties:
-  - The previous script had a finite ten-second ttyGS0 wait, so a short delay
-    alone would not explain a permanent blank screen.
-  - DWC3/extcon behavior without VBUS must still be observed on the device.
+  - The owner result is a no-host display PASS only; RNDIS/ACM behavior after
+    reconnecting a host still needs a separate check.
   - This candidate intentionally keeps USB/RNDIS/ACM available as an optional
     service; it does not change USB role policy or kernel configuration.
-Recommended next experiment: owner boots the transient image above with no
-  computer USB host attached, then repeats with the host attached. If the
-  candidate passes, rebuild the same change through Buildroot before making it
-  the locked artifact. Capture /root/boot_mainline.log,
-  /tmp/op3-recovery.log, /root/boot_status.txt, and filtered DWC3/FUSB301/UDC
-  dmesg. The PASS condition is a visible recovery UI with no USB host attached
-  and no regression of RNDIS/ACM when a host is later connected.
+Recommended next experiment: repeat once with the host attached and capture
+  /root/boot_mainline.log, /tmp/op3-recovery.log, /root/boot_status.txt, and
+  filtered DWC3/FUSB301/UDC dmesg. Then rebuild the same source through
+  Buildroot before making it the locked artifact. The Integration role can
+  promote the result after that reproducibility and regression check.
+The PASS condition is a visible recovery UI with no USB host attached and no
+regression of RNDIS/ACM when a host is later connected.
 ```
 
 Implementation note: `init_mainline.sh` now launches `setup_usb_debug` in the
