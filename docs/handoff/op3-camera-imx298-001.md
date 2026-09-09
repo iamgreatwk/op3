@@ -5,11 +5,84 @@ Role: Implementation Agent
 Baseline commit: `67b0bbc3cbf46bae712a2606a43361756fcbd829`
 Working branch: `agent/implementation/op3-camera-imx298-001`
 Working tree: `source/linux-pmos-msm8996-6.12-camera-imx298`
-Commit SHA: `8cce8d4643b3` (tip; rejected LVS1 candidate `c298ff3e7197`)
+Commit SHA: `67630ec3b9e5` (tip; previous rejected direct-SPMI LVS1 candidate
+`c298ff3e7197` was reverted by `8cce8d4643b3`)
 
 Layer: kernel camera / CCI / CAMSS
 
-## Next step: collect early-reboot evidence before another DTS experiment
+## Current next step: owner DTB-only test of the SMD-RPM LVS1 declaration
+
+The previous LVS1 attempt used the wrong DT topology: it added the node below
+`&pm8994_spmi_regulators`, while this OP3 board registers PM8994 switch rails
+under `&rpm_requests` with `compatible = "qcom,rpm-pm8994-regulators"`.
+Commit `67630ec3b9e5` adds the missing `vdd_lvs1_2-supply` and an `lvs1` child
+under that SMD-RPM node, matching the mainline MSM8996 PM8994 regulator
+layout. This is registration-only: IMX298 `vio-supply` remains
+`&vreg_s4a_1p8`, and the camera driver, kernel config, initramfs, and
+Buildroot are unchanged.
+
+Hypothesis: the earlier reboot was caused by declaring LVS1 through the
+wrong regulator provider, not by LVS1 itself. Only variable changed: the DT
+provider/topology for LVS1 registration. PASS requires boot to userspace and
+an LVS1 regulator entry; an early reboot, regulator probe failure, or no LVS1
+entry is FAIL. Do not flash this candidate; use `fastboot boot` only.
+
+Owner build and package commands (DTB only; no kernel image, module, or
+Buildroot rebuild):
+
+```sh
+project=/home/kai/src/oneplus3-mainline
+kernel=$project/source/linux-pmos-msm8996-6.12-camera-imx298
+baseout=$project/out/pmos-msm8996-6.12-camera-imx298-cci400
+kout=$project/out/pmos-msm8996-6.12-camera-imx298-rpm-lvs1-smd
+fullout=$project/out/pmos-msm8996-6.12-recovery-audio-full-s1302-poll-drm100
+initrd=$project/artifacts/initrd-op3-recovery-buildroot-s1302-poll-drm100.cpio.gz
+bootimg=$project/artifacts/boot-oneplus3-pmos612-recovery-imx298-rpm-lvs1-smd.img
+
+test "$(git -C "$kernel" rev-parse --short=12 HEAD)" = 67630ec3b9e5
+test -r "$baseout/.config"
+mkdir -p "$kout"
+cp "$baseout/.config" "$kout/.config"
+
+make -C "$kernel" O="$kout" ARCH=arm64 \
+  CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
+  olddefconfig qcom/msm8996-oneplus3.dtb
+
+dtb=$kout/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dtb
+sha256sum "$dtb"
+test -r "$fullout/arch/arm64/boot/Image.gz"
+test -r "$initrd"
+
+"$project/scripts/pack-boot.sh" \
+  "$fullout/arch/arm64/boot/Image.gz" "$dtb" "$initrd" "$bootimg"
+sha256sum "$bootimg"
+fastboot boot "$bootimg"
+```
+
+After a successful boot, collect only the registration evidence:
+
+```sh
+host=172.16.42.1
+ssh root@"$host" '
+set +e
+echo "--- regulator links ---"
+find /sys/class/regulator -maxdepth 1 -type l -printf "%f -> %l\n" | sort | grep -i lvs1
+echo "--- regulator names ---"
+for r in /sys/class/regulator/regulator*; do
+    [ -r "$r/name" ] || continue
+    name=$(cat "$r/name")
+    case "$name" in *lvs1*|*LVS1*) echo "$r: $name";; esac
+done
+echo "--- rpm/lvs dmesg ---"
+dmesg | grep -iE "rpm|lvs1|regulator|reboot|panic"
+'
+```
+
+If this candidate again reboots before userspace, do not try another DTS
+variant. On the next known-good boot run the pstore collection below; if it
+is mounted but empty, the required next diagnostic is physical MSM8996 UART.
+
+## Prior next step: collect early-reboot evidence before another DTS experiment
 
 The no-`LVS1` camera control boots, and the current 6.12 recovery line already
 has `CONFIG_PSTORE_RAM=y`, `CONFIG_PSTORE_CONSOLE=y`, and the OP3

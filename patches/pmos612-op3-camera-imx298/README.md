@@ -17,9 +17,12 @@ git am --3way patches/pmos612-op3-camera-imx298/000*.patch
 ```
 
 The camera series was exported from nested-kernel commits
-`c37102be3c5b..7fe1f2f950b2`. Its final checkpoint deliberately removes the
+`c37102be3c5b..67630ec3b9e5`. Patch `0012` deliberately removes the
 experimental PM8994 `lvs1 {}` DT child and keeps IMX298 VIO on the known-good
-`vreg_s4a_1p8`; the two preceding LVS1 experiments rebooted before userspace.
+`vreg_s4a_1p8`; the two preceding direct-SPMI LVS1 experiments rebooted
+before userspace. Patch `0013` is a new, isolated registration-only test using
+the OP3 board's actual `qcom,rpm-pm8994-regulators` SMD-RPM node; it does not
+route IMX298 VIO to LVS1.
 Patch `0009` is a separate CCI-bus-speed experiment: it changes only CCI0
 from the previous 1 MHz setting to the OP3 Android camera stack's 400 kHz
 fast mode. Patch `0010` is diagnostic-only: it adds power, reset, MCLK, rail,
@@ -43,6 +46,7 @@ GPIO39 VAF control; it does not add the crashing `lvs1` node.
 | `0010` | `c79909f9a448` | `e6c9f869e12545c1875889616fa27668ffb0981efb310c91bc170ffc43e4bd73` | Add power-on, reset, MCLK, rail, and chip-ID diagnostics. |
 | `0011` | `d247ce811242` | `4195cf9be185e6b7cead5baf6a8f56dfb2e61b6ac340772a9a9830a29992ede9` | Hold IMX298 in reset during probe setup. |
 | `0012` | `7fe1f2f950b2` | `5f066b1e2a1870a8142ac7204dfcd6322c56dda6ab020fdd25656214908c0ddf` | Follow the original OP3 IMX298 power order; add S5/CUSTOM1 and GPIO39/VAF. |
+| `0013` | `67630ec3b9e5` | `0113d8a19b38670460536dc8103f23d125b8740380d32969a16673491c3eae1e` | Register PM8994 LVS1 through the SMD-RPM topology, without changing camera VIO. |
 
 These patches provide probe support only. They do not provide camera modes,
 streaming, capture userspace, front IMX179, OIS, actuator, flash, or EEPROM

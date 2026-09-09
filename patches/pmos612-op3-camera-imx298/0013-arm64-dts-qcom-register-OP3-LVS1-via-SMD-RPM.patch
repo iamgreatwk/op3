@@ -1,0 +1,40 @@
+From 67630ec3b9e509ba9ebb242a6fdd113ac7636a2f Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Wed, 9 Sep 2026 18:47:24 +0800
+Subject: [PATCH] arm64: dts: qcom: register OP3 PM8994 LVS1 via SMD RPM
+
+---
+ arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi b/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi
+index e47f031e2e07..6caa03087ab0 100644
+--- a/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi
++++ b/arch/arm64/boot/dts/qcom/msm8996-oneplus-common.dtsi
+@@ -464,6 +464,9 @@ &rpm_requests {
+ 	regulators {
+ 		compatible = "qcom,rpm-pm8994-regulators";
+ 
++		/* OP3's PM8994 switch is controlled through the SMD RPM path. */
++		vdd_lvs1_2-supply = <&vreg_s4a_1p8>;
++
+ 		vreg_s3a_1p3: s3 {
+ 			regulator-name = "vreg_s3a_1p3";
+ 			regulator-min-microvolt = <1300000>;
+@@ -652,6 +655,13 @@ vreg_l32a_1p8: l32 {
+ 			regulator-min-microvolt = <1800000>;
+ 			regulator-max-microvolt = <1800000>;
+ 		};
++
++		/* Registration-only test; camera VIO remains on S4 for this boot A/B. */
++		vreg_lvs1a_1p8: lvs1 {
++			regulator-name = "vreg_lvs1a_1p8";
++			regulator-min-microvolt = <1800000>;
++			regulator-max-microvolt = <1800000>;
++		};
+ 	};
+ };
+ 
+-- 
+2.53.0
+

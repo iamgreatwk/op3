@@ -1,5 +1,22 @@
 # Latest handoff
 
+## OP3 PM8994 LVS1 SMD-RPM declaration candidate (owner DTB build pending, 2026-09-09)
+
+The camera branch now contains nested-kernel commit `67630ec3b9e5`, archived as
+`patches/pmos612-op3-camera-imx298/0013-arm64-dts-qcom-register-OP3-LVS1-via-SMD-RPM.patch`.
+It registers PM8994 LVS1 below the OP3 board's actual
+`&rpm_requests` / `qcom,rpm-pm8994-regulators` SMD-RPM provider, adds the
+`vdd_lvs1_2-supply` input, and leaves IMX298 VIO on the known-good
+`vreg_s4a_1p8`. This is an isolated regulator-registration test; it does not
+change the camera driver, module, initramfs, or Buildroot.
+
+Hypothesis: the earlier complete-DT LVS1 candidate rebooted because it used
+the direct SPMI provider instead of the board's SMD-RPM topology. Build only
+the DTB, reuse the locked Image.gz and Buildroot initrd, and use `fastboot
+boot`; do not flash, rebuild Buildroot, or unload CAMSS. PASS requires boot to
+userspace with an LVS1 regulator entry. Full commands and UART/pstore evidence
+requirements are in `docs/handoff/op3-camera-imx298-001.md`.
+
 ## OP3 PM8994 LVS1 complete-DT declaration test rejected (2026-09-09)
 
 The DTB-only candidate from nested-kernel commit `c298ff3e7197` added the
