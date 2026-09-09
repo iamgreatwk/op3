@@ -72,7 +72,7 @@ but the sensor still reported `imx298 5-001a: failed to read chip ID: -6`;
 no sensor driver binding or chip-ID pass was observed. This is a device FAIL
 for the CCI-speed hypothesis, not a camera-layer acceptance.
 
-The next diagnostic-only revision is commit `c79909f9a448`. It changes only
+This diagnostic-only revision is commit `c79909f9a448`. It changes only
 `drivers/media/i2c/imx298.c` logging: it records the reset GPIO logical value
 before/after assertion and release, each rail's `regulator_is_enabled()` and
 `regulator_get_voltage()` result, the bulk-enable return value, the MCLK
@@ -80,6 +80,25 @@ enable return value and effective rate, and separate results for the
 `0x0016`/`0x0017` chip-ID reads. It deliberately keeps the existing
 `GPIOD_OUT_LOW`, bulk regulator enable, reset timing, and CCI-400 DTS
 unchanged. No boot image or Buildroot rebuild is required for this revision.
+
+Diagnostic module device test: 2026-09-09 over SSH at `192.168.1.4`. The
+owner-built module SHA256 is
+`d9b5ea7a08a4a11840f95777f272eceb73750e8a9b16228d5b38ea3ce417c70f`.
+The old `imx298` module was removed with `rmmod` return code 0 and the
+diagnostic module was inserted with `insmod` return code 0; CAMSS and all
+dependencies were left loaded. The diagnostic output showed:
+
+- reset before assertion: logical `0`; asserted: logical `1`; released:
+  logical `0`;
+- `vdig`: enabled `1`, `1100000` µV; `vio`: enabled `1`, `1800000` µV;
+  `vana`: enabled `1`, `2600000` µV;
+- MCLK enable return `0`, effective rate `24000000` Hz;
+- chip-ID high register `0x0016`: return `-6`.
+
+After probe cleanup, VDIG and VANA became disabled while VIO remained enabled,
+confirming that the current VIO source is effectively always-on. This is a
+diagnostic PASS for the power/clock evidence, but the sensor probe remains a
+FAIL because the address still returns `-6`.
 
 Device test run: first candidate tested 2026-09-08 by direct agent access;
 both the direct-`LVS1` boot image and the `lvs1`-node-only control image
@@ -100,8 +119,8 @@ The direct test also found that unloading `qcom_camss` triggers a device
 kernel unload-time segfault; no further unload or broad I²C scan should be
 used in the next run.
 
-Conclusion: INCONCLUSIVE (the CCI-400 subexperiment failed; power-on
-diagnostic evidence is pending)
+Conclusion: INCONCLUSIVE (the CCI-400 subexperiment failed; diagnostics show
+the expected rails and 24 MHz MCLK, but the sensor still does not ACK)
 Uncertainties: The IMX298 ID register layout follows the existing Sony IMX318
 driver convention and must be confirmed on hardware. The first device run
 also showed no sensor I²C acknowledgement after the initial software stack
