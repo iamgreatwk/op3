@@ -141,12 +141,23 @@ closure. Reuse the already built and hash-verified
 the DTB changes in this experiment, so do not rebuild Buildroot or rebuild
 the module bundle.
 
-After boot, use the device's existing SSH path and run:
+After boot, upload and extract the module bundle under `/newroot`. The bundle
+is intentionally a minimal archive and does not contain `modules.dep`; use
+the explicit dependency order below rather than the initramfs `modprobe`:
 
 ```sh
-modprobe i2c-qcom-cci
-modprobe qcom-camss
-modprobe imx298
+module_root=/newroot/lib/modules/6.12.1-msm8996+/kernel
+insmod "$module_root/drivers/media/mc/mc.ko"
+insmod "$module_root/drivers/media/v4l2-core/videodev.ko"
+insmod "$module_root/drivers/media/v4l2-core/v4l2-async.ko"
+insmod "$module_root/drivers/media/v4l2-core/v4l2-fwnode.ko"
+insmod "$module_root/drivers/media/common/videobuf2/videobuf2-common.ko"
+insmod "$module_root/drivers/media/common/videobuf2/videobuf2-memops.ko"
+insmod "$module_root/drivers/media/common/videobuf2/videobuf2-dma-sg.ko"
+insmod "$module_root/drivers/media/common/videobuf2/videobuf2-v4l2.ko"
+insmod "$module_root/drivers/i2c/busses/i2c-qcom-cci.ko"
+insmod "$module_root/drivers/media/platform/qcom/camss/qcom-camss.ko"
+insmod "$module_root/drivers/media/i2c/imx298.ko"
 
 dmesg | grep -iE 'imx298|camss|cci|csiphy|csid|vfe|media'
 find /dev -maxdepth 1 \( -name 'media*' -o -name 'v4l-subdev*' -o -name 'video*' \) -ls
