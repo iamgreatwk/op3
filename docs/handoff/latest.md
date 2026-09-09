@@ -13,11 +13,20 @@ available.
 
 Only `boot/initramfs/sbin/init_mainline.sh` changes behavior; kernel, DTS,
 DRM/GPU, recovery, Wi-Fi, audio, Buildroot configuration, and boot cmdline
-are unchanged. Static shell and diff checks pass. The candidate is committed
-in `docs/handoff/op3-recovery-usb-independent-001.md`; Buildroot packaging and
-device validation are pending. The next PASS condition is a visible recovery
-UI after a `fastboot flash` boot with no computer USB host attached, followed
-by successful RNDIS/ACM availability when a host is connected.
+are unchanged. Static shell and diff checks pass. A transient A/B initramfs and
+boot image were repacked without a Buildroot rebuild:
+`artifacts/initrd-op3-recovery-buildroot-usb-independent-ab-20260909.cpio.gz`
+has SHA256
+`123bfec8cb818d69aa689ef86c0edf2c7a4cf4d98de07fcf3cd951f677344837`, and
+`artifacts/boot-oneplus3-pmos612-recovery-buildroot-usb-independent-ab-20260909.img`
+has SHA256
+`9ed9caf7efc083494c37865bf80a064b59ebcf5e8ea80a3c720f669fd9f6f267`.
+The candidate is committed in
+`docs/handoff/op3-recovery-usb-independent-001.md`; device validation and the
+subsequent clean Buildroot rebuild are pending. The next PASS condition is a
+visible recovery UI after a `fastboot flash` boot with no computer USB host
+attached, followed by successful RNDIS/ACM availability when a host is
+connected.
 
 ## OP3 rear IMX298 probe candidate (LVS1 node removed after early reboot, 2026-09-08)
 

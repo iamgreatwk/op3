@@ -7,7 +7,7 @@ Baseline commit: 24f369b1e14f4bb7cac32753687cdaffca42965
 Working branch: agent/implementation/recovery-browser-001
 Changed files: boot/initramfs/sbin/init_mainline.sh;
   docs/handoff/latest.md; docs/handoff/op3-recovery-usb-independent-001.md
-Commit SHA: pending
+Commit SHA: e3e9edd
 
 Layer: 02 recovery boot userspace / initramfs integration
 Hypothesis tested: optional USB gadget/ACM initialization in the synchronous
@@ -19,8 +19,16 @@ Only variable changed: whether optional USB debug initialization gates the
   recovery binary, and boot cmdline are unchanged.
 
 Build run by project owner: NOT_RUN
-Build result: source static check PASS; owner Buildroot rebuild NOT_RUN
-Artifacts and SHA256: no artifact generated
+Build result: source static check PASS; Buildroot rebuild NOT_RUN; transient
+  initramfs repack and boot-image packaging PASS
+Artifacts and SHA256:
+  `artifacts/initrd-op3-recovery-buildroot-usb-independent-ab-20260909.cpio.gz`
+  `123bfec8cb818d69aa689ef86c0edf2c7a4cf4d98de07fcf3cd951f677344837`;
+  `artifacts/boot-oneplus3-pmos612-recovery-buildroot-usb-independent-ab-20260909.img`
+  `9ed9caf7efc083494c37865bf80a064b59ebcf5e8ea80a3c720f669fd9f6f267`.
+  The initramfs was derived from the existing Buildroot rootfs and only its
+  `sbin/init_mainline.sh` was replaced; it is an A/B test artifact, not yet a
+  Buildroot reproducibility artifact.
 
 Device test run by project owner: NOT_RUN
 Device result: NOT_RUN
@@ -36,9 +44,10 @@ Uncertainties:
   - DWC3/extcon behavior without VBUS must still be observed on the device.
   - This candidate intentionally keeps USB/RNDIS/ACM available as an optional
     service; it does not change USB role policy or kernel configuration.
-Recommended next experiment: owner rebuilds only the Buildroot recovery
-  initramfs, repacks it with the already validated kernel/DTB, and tests both
-  no-host and host-attached boots. Capture /root/boot_mainline.log,
+Recommended next experiment: owner boots the transient image above with no
+  computer USB host attached, then repeats with the host attached. If the
+  candidate passes, rebuild the same change through Buildroot before making it
+  the locked artifact. Capture /root/boot_mainline.log,
   /tmp/op3-recovery.log, /root/boot_status.txt, and filtered DWC3/FUSB301/UDC
   dmesg. The PASS condition is a visible recovery UI with no USB host attached
   and no regression of RNDIS/ACM when a host is later connected.
