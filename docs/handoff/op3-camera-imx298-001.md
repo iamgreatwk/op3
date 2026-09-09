@@ -5,7 +5,7 @@ Role: Implementation Agent
 Baseline commit: `67b0bbc3cbf46bae712a2606a43361756fcbd829`
 Working branch: `agent/implementation/op3-camera-imx298-001`
 Working tree: `source/linux-pmos-msm8996-6.12-camera-imx298`
-Commit SHA: `306d4a364565` (tip; commits `c37102be3c5b..306d4a364565`)
+Commit SHA: `b0594dbd5bf4` (tip; commits `c37102be3c5b..b0594dbd5bf4`)
 
 Layer: kernel camera / CCI / CAMSS
 Hypothesis tested: The OP3 15801 rear IMX298 can be powered and identified on
@@ -26,12 +26,12 @@ Changed files:
 
 The DT uses the old 15801 evidence for GPIO30 reset/XCLR, GPIO13 MCLK0,
 24 MHz, CCI0 address `0x1a`, four CSI-2 lanes, and 1.1 V / 1.8 V / 2.6 V
-sensor rails. The VIO rail is now explicitly mapped to the PM8994 `LVS1`
-regulator in the previous candidate; the current checkpoint keeps the
-always-on RPM-request `vreg_s4a_1p8` and removes the experimental PM8994
-`lvs1 {}` child node. Both the direct `LVS1` mapping and the control test that
-retained only the node rebooted before userspace. The vendor Android mode
-tables were not copied.
+sensor rails. CCI0 is now set to 400 kHz, matching the old OP3 Android
+camera stack's I2C fast mode; the previous probe candidate used 1 MHz. The
+VIO rail is kept on the known-good always-on RPM-request `vreg_s4a_1p8`; the
+experimental PM8994 `lvs1 {}` child node remains removed. Both the direct
+`LVS1` mapping and the control test that retained only the node rebooted
+before userspace. The vendor Android mode tables were not copied.
 
 Build run by project owner: 2026-09-08. The DTB from `ec5025c75ff4` built
 successfully, but its direct-`LVS1` boot image rebooted immediately and did
@@ -72,27 +72,32 @@ The direct test also found that unloading `qcom_camss` triggers a device
 kernel unload-time segfault; no further unload or broad I²C scan should be
 used in the next run.
 
-Conclusion: INCONCLUSIVE
+Conclusion: INCONCLUSIVE (the prior 1 MHz CCI checkpoint)
 Uncertainties: The IMX298 ID register layout follows the existing Sony IMX318
 driver convention and must be confirmed on hardware. The first device run
 also showed no sensor I²C acknowledgement after the initial software stack
 was corrected. The driver intentionally does not implement formats, modes,
 or streaming, so this stage cannot produce a capture frame.
-Recommended next experiment: isolate the camera I²C/power sequence while
-keeping `306d4a364565` unchanged. Do not reintroduce `lvs1`, and do not change
-the clock, reset GPIO, CCI address, or driver in the next run. The boot path
-is now PASS; the camera probe remains INCONCLUSIVE.
+Recommended next experiment: build and test `b0594dbd5bf4`, which changes only
+the CCI0 bus rate from 1 MHz to 400 kHz. The old Android source defines I2C
+fast mode as 400 kHz and the OP3 camera configuration selects that mode;
+mainline `i2c-qcom-cci` maps the DT `clock-frequency` to the same controller
+mode. Do not reintroduce `lvs1`, or change the reset GPIO, CCI address, sensor
+MCLK, power rails, endpoint, or driver. PASS remains a clean
+`IMX298 probe passed: chip ID=0x0298` message with a registered V4L2 sensor
+sub-device and no CAMSS fault; FAIL is the unchanged `-ENXIO`/`-6` probe
+result. This experiment has not yet been built or tested on the device.
 
 Owner test commands:
 
 ```sh
 project=/home/kai/src/oneplus3-mainline
 kernel=$project/source/linux-pmos-msm8996-6.12-camera-imx298
-kout=$project/out/pmos-msm8996-6.12-camera-imx298-no-lvs1
+kout=$project/out/pmos-msm8996-6.12-camera-imx298-cci400
 base=$project/kernel/configs/oneplus3-recovery-audio-full.config
 fragment=$project/kernel/configs/oneplus3-recovery-imx298-probe.fragment
 
-test "$(git -C "$kernel" rev-parse HEAD)" = 306d4a364565
+test "$(git -C "$kernel" rev-parse --short=12 HEAD)" = b0594dbd5bf4
 git -C "$kernel" log -1 --oneline
 
 mkdir -p "$kout"
@@ -113,8 +118,9 @@ grep -E '^CONFIG_(VIDEO_IMX298|VIDEO_QCOM_CAMSS|I2C_QCOM_CCI)=' \
 sha256sum "$kout/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dtb"
 ```
 
-The owner should package the control DTB with the existing known-good
-Buildroot initramfs, then boot or flash according to the active test plan.
+The owner should package this DTB with the existing known-good Buildroot
+initramfs, then boot or flash according to the active test plan. This is a
+DTB-only experiment: do not rebuild the kernel Image.gz or Buildroot.
 The current deployed Buildroot rootfs also lacks the existing camera module
 closure. Reuse the already built and hash-verified
 `artifacts/op3-imx298-probe-modules.tar.gz`; it contains `imx298.ko`,

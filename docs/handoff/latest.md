@@ -33,23 +33,24 @@ image. This is recorded as a device PASS for the isolated hypothesis, not yet
 as final Integration acceptance: the host-attached RNDIS/ACM regression and a
 clean Buildroot rebuild from the committed source remain pending.
 
-## OP3 rear IMX298 probe candidate (LVS1 node removed after early reboot, 2026-09-08)
+## OP3 rear IMX298 probe candidate (CCI 400 kHz follow-up prepared, 2026-09-09)
 
 GitHub Issue #12 starts the camera layer with one isolated variable: rear Sony
 IMX298 probe support. The dedicated nested kernel worktree is
 `source/linux-pmos-msm8996-6.12-camera-imx298` on
 `agent/implementation/op3-camera-imx298-001`, based on the integrated kernel
-checkpoint `4f8595b13fbd`. The camera branch's control checkpoint ends at
-`306d4a364565` (the direct-`LVS1` change was `ec5025c75ff4`).
+checkpoint `4f8595b13fbd`. The prior no-`LVS1` control checkpoint ends at
+`306d4a364565` (the direct-`LVS1` change was `ec5025c75ff4`); the current
+camera tip is `b0594dbd5bf4`.
 
 The candidate adds a probe-only V4L2 driver, a binding, and OnePlus 3 15801
 CCI0/CAMSS DT wiring. It uses CCI address `0x1a`, GPIO30 reset/XCLR, GPIO13
 MCLK0, 24 MHz, four CSI-2 lanes, and the documented 1.1 V / 1.8 V / 2.6 V
-rails. The current DTS keeps camera VIO on the legacy always-on
-`vreg_s4a_1p8` and removes the experimental PM8994 `lvs1 {}` child node. It
-does not add Android camera blobs or mode tables, and it
-does not touch the front IMX179, OIS, actuator, flash, EEPROM, or camera
-userspace.
+rails. The current DTS sets CCI0 to 400 kHz, matching the old OP3 Android
+camera stack's fast mode, keeps camera VIO on the legacy always-on
+`vreg_s4a_1p8`, and removes the experimental PM8994 `lvs1 {}` child node. It
+does not add Android camera blobs or mode tables, and it does not touch the
+front IMX179, OIS, actuator, flash, EEPROM, or camera userspace.
 
 The owner-only DTB build for `ec5025c75ff4` passed, but the corresponding
 direct-`LVS1` boot image rebooted before userspace. The follow-up control image
@@ -62,16 +63,18 @@ of the previous DTB loaded the full module closure in dependency order; CAMSS
 created `/dev/video0`–`/dev/video5`, but the sensor still returned I²C error
 `-6` and did not bind. The failed temporary boot image was
 `artifacts/boot-oneplus3-pmos612-recovery-imx298-vio-lvs1.img` with SHA256
-`bb71fb07cd3461fdf3bd79ee272779db5f306f4d4c7f8e2497b6eecb36f79c43`. Use the candidate fragment
+`bb71fb07cd3461fdf3bd79ee272779db5f306f4d4c7f8e2497b6eecb36f79c43`.
 The successful no-`LVS1` control boot image has SHA256
 `176885492e91e1ac308bac146fa62f8daa5ad01d27335aa6f85e6fe233e932f4`; its
 DTB SHA256 is
 `51f494ef4f0a20697b0aecd8d4edbdd376a1614eda4959ef934735f4b75f4df3`.
-Use the candidate fragment
+The prior 1 MHz probe returned I²C `-6`; commit `b0594dbd5bf4` changes only
+CCI0 to 400 kHz for the next test. Use the candidate fragment
 `kernel/configs/oneplus3-recovery-imx298-probe.fragment` and the complete
 handoff at `docs/handoff/op3-camera-imx298-001.md`. The next PASS condition is
 a clean `IMX298 probe passed: chip ID=0x0298` log and a registered V4L2 sensor
-sub-device; capture is deliberately a separate follow-up.
+sub-device; capture is deliberately a separate follow-up. The 400 kHz DTB has
+not yet been built or tested on the device.
 
 ## OP3 recovery balanced CPU governor fix (userspace candidate device-tested, Buildroot pending, 2026-09-08)
 

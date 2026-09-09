@@ -17,9 +17,12 @@ git am --3way patches/pmos612-op3-camera-imx298/000*.patch
 ```
 
 The camera series was exported from nested-kernel commits
-`c37102be3c5b..306d4a364565`. Its final checkpoint deliberately removes the
+`c37102be3c5b..b0594dbd5bf4`. Its final checkpoint deliberately removes the
 experimental PM8994 `lvs1 {}` DT child and keeps IMX298 VIO on the known-good
 `vreg_s4a_1p8`; the two preceding LVS1 experiments rebooted before userspace.
+Patch `0009` is a separate CCI-bus-speed experiment: it changes only CCI0
+from the previous 1 MHz setting to the OP3 Android camera stack's 400 kHz
+fast mode.
 
 | Patch | Original commit | SHA256 | Purpose |
 | --- | --- | --- | --- |
@@ -31,6 +34,7 @@ experimental PM8994 `lvs1 {}` DT child and keeps IMX298 VIO on the known-good
 | `0006` | `ec5025c75ff4` | `dd59ccb4b74f1d7b28162bf32b4ec59b5f539884eb78f2893bc267333893f647` | Experimental LVS1 VIO mapping. |
 | `0007` | `a112a6f19fa2` | `f939375bc3c72b83eb3e9ba39946b4b7929a2d1d72112cd7d597e89699281977` | Isolate the LVS1 node boot test. |
 | `0008` | `306d4a364565` | `fdc67826a0690187d857f1e8e02750b06a4f87ca94a6fd20c967c7969a33c868` | Remove the crashing LVS1 node. |
+| `0009` | `b0594dbd5bf4` | `8c6a4424aa02e8ee81627e8ca9ba0ba2db6ff7305dff411549ec2dc150555f3b` | Use OP3 IMX298 CCI fast mode at 400 kHz. |
 
 These patches provide probe support only. They do not provide camera modes,
 streaming, capture userspace, front IMX179, OIS, actuator, flash, or EEPROM

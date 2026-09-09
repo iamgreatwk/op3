@@ -1,0 +1,26 @@
+From b0594dbd5bf43ad14fcee74202b915407c9dc3c8 Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Wed, 9 Sep 2026 16:49:23 +0800
+Subject: [PATCH] arm64: dts: qcom: use OP3 IMX298 CCI fast mode
+
+---
+ arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts b/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts
+index e8d9cf9a1706..431e82136f40 100644
+--- a/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts
++++ b/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dts
+@@ -139,7 +139,8 @@ &cci {
+ };
+ 
+ &cci_i2c0 {
+-	clock-frequency = <1000000>;
++	/* The OP3 Android camera stack selects CCI fast mode (400 kHz). */
++	clock-frequency = <400000>;
+ 
+ 	/* Rear Sony IMX298 at the OP3's CCI0 address 0x1a. */
+ 	imx298: camera-sensor@1a {
+-- 
+2.53.0
+
