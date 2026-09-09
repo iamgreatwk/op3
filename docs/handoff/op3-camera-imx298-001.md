@@ -5,7 +5,7 @@ Role: Implementation Agent
 Baseline commit: `67b0bbc3cbf46bae712a2606a43361756fcbd829`
 Working branch: `agent/implementation/op3-camera-imx298-001`
 Working tree: `source/linux-pmos-msm8996-6.12-camera-imx298`
-Commit SHA: `c298ff3e7197` (tip; previous candidate `7fe1f2f950b2`)
+Commit SHA: `8cce8d4643b3` (tip; rejected LVS1 candidate `c298ff3e7197`)
 
 Layer: kernel camera / CCI / CAMSS
 Hypothesis tested: The OP3 15801 rear IMX298 can be powered and identified on
@@ -263,6 +263,24 @@ device reboots before SSH. Do not unload CAMSS and do not rebuild Buildroot.
 
 Owner DTB-only build/test is pending. Reuse the known-good Image.gz and
 Buildroot initrd; do not build `imx298.ko` for this regulator-only test.
+
+Owner DTB build and device test: 2026-09-09. The candidate DTB SHA256 is
+`721a4a15c7366b5b3b44bfabea9f566b478d063a7fb9b036d4b93f4f5b45ab2b`; the
+temporary boot image is
+`artifacts/boot-oneplus3-pmos612-recovery-imx298-lvs1-decl-20260909.img`
+with SHA256
+`221f3077913f9ef393d57d1e2133638c694570851ca47354babd9dd08d48dc3e`.
+`fastboot boot` completed, but the phone rebooted back to fastboot before
+userspace and never exposed SSH. Adding the parent input supply therefore did
+not make the LVS1 path safe. Result: FAIL; the incomplete-parent hypothesis is
+rejected. Keep the known-good no-LVS1 DT as the camera control baseline. Any
+future LVS1 work requires early-boot UART or pstore evidence and must not be
+used in the normal recovery image.
+
+The nested camera branch was returned to the known-good no-LVS1 state by
+revert commit `8cce8d4643b3`. The rejected `c298ff3e7197` remains in history
+as the reproducible failed experiment; no destructive reset or history rewrite
+was used.
 
 Owner test commands:
 

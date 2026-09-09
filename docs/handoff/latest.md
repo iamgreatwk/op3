@@ -1,5 +1,20 @@
 # Latest handoff
 
+## OP3 PM8994 LVS1 complete-DT declaration test rejected (2026-09-09)
+
+The DTB-only candidate from nested-kernel commit `c298ff3e7197` added the
+PM8994 LVS1 parent input `vdd_lvs_1_2-supply = <&vreg_s4a_1p8>` together with
+the `lvs1 {}` node. Its DTB SHA256 was
+`721a4a15c7366b5b3b44bfabea9f566b478d063a7fb9b036d4b93f4f5b45ab2b`; the
+temporary boot image SHA256 was
+`221f3077913f9ef393d57d1e2133638c694570851ca47354babd9dd08d48dc3e`.
+`fastboot boot` sent the image successfully, but the phone rebooted to
+fastboot before userspace, with no SSH. The missing-parent hypothesis is
+therefore rejected. Keep LVS1 out of the normal recovery DT; future LVS1 work
+requires UART/pstore evidence and a separate early-boot regulator diagnostic.
+The camera branch was returned to the known-good no-LVS1 state by nested-kernel
+revert commit `8cce8d4643b3`; the failed candidate remains in history.
+
 ## OP3 PM8994 LVS1 complete-DT declaration candidate (owner DTB build pending, 2026-09-09)
 
 The camera branch has a new nested-kernel commit `c298ff3e7197` that adds
