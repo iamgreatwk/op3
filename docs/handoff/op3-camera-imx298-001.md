@@ -158,7 +158,7 @@ grep -qx 'CONFIG_VIDEO_IMX298=m' "$kout/.config"
 make -C "$kernel" O="$kout" ARCH=arm64 \
   CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
   olddefconfig \
-  arch/arm64/boot/dts/qcom/msm8996-oneplus3.dtb \
+  qcom/msm8996-oneplus3.dtb \
   modules_prepare
 
 mkdir -p "$module_build"
