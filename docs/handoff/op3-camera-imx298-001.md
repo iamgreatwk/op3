@@ -135,7 +135,11 @@ grep -qx 'CONFIG_VIDEO_IMX298=m' "$kout/.config"
 
 make -C "$kernel" O="$kout" ARCH=arm64 \
   CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
-  M=drivers/media/i2c imx298.ko
+  modules_prepare
+
+make -C "$kernel" O="$kout" ARCH=arm64 \
+  CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
+  drivers/media/i2c/imx298.ko
 
 sha256sum "$kout/drivers/media/i2c/imx298.ko"
 ```
