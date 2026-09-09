@@ -125,35 +125,39 @@ purpose is to select the next falsifiable experiment.
 Owner test commands:
 
 `modules_prepare` creates generated headers but intentionally does not create
-the kernel object needed by the in-tree `modpost` target. The existing full
-recovery output has the required `vmlinux.o` and the same
-`6.12.1-msm8996+` release and cross-compiler configuration. The in-tree
-target does not consume `KBUILD_EXTRA_SYMBOLS`, so expose that object in the
-camera output directory with a symlink:
+the kernel export table needed by `modpost`. The existing full recovery
+output has the required `Module.symvers` and the same `6.12.1-msm8996+`
+release and cross-compiler configuration. The in-tree single-target path
+does not consume `KBUILD_EXTRA_SYMBOLS`, so build this one source file through
+a temporary external-module wrapper under the output directory:
 
 ```sh
 project=/home/kai/src/oneplus3-mainline
 kernel=$project/source/linux-pmos-msm8996-6.12-camera-imx298
 kout=$project/out/pmos-msm8996-6.12-camera-imx298-cci400
 fullout=$project/out/pmos-msm8996-6.12-recovery-audio-full-s1302-poll-drm100
-vmlinux_obj=$fullout/vmlinux.o
+symvers=$fullout/Module.symvers
+module_build=$kout/imx298-module
 
 test "$(git -C "$kernel" rev-parse --short=12 HEAD)" = c79909f9a448
 git -C "$kernel" log -1 --oneline
 grep -qx 'CONFIG_VIDEO_IMX298=m' "$kout/.config"
-test -s "$vmlinux_obj"
+test -s "$symvers"
 
 make -C "$kernel" O="$kout" ARCH=arm64 \
   CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
   modules_prepare
 
-ln -sfn "$vmlinux_obj" "$kout/vmlinux.o"
+mkdir -p "$module_build"
+ln -sfn "$kernel/drivers/media/i2c/Makefile" "$module_build/Makefile"
+ln -sfn "$kernel/drivers/media/i2c/imx298.c" "$module_build/imx298.c"
 
+KBUILD_EXTRA_SYMBOLS="$symvers" \
 make -C "$kernel" O="$kout" ARCH=arm64 \
   CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
-  drivers/media/i2c/imx298.ko
+  M="$module_build" modules
 
-sha256sum "$kout/drivers/media/i2c/imx298.ko"
+sha256sum "$module_build/imx298.ko"
 ```
 
 This is a module-only build. Do not rebuild `Image.gz`, the DTB, Buildroot,
@@ -167,7 +171,7 @@ V4L2/Media dependencies. Upload the newly built module separately so the old
 driver is not loaded:
 
 ```sh
-scp -O "$kout/drivers/media/i2c/imx298.ko" \
+scp -O "$module_build/imx298.ko" \
   root@172.16.42.1:/newroot/tmp/imx298-diagnostic.ko
 ```
 
