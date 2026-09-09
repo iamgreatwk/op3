@@ -134,7 +134,15 @@ DTB SHA256
 `91da5fe9f15ef61114fe9c4f37d0b19aebab1e68ab617f957bdce2c665bea28b`, and
 temporary boot image SHA256
 `6009fd778e47dab26dd6e33b5fa79062f29875955e0d9e88da1d303836e653ec`.
-Device testing is pending; no image has been flashed.
+Device test: 2026-09-09 over SSH at `172.16.42.1` after `fastboot boot`.
+The new module inserted with `insmod` return code 0, and the archived camera
+dependency bundle loaded successfully; CAMSS created `/dev/video0` through
+`/dev/video5`. The new log confirmed VANA 2.6 V, VDIG 1.1 V, VIO 1.8 V,
+VAF GPIO39 logical 1, CUSTOM1 2.15 V, MCLK 24 MHz, and RESET logical 1 to 0.
+The sensor still returned `chip-id-high read reg=0x0016 rc=-6`, then cleaned
+up its switchable rails; `/sys/bus/i2c/devices/5-001a` remained unbound.
+Result: FAIL for the original-power-resource-sequence hypothesis. No image
+was flashed.
 
 The next owner build must produce both the new DTB and the new external
 `imx298.ko`; the old CCI-400 image cannot test the new supply/GPIO properties.
