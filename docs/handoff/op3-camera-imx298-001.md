@@ -126,8 +126,15 @@ cleanup. The DTS adds `custom1-supply = <&vreg_s5a_2p15>`,
 `vaf-gpios = <&tlmm 39 GPIO_ACTIVE_HIGH>`, and GPIO39 active/sleep states.
 The known-good `vreg_s4a_1p8` remains VIO; the crashing `lvs1` node is not
 reintroduced. No sensor mode table, stream operation, or Buildroot content
-was changed. Static `checkpatch.pl` and `git diff --check` passed; no device
-test or kernel build has been run for this commit.
+was changed. Static `checkpatch.pl` and `git diff --check` passed. The
+owner-authorized agent build completed on 2026-09-09 using the existing
+CCI-400 configuration: `imx298.ko` SHA256
+`47052972b47ac33611686be017322fb329e9088a9ad18e39466eea9dc4fc2a65`, new
+DTB SHA256
+`91da5fe9f15ef61114fe9c4f37d0b19aebab1e68ab617f957bdce2c665bea28b`, and
+temporary boot image SHA256
+`6009fd778e47dab26dd6e33b5fa79062f29875955e0d9e88da1d303836e653ec`.
+Device testing is pending; no image has been flashed.
 
 The next owner build must produce both the new DTB and the new external
 `imx298.ko`; the old CCI-400 image cannot test the new supply/GPIO properties.
