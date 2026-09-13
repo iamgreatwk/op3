@@ -36,9 +36,10 @@
 #define MAX_BUFFERS 8
 #define MAX_PIPELINE_ENTITIES 8
 #define MAX_FOCUS_SWEEP 8
-#define MAX_FRAME_COUNT 100
+#define MAX_FRAME_COUNT 256
 #define FOCUS_SETTLE_US 150000
 #define FOCUS_SAMPLE_FRAMES 3
+#define MIN_SWEEP_FRAMES_PER_POSITION 24
 #define MIN_READY_FRAMES 4
 #define DEFAULT_FRAME_COUNT 30
 #define DEFAULT_FOCUS_POSITION 640
@@ -1312,7 +1313,8 @@ static int parse_options(int argc, char **argv, struct test_options *options)
 	    options->focus_position > 1023)
 		return -ERANGE;
 	if (options->sweep_count &&
-	    options->frame_count < MIN_READY_FRAMES + options->sweep_count * 3)
+	    options->frame_count < MIN_READY_FRAMES +
+	    options->sweep_count * MIN_SWEEP_FRAMES_PER_POSITION)
 		return -ERANGE;
 	return 0;
 }
