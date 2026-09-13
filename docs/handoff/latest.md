@@ -18,9 +18,12 @@ protocol. See [op3-af-g2-vendor-constraints.md](op3-af-g2-vendor-constraints.md)
 Do not guess-write registers or integrate OIS firmware. A clean formal G3 run
 now completed 128/128 RAW10 frames, collected three frames at each of the five
 positions, and returned `ioctl_rc=0` for every VCM command without VFE/SMMU
-errors. The scene was dark and low-texture, however, and Tenengrad varied by
-only about 1%, so optical lens motion remains inconclusive; the next run must
-use a well-lit high-contrast target before entering closed-loop AF.
+errors. A second clean run with the phone aimed at high-contrast display text
+also completed 128/128 frames, but the five position scores differed by only
+about 0.30% and the recovered text remained similarly blurred. VCM communication
+is therefore proven, while optical lens motion remains inconclusive; the next
+step is the source-backed actuator-init/electrical G2 investigation, not closed-
+loop AF or guessed register writes.
 
 ## OP3 autofocus G1 continuous-stream focus test (device evidence PASS, 2026-09-13)
 
