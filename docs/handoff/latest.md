@@ -1,5 +1,15 @@
 # Latest handoff
 
+## OP3 autofocus G0 protocol audit (2026-09-13)
+
+G0 的主机端协议审计已完成，结果为 **INCONCLUSIVE**，记录在
+[op3-af-protocol-audit.md](op3-af-protocol-audit.md)。同机型下游代码支持
+`reg=0x1c` 经 `i2c_addr >> 1` 得到 Linux CCI 地址 `0x0e`，以及
+`f0 90 00 position_hi position_lo` 的位置写入；VAF 2.8 V、AF_PWDM 高电平和
+2--3 ms 上电等待也有来源。离线 Android actuator/OIS 库是 stripped 32 位 ELF，
+无法证明 AF 初始化表、状态读回、校准范围、park 位或固件依赖，因此本阶段没有
+改代码或编译。下一步是 G1 的连续出帧 + 单次位置命令对照，不能先移植整套 OIS。
+
 ## OP3 autofocus execution handoff and evidence correction (2026-09-13)
 
 Current camera source is `004cda8e061387d07ab4dd08c474910eedd3eb24` on
