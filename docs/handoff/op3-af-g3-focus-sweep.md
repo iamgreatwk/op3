@@ -33,7 +33,7 @@ Only variable changed: VCM position；内核、DTS、CCI、曝光、增益、采
 ```sh
 aarch64-linux-gnu-gcc-11 -static -O2 -Wall -Wextra -Werror -pthread \
   scripts/op3-v4l2-af-stream-test.c \
-  -o out/op3-af-g3-helper-20260913/op3-v4l2-af-stream-test.aarch64
+  -o out/op3-af-g3-helper-20260913-v2/op3-v4l2-af-stream-test.aarch64
 ```
 
 本轮构建结果：`BUILD_PASS`。提交 `e3d0136` 将最大帧数提高到 256，并要求每个
