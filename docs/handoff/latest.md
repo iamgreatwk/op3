@@ -1,5 +1,24 @@
 # Latest handoff
 
+## OP3 autofocus G3 sweep tool correction and vendor G2 constraints (2026-09-13)
+
+The G3 helper now waits 150 ms after each VCM command and saves three consecutive
+RAW10 frames per position while keeping one continuous `STREAMON` and the same
+lens fd. The host and ARM64 builds passed; the corrected helper hashes and the
+device-test procedure are recorded in
+[op3-af-g3-focus-sweep.md](op3-af-g3-focus-sweep.md). The earlier five-position
+run was only a communication/采集初筛 because it sampled too early and one frame
+per position; its flat sharpness result is not a final optical verdict.
+
+The G2 static audit found no safe, source-backed BU63165GWL initialization or
+status sequence to port. Vendor data confirms the original 8-bit address `0x1c`
+(Linux `0x0e`) and the four-byte position payload, while the stripped actuator
+library and available persist backup do not expose AF init bytes or calibration
+protocol. See [op3-af-g2-vendor-constraints.md](op3-af-g2-vendor-constraints.md).
+Do not guess-write registers or integrate OIS firmware; first repeat strict G3,
+then obtain electrical/runtime vendor evidence if optical movement remains
+unproven.
+
 ## OP3 autofocus G1 continuous-stream focus test (device evidence PASS, 2026-09-13)
 
 G1 的用户态 helper 已完成并提交为

@@ -35,6 +35,10 @@
 #define MAX_VIDEO_NODES 64
 #define MAX_BUFFERS 8
 #define MAX_PIPELINE_ENTITIES 8
+#define MAX_FOCUS_SWEEP 8
+#define MAX_FRAME_COUNT 100
+#define FOCUS_SETTLE_US 150000
+#define FOCUS_SAMPLE_FRAMES 3
 #define MIN_READY_FRAMES 4
 #define DEFAULT_FRAME_COUNT 30
 #define DEFAULT_FOCUS_POSITION 640
@@ -59,6 +63,8 @@ struct test_options {
 	int focus_position;
 	int exposure;
 	int gain;
+	int sweep_positions[MAX_FOCUS_SWEEP];
+	unsigned int sweep_count;
 	const char *output_prefix;
 };
 
@@ -90,6 +96,7 @@ struct test_context {
 	int ready;
 	unsigned int pipeline_entity_count;
 	char pipeline_entities[MAX_PIPELINE_ENTITIES][64];
+	int sweep_save_position[MAX_FRAME_COUNT];
 	char media_path[64];
 	char sensor_path[64];
 	char lens_path[64];
@@ -783,6 +790,28 @@ static int save_frame(struct test_context *context, unsigned int frame,
 	return ret;
 }
 
+static int save_focus_frame(struct test_context *context, int position,
+				    unsigned int frame, const void *data,
+				    size_t length)
+{
+	char path[256];
+	int fd;
+	int ret;
+
+	snprintf(path, sizeof(path), "%s-pos-%04d-frame-%04u.raw",
+		 context->options.output_prefix, position, frame);
+	fd = open(path, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0600);
+	if (fd < 0)
+		return -errno;
+	ret = write_all(fd, data, length);
+	if (close(fd) < 0 && !ret)
+		ret = -errno;
+	if (ret)
+		fprintf(stderr, "focus sample position=%d output=%s failed errno=%d(%s)\n",
+			position, path, -ret, strerror(-ret));
+	return ret;
+}
+
 static void set_stop(struct test_context *context, int capture_error,
 			     int error_number)
 {
@@ -822,6 +851,7 @@ static void *capture_thread(void *argument)
 		unsigned int index;
 		size_t bytes;
 		long long host_timestamp;
+		int focus_position = -1;
 
 		if (should_stop(context))
 			break;
@@ -859,6 +889,12 @@ static void *capture_thread(void *argument)
 			break;
 		}
 		bytes = planes[0].bytesused;
+		pthread_mutex_lock(&context->lock);
+		context->frames_seen = frame + 1;
+		if (frame < MAX_FRAME_COUNT)
+			focus_position = context->sweep_save_position[frame];
+		pthread_cond_broadcast(&context->condition);
+		pthread_mutex_unlock(&context->lock);
 		host_timestamp = monotonic_us();
 		printf("frame=%u host_us=%lld sequence=%u timestamp=%lld.%06ld buffer=%u bytes=%zu flags=0x%x data_offset=%u\n",
 		       frame, host_timestamp, buffer.sequence,
@@ -872,8 +908,14 @@ static void *capture_thread(void *argument)
 				frame, !!(buffer.flags & V4L2_BUF_FLAG_ERROR), bytes,
 				context->buffers[index].length);
 		} else {
-			ret = save_frame(context, frame, context->buffers[index].address,
-					 bytes);
+			if (context->options.sweep_count && focus_position >= 0)
+				ret = save_focus_frame(context, focus_position, frame,
+						      context->buffers[index].address, bytes);
+			else if (!context->options.sweep_count)
+				ret = save_frame(context, frame, context->buffers[index].address,
+						 bytes);
+			else
+				ret = 0;
 			if (ret) {
 				set_stop(context, 1, -ret);
 				break;
@@ -927,6 +969,8 @@ static int choose_focus_position(struct test_context *context,
 	return position;
 }
 
+static int run_focus_sweep(struct test_context *context);
+
 static void *focus_thread(void *argument)
 {
 	struct test_context *context = argument;
@@ -958,6 +1002,19 @@ static void *focus_thread(void *argument)
 	printf("lens opened path=%s fd=%d\n", context->lens_path,
 	       context->lens_fd);
 	print_runtime_state(context, "after-lens-open");
+	if (context->options.sweep_count) {
+		ret = run_focus_sweep(context);
+		if (ret) {
+			context->focus_result = -1;
+			context->focus_errno = -ret;
+			fprintf(stderr, "focus sweep failed errno=%d(%s)\n",
+				-ret, strerror(-ret));
+			set_stop(context, 1, -ret);
+		} else {
+			context->focus_result = 0;
+		}
+		goto wait_capture;
+	}
 
 	memset(&control, 0, sizeof(control));
 	control.id = V4L2_CID_FOCUS_ABSOLUTE;
@@ -995,6 +1052,93 @@ wait_capture:
 	context->lens_fd = -1;
 	printf("lens closed\n");
 	return NULL;
+}
+
+static int parse_focus_sweep(const char *text, struct test_options *options)
+{
+	char *copy;
+	char *saveptr = NULL;
+	char *token;
+
+	copy = strdup(text);
+	if (!copy)
+		return -ENOMEM;
+	for (token = strtok_r(copy, ",", &saveptr); token;
+	     token = strtok_r(NULL, ",", &saveptr)) {
+		char *end;
+		long value;
+
+		if (options->sweep_count >= MAX_FOCUS_SWEEP) {
+			free(copy);
+			return -E2BIG;
+		}
+		value = strtol(token, &end, 10);
+		if (*token == '\0' || *end != '\0' || value < 0 || value > 1023) {
+			free(copy);
+			return -EINVAL;
+		}
+		options->sweep_positions[options->sweep_count++] = (int)value;
+	}
+	free(copy);
+	return options->sweep_count >= 2 ? 0 : -EINVAL;
+}
+
+static int run_focus_sweep(struct test_context *context)
+{
+	unsigned int i;
+
+	for (i = 0; i < context->options.sweep_count; i++) {
+		struct v4l2_control control = {
+			.id = V4L2_CID_FOCUS_ABSOLUTE,
+			.value = context->options.sweep_positions[i],
+		};
+		unsigned int first_sample_frame;
+		unsigned int last_sample_frame;
+		struct timespec settle = {
+			.tv_sec = FOCUS_SETTLE_US / 1000000,
+			.tv_nsec = (FOCUS_SETTLE_US % 1000000) * 1000,
+		};
+		long long command_us;
+		int ret;
+
+		ret = xioctl(context->lens_fd, VIDIOC_S_CTRL, &control);
+		command_us = monotonic_us();
+		printf("sweep focus position=%d command_us=%lld ioctl_rc=%d\n",
+		       control.value, command_us, ret);
+		if (ret < 0)
+			return -errno;
+
+		/* Keep capture running while the VCM settles; do not hold its queue lock. */
+		nanosleep(&settle, NULL);
+		pthread_mutex_lock(&context->lock);
+		if (context->capture_done || context->stop) {
+			pthread_mutex_unlock(&context->lock);
+			return -ECANCELED;
+		}
+		first_sample_frame = context->frames_seen;
+		last_sample_frame = first_sample_frame + FOCUS_SAMPLE_FRAMES - 1;
+		if (last_sample_frame >= MAX_FRAME_COUNT ||
+		    last_sample_frame >= context->options.frame_count) {
+			pthread_mutex_unlock(&context->lock);
+			return -ENOSPC;
+		}
+		for (unsigned int frame = first_sample_frame;
+		     frame <= last_sample_frame; frame++)
+			context->sweep_save_position[frame] = control.value;
+		pthread_cond_broadcast(&context->condition);
+		while (context->frames_seen <= last_sample_frame &&
+		       !context->capture_done && !context->stop)
+			pthread_cond_wait(&context->condition, &context->lock);
+		ret = context->frames_seen > last_sample_frame ? 0 : -ETIMEDOUT;
+		pthread_mutex_unlock(&context->lock);
+		if (ret)
+			return ret;
+		printf("sweep samples position=%d first_frame=%u last_frame=%u "
+		       "count=%u settle_us=%u\n", control.value,
+		       first_sample_frame, last_sample_frame,
+		       FOCUS_SAMPLE_FRAMES, FOCUS_SETTLE_US);
+	}
+	return 0;
 }
 
 static int prepare_video(struct test_context *context)
@@ -1112,7 +1256,7 @@ static void usage(const char *program)
 {
 	fprintf(stderr,
 		"usage: %s [--frames N] [--focus N] [--exposure N] [--gain N] "
-		"[--output-prefix PATH]\n",
+		"[--sweep P0,P1,...] [--output-prefix PATH]\n",
 		program);
 }
 
@@ -1140,6 +1284,13 @@ static int parse_options(int argc, char **argv, struct test_options *options)
 			options->output_prefix = argv[++i];
 			continue;
 		}
+		if (!strcmp(argument, "--sweep")) {
+			int ret = parse_focus_sweep(argv[++i], options);
+
+			if (ret)
+				return ret;
+			continue;
+		}
 		if (i + 1 >= argc)
 			return -EINVAL;
 		value = strtol(argv[++i], &end, 10);
@@ -1157,8 +1308,11 @@ static int parse_options(int argc, char **argv, struct test_options *options)
 			return -EINVAL;
 	}
 	if (options->frame_count < MIN_READY_FRAMES ||
-	    options->frame_count > 100 || options->focus_position < 0 ||
+	    options->frame_count > MAX_FRAME_COUNT || options->focus_position < 0 ||
 	    options->focus_position > 1023)
+		return -ERANGE;
+	if (options->sweep_count &&
+	    options->frame_count < MIN_READY_FRAMES + options->sweep_count * 3)
 		return -ERANGE;
 	return 0;
 }
@@ -1169,6 +1323,7 @@ int main(int argc, char **argv)
 	struct test_context context;
 	pthread_t capture_thread_id;
 	pthread_t focus_thread_id;
+	unsigned int i;
 	int ret;
 
 	memset(&context, 0, sizeof(context));
@@ -1178,6 +1333,8 @@ int main(int argc, char **argv)
 	context.focus_result = 1;
 	context.focus_cache = -1;
 	context.focus_sent_position = -1;
+	for (i = 0; i < MAX_FRAME_COUNT; i++)
+		context.sweep_save_position[i] = -1;
 	ret = parse_options(argc, argv, &context.options);
 	if (ret == 1)
 		return 0;
@@ -1275,9 +1432,11 @@ out_sync:
 	pthread_cond_destroy(&context.condition);
 	pthread_mutex_destroy(&context.lock);
 	if (ret < 0)
-		fprintf(stderr, "G1 result=FAIL rc=%d errno=%d(%s)\n", ret, -ret,
+		fprintf(stderr, "%s result=FAIL rc=%d errno=%d(%s)\n",
+			context.options.sweep_count ? "G3" : "G1", ret, -ret,
 			strerror(-ret));
 	else
-		printf("G1 result=PASS capture-ready-and-focus-ioctl-returned\n");
+		printf("%s result=PASS capture-ready-and-focus-ioctl-returned\n",
+		       context.options.sweep_count ? "G3" : "G1");
 	return ret < 0 ? 1 : 0;
 }
