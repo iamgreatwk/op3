@@ -15,9 +15,12 @@ status sequence to port. Vendor data confirms the original 8-bit address `0x1c`
 (Linux `0x0e`) and the four-byte position payload, while the stripped actuator
 library and available persist backup do not expose AF init bytes or calibration
 protocol. See [op3-af-g2-vendor-constraints.md](op3-af-g2-vendor-constraints.md).
-Do not guess-write registers or integrate OIS firmware; first repeat strict G3,
-then obtain electrical/runtime vendor evidence if optical movement remains
-unproven.
+Do not guess-write registers or integrate OIS firmware. A clean formal G3 run
+now completed 128/128 RAW10 frames, collected three frames at each of the five
+positions, and returned `ioctl_rc=0` for every VCM command without VFE/SMMU
+errors. The scene was dark and low-texture, however, and Tenengrad varied by
+only about 1%, so optical lens motion remains inconclusive; the next run must
+use a well-lit high-contrast target before entering closed-loop AF.
 
 ## OP3 autofocus G1 continuous-stream focus test (device evidence PASS, 2026-09-13)
 
