@@ -34,6 +34,7 @@
 #define MAX_SUBDEV_NODES 64
 #define MAX_VIDEO_NODES 64
 #define MAX_BUFFERS 8
+#define MAX_PIPELINE_ENTITIES 8
 #define MIN_READY_FRAMES 4
 #define DEFAULT_FRAME_COUNT 30
 #define DEFAULT_FOCUS_POSITION 640
@@ -87,6 +88,8 @@ struct test_context {
 	int capture_done;
 	int stop;
 	int ready;
+	unsigned int pipeline_entity_count;
+	char pipeline_entities[MAX_PIPELINE_ENTITIES][64];
 	char media_path[64];
 	char sensor_path[64];
 	char lens_path[64];
@@ -333,6 +336,30 @@ static int media_entity_index(const struct media_graph *graph, uint32_t id)
 	return -1;
 }
 
+static int pipeline_entity_selected(const struct test_context *context,
+					    const char *name)
+{
+	unsigned int i;
+
+	for (i = 0; i < context->pipeline_entity_count; i++)
+		if (!strcmp(context->pipeline_entities[i], name))
+			return 1;
+	return 0;
+}
+
+static int pipeline_entity_add(struct test_context *context, const char *name)
+{
+	if (pipeline_entity_selected(context, name))
+		return 0;
+	if (context->pipeline_entity_count >= MAX_PIPELINE_ENTITIES)
+		return -ENOSPC;
+	strncpy(context->pipeline_entities[context->pipeline_entity_count], name,
+		sizeof(context->pipeline_entities[0]) - 1);
+	context->pipeline_entities[context->pipeline_entity_count][sizeof(context->pipeline_entities[0]) - 1] = '\0';
+	context->pipeline_entity_count++;
+	return 0;
+}
+
 static void media_print_graph(const struct media_graph *graph)
 {
 	uint32_t i;
@@ -380,7 +407,7 @@ static int select_media_graph(struct test_context *context)
 		for (uint32_t entity = 0; entity < graph.topology.num_entities;
 		     entity++) {
 			if (contains_ci(graph.entities[entity].name, "imx298"))
-				context->ready = 1;
+				context->ready |= 1;
 			if (contains_ci(graph.entities[entity].name, "vfe0_rdi0"))
 				context->ready |= 2;
 		}
@@ -565,6 +592,12 @@ static int enable_media_path(struct test_context *context)
 			ret = -EINVAL;
 			goto out;
 		}
+		ret = pipeline_entity_add(context, source_entity->name);
+		if (ret)
+			goto out;
+		ret = pipeline_entity_add(context, sink_entity->name);
+		if (ret)
+			goto out;
 		printf("media selected link %s:%u -> %s:%u flags=0x%x\n",
 		       source_entity->name, source->index, sink_entity->name,
 		       sink->index, link->flags);
@@ -646,7 +679,7 @@ static int configure_subdev(const char *path, const char *name)
 	return configured;
 }
 
-static int configure_pipeline_subdevs(void)
+static int configure_pipeline_subdevs(const struct test_context *context)
 {
 	char path[64];
 	char name[128];
@@ -661,6 +694,8 @@ static int configure_pipeline_subdevs(void)
 		    !contains_ci(name, "csid") &&
 		    !contains_ci(name, "ispif") &&
 		    !contains_ci(name, "rdi"))
+			continue;
+		if (!pipeline_entity_selected(context, name))
 			continue;
 		snprintf(path, sizeof(path), "/dev/v4l-subdev%u", i);
 		if (configure_subdev(path, name) > 0)
@@ -970,10 +1005,12 @@ static int prepare_video(struct test_context *context)
 	unsigned int i;
 	int type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
 
-	context->video_fd = open(context->video_path, O_RDWR | O_NONBLOCK |
-				 O_CLOEXEC);
-	if (context->video_fd < 0)
-		return -errno;
+	if (context->video_fd < 0) {
+		context->video_fd = open(context->video_path, O_RDWR | O_NONBLOCK |
+					 O_CLOEXEC);
+		if (context->video_fd < 0)
+			return -errno;
+	}
 
 	memset(&format, 0, sizeof(format));
 	format.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
@@ -1173,16 +1210,22 @@ int main(int argc, char **argv)
 	printf("discover summary media=%s sensor=%s lens=%s video=%s\n",
 	       context.media_path, context.sensor_path, context.lens_path,
 	       context.video_path);
+	context.video_fd = open(context.video_path, O_RDWR | O_NONBLOCK |
+					O_CLOEXEC);
+	if (context.video_fd < 0) {
+		ret = -errno;
+		goto out_sync;
+	}
 	ret = enable_media_path(&context);
 	if (ret)
-		goto out_sync;
-	if (configure_pipeline_subdevs() <= 0) {
+		goto out_video;
+	if (configure_pipeline_subdevs(&context) <= 0) {
 		ret = -ENODEV;
-		goto out_sync;
+		goto out_video;
 	}
 	ret = set_sensor_controls(&context);
 	if (ret)
-		goto out_sync;
+		goto out_video;
 	print_runtime_state(&context, "before-stream-on");
 	ret = prepare_video(&context);
 	if (ret)
