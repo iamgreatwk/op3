@@ -1,15 +1,23 @@
 # Latest handoff
 
-## OP3 autofocus G1 continuous-stream focus test (2026-09-13)
+## OP3 autofocus G1 continuous-stream focus test (device evidence PASS, 2026-09-13)
 
 G1 的用户态 helper 已完成并提交为
 `scripts/op3-v4l2-af-stream-test.c`，交接记录在
 [op3-af-g1-stream-focus.md](op3-af-g1-stream-focus.md)。它动态发现 media、
 IMX298、BU63165GWL 和 VFE RDI 节点，在一次连续 `STREAMON` 中由独立线程持续
 `DQBUF/QBUF`，收到四帧后只发送一次不同于缓存值的 VCM 位置命令，并保存逐帧
-RAW 与事务日志。主机静态 ARM64 编译通过，helper SHA256 为
-`38622b9eed773371d1fddef49039cce508865848c36c9e07271558b18feb2894`；尚未在
-手机执行，等待同一 AF_PWDM 临时镜像和模块闭包的设备测试。
+RAW 与事务日志。先后修复了 topology ready 位覆盖、全量 subdev 配置和 video
+节点打开顺序；这些修正提交为 `4837c51`。主机静态 ARM64 helper SHA256 为
+`eb825ce009e5168dc599ce11d5e158fe2d393415c023a92d6a7c38db71792157`。
+
+在 `boot-oneplus3-pmos612-recovery-imx298-afpwdm-20260909.img` 的一次干净启动
+中，使用当前 CCI 模块 `1691a3a35b6e24145e705074a92b7641525e2909372bb25a65ad621049107d25`
+和已验证的 CAMSS/VCM/IMX298 模块，连续 `STREAMON` 收到 30/30 个无错误 RAW10
+帧；第 4 帧后一次 `V4L2_CID_FOCUS_ABSOLUTE` 写入位置 640 返回 0，内核记录
+`AF_PWDM`、2.8 V VAF 和 CCI `0x0e` 事务。G1 为 **EVIDENCE-PASS**，但仍需
+G3 用固定场景和图像清晰度变化证明镜头实际位移，不能把 ioctl 成功视为自动对焦
+已完成。
 
 ## OP3 autofocus G0 protocol audit (2026-09-13)
 
