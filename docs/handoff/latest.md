@@ -1,5 +1,16 @@
 # Latest handoff
 
+## OP3 autofocus G1 continuous-stream focus test (2026-09-13)
+
+G1 的用户态 helper 已完成并提交为
+`scripts/op3-v4l2-af-stream-test.c`，交接记录在
+[op3-af-g1-stream-focus.md](op3-af-g1-stream-focus.md)。它动态发现 media、
+IMX298、BU63165GWL 和 VFE RDI 节点，在一次连续 `STREAMON` 中由独立线程持续
+`DQBUF/QBUF`，收到四帧后只发送一次不同于缓存值的 VCM 位置命令，并保存逐帧
+RAW 与事务日志。主机静态 ARM64 编译通过，helper SHA256 为
+`38622b9eed773371d1fddef49039cce508865848c36c9e07271558b18feb2894`；尚未在
+手机执行，等待同一 AF_PWDM 临时镜像和模块闭包的设备测试。
+
 ## OP3 autofocus G0 protocol audit (2026-09-13)
 
 G0 的主机端协议审计已完成，结果为 **INCONCLUSIVE**，记录在
