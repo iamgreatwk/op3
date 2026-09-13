@@ -1,5 +1,31 @@
 # Latest handoff
 
+## OP3 autofocus execution handoff and evidence correction (2026-09-13)
+
+Current camera source is `004cda8e061387d07ab4dd08c474910eedd3eb24` on
+`agent/implementation/op3-camera-imx298-001`. The executable handoff is
+[OP3 autofocus plan for 5.6luna](../op3-autofocus-luna-plan.md); it supersedes
+the stale AF build-pending description below. This checkpoint changes only
+documentation: no new compilation or device test was run.
+
+Static review corrects the previous conversation's claim that holding the
+IMX298 subdev open excluded missing sensor power. Its internal ops have no
+open/resume callback; runtime resume occurs in `imx298_s_stream(1)`. The old
+open-only experiment did not establish an active sensor power session, so
+the supply hypothesis remains INCONCLUSIVE. Lens registration does not
+perform a chip identification transaction, and G_CTRL is cached state rather
+than measured lens position. Neither proves working autofocus.
+
+The previous AF_PWDM candidate booted and read IMX298 ID `0x0298`, but its
+VCM position write timed out. The next gates are vendor protocol/power/init
+audit, a real continuous-stream focus experiment, optical movement evidence,
+then single-shot contrast autofocus. The offline vendor image contains both
+BU63165GWL actuator and OIS libraries; shared initialization is a hypothesis
+to audit, not a confirmed fix. Paths, hashes, bounded test conditions and the
+filled execution prompt are in the plan. Local AF kernel history is newer
+than the tracked camera patch archive; do not claim full GitHub restoration
+of this candidate until the missing commits are exported and tree-verified.
+
 ## OP3 IMX298 BU63165GWL VCM autofocus actuator (owner build pending, 2026-09-09)
 
 The dedicated camera branch now contains nested-kernel commit `7b2a25d7cbb8`,

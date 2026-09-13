@@ -1,5 +1,12 @@
 # OP3 rear IMX298 probe handoff
 
+> Current AF handoff (2026-09-13): read
+> [the 5.6luna execution plan](../op3-autofocus-luna-plan.md) first.
+> The branch is now at `004cda8e0613`; the older build-pending sections below
+> are historical checkpoints. The previous open-only IMX298 test did not
+> power the sensor and cannot reject the shared-power hypothesis. No new
+> device test was performed during the plan audit.
+
 Task / GitHub Issue: #12, `[LAYER-05] OP3 rear IMX298 mainline camera bring-up`
 Role: Implementation Agent
 Baseline commit: `67b0bbc3cbf46bae712a2606a43361756fcbd829`
