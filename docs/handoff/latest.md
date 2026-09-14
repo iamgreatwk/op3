@@ -1755,3 +1755,11 @@ AF helper also timed out at frame 0. Both runs showed `VFE0 rdi0 overflow` and
 ARM SMMU write context faults, so the result is **CAMERA-NO-FRAME /
 INCONCLUSIVE** and is not a DRM-only verdict. The next run must start from a
 fresh `fastboot boot` and test the known-good AF helper before the preview.
+
+The fresh same-boot repeat-open test then ran the known-good AF helper twice
+without starting DRM or unloading modules: AF run 1 passed with `8/8` frames
+and focus position `512`; AF run 2 failed at frame 0 with `rc=1` and repeated
+`VFE0 rdi0 overflow`. This **CONFIRMS** the one-open-per-boot failure for the
+current camera path. The next experiment is limited to camera stream teardown
+and VFE/ISPIF/CSID/CSI-PHY state recovery; DRM, Buildroot, and rootfs remain
+unchanged.

@@ -71,3 +71,50 @@ camera buffer has been dequeued. Its host-built ARM64 executable is:
 
 It requires another clean boot because the `91472ab` test ended with VFE/SMMU
 faults.
+
+## Same-boot repeat-open validation (2026-09-14)
+
+This test isolates the owner's hypothesis that the camera can be opened only
+once during one boot. It started from a fresh `fastboot boot` of the current
+recovery image, loaded the complete ordered camera module chain once, and ran
+the known-good AF helper twice consecutively. No DRM preview was started and
+no camera module was unloaded between runs.
+
+The first open passed:
+
+```text
+af1-rc=0
+result frames_good=8 frames_error=0 focus_result=0 focus_position=512
+G1 result=PASS capture-ready-and-focus-ioctl-returned
+af1-raw-count=8
+```
+
+The second open failed in the same boot:
+
+```text
+af2-rc=1
+capture poll timeout frame=0
+G1 result=FAIL rc=-110 errno=110(Connection timed out)
+af2-raw-count=0
+```
+
+The second run produced repeated `qcom-camss ... VFE0 rdi0 overflow` messages;
+the first run's power-off path completed normally. The media nodes remained
+present, so this is not a missing-module or missing-device-node failure. The
+same-boot repeat-open hypothesis is therefore **CONFIRMED** for the current
+CAMSS/VFE path. The likely fault domain is incomplete stream teardown or stale
+CAMSS/SMMU state after the first capture, not DRM startup ordering.
+
+Device evidence was collected through SSH at `172.16.42.1`:
+
+```text
+/tmp/op3-af-repeat1.log
+/tmp/op3-af-repeat2.log
+dmesg | grep -iE 'imx298|camss|cci|csiphy|csid|vfe|smmu|context fault|overflow|fault|reset|panic'
+```
+
+The next code experiment must remain in the camera kernel/userspace camera
+layer: audit and repair the stream-off/close teardown so a second open starts
+from a clean VFE/ISPIF/CSID/CSI-PHY state. Do not change DRM, Buildroot, or
+rootfs in that experiment. Reboot before each new trial; do not use `rmmod`
+against CAMSS or CCI as a substitute for a clean reset.
