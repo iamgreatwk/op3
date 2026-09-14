@@ -1,5 +1,16 @@
 # Latest handoff
 
+## Device test operational contract (2026-09-14)
+
+The canonical host/device and temporary-camera rules are now recorded in
+[`docs/device-shell-compat.md`](../device-shell-compat.md). In particular,
+device gzip archives must be extracted with `busybox gzip -dc | busybox tar -x`,
+Dropbear transfers must use `scp -O`, and every temporary camera run must start
+from a clean boot and load the complete ordered module chain with
+[`scripts/op3-camera-load-modules.sh`](../../scripts/op3-camera-load-modules.sh).
+The current AF test also requires an active IMX298 continuous stream; opening
+the VCM subdevice alone is not a valid test.
+
 ## OP3 autofocus G4 EEPROM read-only diagnostic and calibrated sweep (2026-09-14)
 
 The next autofocus experiment is a bounded userspace EEPROM read, recorded in
