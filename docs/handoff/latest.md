@@ -11,9 +11,13 @@ an EEPROM data-write command. Static vendor-library analysis makes raw offsets
 `0x24` and `0x26` candidate little-endian AF calibration fields, not accepted
 macro/infinity values. After loading the verified camera modules, CCI0 appeared
 as `/dev/i2c-5`; the first 48-byte transaction was rejected by the MSM8996 CCI
-four-byte read limit. The helper is now changed to perform bounded four-byte
-read transactions, with the retry pending; no kernel, DTS, flash, or Buildroot
-change was made.
+four-byte read limit. The helper now performs bounded four-byte read transactions.
+On a live camera stream, the read passed and returned candidate raw fields
+`0x24=610` and `0x26=316`; the same run captured 128/128 frames. A prior failed
+read after sensor power-off left CCI in a queue-timeout state, so the subsequent
+sweep produced VFE overflow and zero frames. The next sweep must use a clean boot
+and the calibrated `316..610` range; no kernel, DTS, flash, or Buildroot change
+was made.
 
 ## OP3 autofocus G3 sweep tool correction and vendor G2 constraints (2026-09-13)
 

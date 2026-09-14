@@ -2,7 +2,7 @@
 
 阶段：`OP3-AF-G4`  
 日期：2026-09-14  
-状态：**TOOL-READY / DEVICE-NOT-RUN / NO-WRITE**
+状态：**READ-PASS / G1-PASS / CALIBRATED-SWEEP-PENDING / NO-WRITE**
 
 ## 交接
 
@@ -68,7 +68,14 @@ ls -l /dev/i2c-*
 
 设备已确认 CCI0 为 `/dev/i2c-5`，并已加载此前验证的 CCI、CAMSS、IMX298 和
 BU63165GWL 模块。首次 48 字节单事务读取被内核拒绝，dmesg 报告 CCI 适配器的
-`msg too long` 限制（最大读取长度为 4 字节）；这确认总线可访问，但工具需要分块。
-工具已修正为 4 字节分块读取，等待重新测试。没有刷机、没有改 DTS、没有写 EEPROM，
-也没有重新编译内核或 Buildroot。下一 PASS 条件是：在 CCI0/地址 `0x50` 上完成
-所有分块只读事务，保存完整原始字节和 dmesg，并确认没有 CCI 错误、相机重启或异常温升。
+`msg too long` 限制（最大读取长度为 4 字节）；这确认总线可访问，但工具随后改为分块。
+工具已修正为 4 字节分块读取，并在相机保持连续采集、传感器电源和时钟开启时读取成功，
+结果保存于 `artifacts/op3-af-evidence/device-g4-eeprom-20260914/op3-imx298-eeprom-20260914.txt`。
+原始数据中候选字段为 `raw+0x24=0x0262=610`、`raw+0x26=0x013c=316`；同一轮相机
+采集完成 `128/128` 帧且 `G1 PASS`。
+
+注意：在传感器断电后执行首次失败读取时，CCI 进入 queue timeout；随后未重启就开始的
+扫焦得到 0 帧并出现 VFE overflow。因此后续校准区间扫焦必须从干净启动开始，不能通过
+`rmmod qcom_camss` 恢复状态。没有刷机、没有改 DTS、没有写 EEPROM，也没有重新编译内核
+或 Buildroot。下一 PASS 条件是：干净启动后只在 `316..610` 校准区间完成扫焦，并确认无
+CCI/VFE 错误或重启。
