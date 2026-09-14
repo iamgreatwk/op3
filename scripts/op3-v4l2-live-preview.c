@@ -362,9 +362,6 @@ int main(void)
 	ret = set_sensor_controls(&context);
 	if (ret)
 		goto out_video;
-	ret = prepare_video(&context);
-	if (ret)
-		goto out_video;
 
 	memset(&display, 0, sizeof(display));
 	display.fd = -1;
@@ -377,6 +374,12 @@ int main(void)
 		ret = -EIO;
 		goto out_display;
 	}
+	/* Do not leave STREAMON running while setting up the display.  The
+	 * MSM8996 VFE has only a small queue and can overflow before the first
+	 * DQBUF if DRM modesetting blocks on the command-mode panel. */
+	ret = prepare_video(&context);
+	if (ret)
+		goto out_display;
 	preview_open_inputs(inputs, &input_count);
 	printf("preview ready %ux%u; volume +/- focus step=16; power/back exits\n",
 	       context.width, context.height);
