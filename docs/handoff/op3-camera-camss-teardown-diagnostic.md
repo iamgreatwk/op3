@@ -36,6 +36,7 @@ project=/home/kai/src/oneplus3-mainline
 kernel=$project/source/linux-pmos-msm8996-6.12-camera-imx298
 kout=$project/out/pmos-msm8996-6.12-camera-imx298-camss-teardown-diag
 base=$project/out/pmos-msm8996-6.12-camera-imx298-cci400
+fullout=$project/out/pmos-msm8996-6.12-recovery-audio-full-s1302-poll-drm100
 
 mkdir -p "$kout"
 cp "$base/.config" "$kout/.config"
@@ -43,10 +44,13 @@ make -C "$kernel" O="$kout" ARCH=arm64 \
   CROSS_COMPILE=aarch64-linux-gnu- \
   CC=aarch64-linux-gnu-gcc-11 olddefconfig modules_prepare
 
+ln -sfn "$fullout/vmlinux.o" "$kout/vmlinux.o"
+ln -sfn "$fullout/Module.symvers" "$kout/Module.symvers"
+
 make -C "$kernel" O="$kout" ARCH=arm64 \
   CROSS_COMPILE=aarch64-linux-gnu- \
   CC=aarch64-linux-gnu-gcc-11 \
-  M=drivers/media/platform/qcom/camss modules
+  drivers/media/platform/qcom/camss/qcom-camss.ko
 
 sha256sum "$kout/drivers/media/platform/qcom/camss/qcom-camss.ko"
 ```
