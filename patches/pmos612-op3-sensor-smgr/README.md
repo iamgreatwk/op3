@@ -11,7 +11,7 @@ The series is based on the already-tested recovery kernel checkpoint:
 agent/implementation/recovery-browser-audio-full-001
 ```
 
-The ten commits are:
+The eleven commits are:
 
 ```text
 b853c4b962fa  iio: Add Qualcomm Sensor Manager driver
@@ -22,8 +22,9 @@ a2af2e73df40  net: qrtr: Define macro to convert QMI version and instance to QRT
 603c36de0534  modpost: keep QRTR alias in current devtable API
 f6d4b4706f83  iio: qcom: Adapt Sensor Manager to Linux 6.12 APIs
 76822cd7b4ae  net: qrtr: connect SMD service device callbacks
-b93eacd248c3  net: qrtr: use token namespace for Linux 6.12 exports
-23b5bfc59973  iio: qcom: Select kfifo buffer for Sensor Manager
+ b93eacd248c3  net: qrtr: use token namespace for Linux 6.12 exports
+ 23b5bfc59973  iio: qcom: Select kfifo buffer for Sensor Manager
+9eb796adcee8  iio: qcom: log Sensor Manager inventory
 ```
 
 The first two commits are based on the Linux v6.16 MSM8996 Sensor Manager
@@ -51,6 +52,9 @@ macro, which stringifies namespace tokens itself.
 
 The tenth patch makes the Sensor Manager select its kfifo buffer dependency, so
 an `IIO_QCOM_SMGR=y` kernel cannot link against an `IIO_KFIFO_BUF=m` provider.
+
+The eleventh patch adds one diagnostic line for the complete Sensor Manager
+inventory returned by SLPI. It does not change sensor matching or registration.
 
 ## Fresh checkout
 

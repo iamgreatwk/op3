@@ -23,7 +23,7 @@ nested kernel worktree
 `source/linux-pmos-msm8996-6.12-sensor-smgr` on the same branch. The line is
 based on the tested integrated recovery kernel commit `4f8595b13fbd` and adds
 the Qualcomm sns-reg service, SLPI/SSC Sensor Manager transport, IIO
-motion-sensor client, and their QRTR bus prerequisites as a ten-patch kernel
+motion-sensor client, and their QRTR bus prerequisites as an eleven-patch kernel
 series. It does not change the camera, DRM, recovery UI, or default Buildroot
 profile.
 

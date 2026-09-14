@@ -1,0 +1,30 @@
+From 9eb796adcee8f618e4422f7501e1dfcefc3d05ad Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Mon, 14 Sep 2026 23:49:13 +0800
+Subject: [PATCH] iio: qcom: log Sensor Manager inventory
+
+---
+ drivers/iio/common/qcom_smgr/qcom_smgr.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/drivers/iio/common/qcom_smgr/qcom_smgr.c b/drivers/iio/common/qcom_smgr/qcom_smgr.c
+index c6aa7379f09a..c831efd27a4f 100644
+--- a/drivers/iio/common/qcom_smgr/qcom_smgr.c
++++ b/drivers/iio/common/qcom_smgr/qcom_smgr.c
+@@ -68,11 +68,16 @@ static int qcom_smgr_request_all_sensor_info(struct qcom_smgr *smgr,
+ 	*sensors = devm_kzalloc(smgr->dev,
+ 				sizeof(struct qcom_smgr_sensor) * resp.item_len,
+ 				GFP_KERNEL);
++	dev_info(smgr->dev, "available sensor count=%u\n", resp.item_len);
+ 
+ 	for (i = 0; i < resp.item_len; ++i) {
+ 		(*sensors)[i].id = resp.items[i].id;
+ 		(*sensors)[i].type =
+ 			sns_smgr_sensor_type_from_str(resp.items[i].type);
++		dev_info(smgr->dev,
++			 "available sensor[%u]: id=0x%02x type=%.*s parsed=%u\n",
++			 i, resp.items[i].id, resp.items[i].type_len,
++			 resp.items[i].type, (*sensors)[i].type);
+ 	}
+ 
+ 	return resp.item_len;
