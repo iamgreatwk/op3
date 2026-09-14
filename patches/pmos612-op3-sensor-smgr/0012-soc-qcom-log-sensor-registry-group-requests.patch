@@ -1,0 +1,34 @@
+From 8b9430d14e2f3d0187add1dc5f7f1ae3eef413b9 Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Tue, 15 Sep 2026 07:27:18 +0800
+Subject: [PATCH] soc: qcom: log sensor registry group requests
+
+
+diff --git a/drivers/soc/qcom/qcom_sns_reg.c b/drivers/soc/qcom/qcom_sns_reg.c
+index 579325ea208a..c69271b96e9a 100644
+--- a/drivers/soc/qcom/qcom_sns_reg.c
++++ b/drivers/soc/qcom/qcom_sns_reg.c
+@@ -328,6 +328,11 @@ static void qcom_sns_reg_get_group_req_handler(
+ 		return;
+ 
+ 	mutex_lock(&qcom_sns_reg_mutex);
++	if (group)
++		sns_reg_info("serving group id=%u offset=0x%x size=0x%zx registry_size=%zu\n",
++			     group->group_id, group->offset, group->size,
++			     __qcom_sns_reg_data->fw ?
++				     __qcom_sns_reg_data->fw->size : 0);
+ 
+ 	/* assume by default everything goes wrong */
+ 	rsp->result = QMI_RESULT_FAILURE_V01;
+@@ -357,6 +362,8 @@ static void qcom_sns_reg_get_group_req_handler(
+ 
+ 	ret = qmi_send_response(qmi, sq, txn, SNS_REG_GROUP_MSG_ID,
+ 		SNS_REG_GROUP_RESP_MAX_LEN, sns_reg_group_resp_ei, rsp);
++	sns_reg_info("group request id=%u result=0x%x data_len=%u send_ret=%d\n",
++		     req->id, rsp->result, rsp->data_len, ret);
+ 	if (ret)
+ 		sns_reg_err("failed to send group response: %d\n", ret);
+ 
+-- 
+2.53.0
+

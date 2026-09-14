@@ -5,7 +5,7 @@ Role: Implementation
 Baseline commit: `4f8595b13fbd0bc0caf18897bbb3361699cbb2e5` integrated recovery checkpoint; formal 6.12.1 baseline `67b0bbc3cbf46bae712a2606a43361756fcbd829`
 Working branch: top-level `agent/implementation/op3-sensor-smgr-001`; nested kernel `agent/implementation/op3-sensor-smgr-001`
 Changed files: Qualcomm Sensor Manager/IIO stack, sensor config fragment, registry staging script/manifest, patch archive, handoff and test records
-Commit SHA: top-level `e38a0b4`; nested kernel diagnostic commit `9eb796adcee8`
+Commit SHA: top-level `ee2f815`; nested kernel diagnostic commit `8b9430d14e2f`
 
 Layer: Linux kernel sensor transport and IIO enumeration
 Hypothesis tested: The physical OP3 motion/environment sensors are exposed through the existing SLPI/SSC Sensor Manager path, so the 6.12 kernel can enumerate them without inventing direct HLOS I²C nodes.
@@ -100,6 +100,23 @@ The next experiment must remain separate: inspect or validate the SLPI
 registry/firmware sensor availability, without changing IIO type mapping or
 adding guessed HLOS sensor nodes. Timestamp validation remains a separate
 follow-up.
+
+## Registry group audit diagnostic
+
+The next one-variable kernel diagnostic logs every group request made by the
+SLPI Sensor Registry service, including the static map offset/size, registry
+size, response result, returned data length, and QMI send result. It does not
+change the registry data, group map, response bytes, IIO mapping, or DTS.
+
+```text
+Nested source commit: 8b9430d14e2f
+Archived patch: patches/pmos612-op3-sensor-smgr/0012-soc-qcom-log-sensor-registry-group-requests.patch
+Patch SHA256: 2324e8ae58f0913a420bc22854d837e03588b25a79eac1e2a5c6a483d1e94530
+```
+
+The next owner-authorized build must use a new output directory and a fresh
+`fastboot boot` test. The previous two-device inventory result remains valid
+and is not overwritten.
 
 ## Static implementation record
 

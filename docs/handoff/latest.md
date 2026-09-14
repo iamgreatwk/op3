@@ -62,6 +62,12 @@ naming is therefore ruled out as the cause of the missing accelerometer and
 gyroscope. The next sensor experiment should inspect SLPI registry/firmware
 availability, with no guessed IIO mapping or HLOS I2C nodes.
 
+The next isolated diagnostic is committed at nested kernel commit
+`8b9430d14e2f`: it logs each SLPI Sensor Registry group request and the static
+registry map used to answer it. The diagnostic does not alter registry bytes,
+IIO mapping, DTS, or Buildroot. It is ready for an owner-authorized kernel
+build and fresh `fastboot boot` test.
+
 ## OP3 CAMSS/VFE stream-teardown diagnostic (2026-09-14)
 
 The active camera worktree is

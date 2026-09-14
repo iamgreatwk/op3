@@ -11,7 +11,7 @@ The series is based on the already-tested recovery kernel checkpoint:
 agent/implementation/recovery-browser-audio-full-001
 ```
 
-The eleven commits are:
+The twelve commits are:
 
 ```text
 b853c4b962fa  iio: Add Qualcomm Sensor Manager driver
@@ -25,6 +25,7 @@ f6d4b4706f83  iio: qcom: Adapt Sensor Manager to Linux 6.12 APIs
  b93eacd248c3  net: qrtr: use token namespace for Linux 6.12 exports
  23b5bfc59973  iio: qcom: Select kfifo buffer for Sensor Manager
 9eb796adcee8  iio: qcom: log Sensor Manager inventory
+8b9430d14e2f  soc: qcom: log sensor registry group requests
 ```
 
 The first two commits are based on the Linux v6.16 MSM8996 Sensor Manager
@@ -53,8 +54,13 @@ macro, which stringifies namespace tokens itself.
 The tenth patch makes the Sensor Manager select its kfifo buffer dependency, so
 an `IIO_QCOM_SMGR=y` kernel cannot link against an `IIO_KFIFO_BUF=m` provider.
 
-The eleventh patch adds one diagnostic line for the complete Sensor Manager
+The eleventh patch adds diagnostic lines for the complete Sensor Manager
 inventory returned by SLPI. It does not change sensor matching or registration.
+
+The twelfth patch logs every sensor-registry group request, its static registry
+offset/length, registry size, and response result. It does not change the
+registry bytes or the response path; it is only for diagnosing whether the
+vendor registry layout matches the SLPI firmware.
 
 ## Fresh checkout
 
@@ -81,7 +87,7 @@ git -C /path/to/linux-pmos-msm8996-6.12-sensor-smgr am \
 The `git worktree add` command above is illustrative: when the recovery worktree
 already has the requested branch or path, create the sensor worktree from the
 recovery worktree's `HEAD` using the normal nested-repository worktree rules.
-The expected source commits are the ten IDs listed above; the resulting
+The expected source commits are the twelve IDs listed above; the resulting
 commit IDs are allowed to differ on a fresh host, but the tree must contain
 the same files and changes.
 
