@@ -26,7 +26,23 @@ b18c78299914d159f7d2fc32699aabe081c4b4dc46bc00b1352017b00ca020e4  out/pmos-msm89
 
 Device test run by project owner: NOT_RUN
 Device result: NOT_RUN
-Evidence links / log paths: Issue #13; vendor `sensor_def_qcomdev.conf` and `hals.conf` from the preserved OnePlus 3 backup; downstream OnePlus/Lineage kernel source; `/tmp/op3-snsreg.RYqTOf` source hash `2644c56bce535a7c8930e497d2f36601b302573a358493fad2732d1109518f06`; `/tmp/op3-sensor-smgr-kernel-build-final.log` (final clean incremental pass); `/tmp/op3-sensor-smgr-kernel-build.log` (earlier compatibility-fix attempts); `/tmp/op3-sensor-smgr-object-build.log`; `/tmp/op3-sensor-smgr-affected-build.log`
+Evidence links / log paths: Issue #13; vendor `sensor_def_qcomdev.conf` and `hals.conf` from the preserved OnePlus 3 backup; downstream OnePlus/Lineage kernel source; `/tmp/op3-snsreg.RYqTOf` source hash `2644c56bce535a7c8930e497d2f36601b302573a358493fad2732d1109518f06`; `/tmp/op3-sensor-smgr-kernel-build-final.log` (final clean incremental pass); `/tmp/op3-sensor-smgr-kernel-build.log` (earlier compatibility-fix attempts); `/tmp/op3-sensor-smgr-object-build.log`; `/tmp/op3-sensor-smgr-affected-build.log`; `/tmp/op3-sensor-smgr-pack.log`
+
+Temporary device-test package prepared on 2026-09-14 (not an accepted recovery
+artifact and not flashed): the existing Buildroot initrd was repacked with only
+`lib/firmware/qcom/sensors/sns.reg`, then paired with the sensor branch's
+`Image.gz` and unchanged OP3 DTB using `scripts/pack-boot.sh` and
+`boot/oneplus3-fa5.env`.
+
+```text
+3f193f242b6c500a1c62d2b8176c834bf3365bd28dd3c5bf975b3e688c53b2b8  artifacts/initrd-op3-recovery-buildroot-sensor-smgr-test.cpio.gz
+8c94cbf7914dc6511a5727c711489e9cfcae23f5df7d0d0cd1c63953ba9df625  artifacts/boot-oneplus3-pmos612-recovery-sensor-smgr-test.img
+```
+
+The next gate is one fresh temporary `fastboot boot` run. After boot, collect
+`dmesg`, `/sys/bus/iio/devices`, and `iio_info`/raw channel data. Do not unload
+QRTR, SLPI, or Sensor Manager drivers during this run. No device action has
+been performed by the agent yet.
 
 Conclusion: INCONCLUSIVE
 Uncertainties: The vendor registry is a required external binary and is now locked but not committed; the exact physical sensor variants must be confirmed from runtime IIO channels; the SLPI firmware must be present and must accept this registry on the device build. The build embeds the separately locked ath10k files from the external-input directory; they are not part of the sensor source archive.
