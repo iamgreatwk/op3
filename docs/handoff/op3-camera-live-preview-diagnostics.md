@@ -6,7 +6,7 @@ Role: implementation/test
 Baseline commit: top-level `4fa5cd9` (`test: add DRM camera live preview`)
 Working branch: `agent/implementation/recovery-browser-001`
 Changed files: `scripts/op3-v4l2-live-preview.c`
-Commit SHA: `350bce0`, `7d5ef6c`
+Commit SHA: `350bce0`, `7d5ef6c`, `ef85820`
 
 Layer: userspace camera preview diagnostic
 Hypothesis tested: the gray screen and apparent self-exit might be caused by
@@ -32,28 +32,30 @@ device: /tmp/op3-live-preview-diagnostics.log
 device: dmesg | grep -iE 'imx298|camss|vfe|smmu|overflow|fault'
 ```
 
-The diagnostic reported:
+The clean-boot AF-helper control run passed before testing the live preview:
+it captured `8/8` RAW10 frames, completed the VCM write at position `512`, and
+introduced no new VFE/SMMU error. The old-order live preview then reported:
 
 ```text
 preview frame timeout after 3002182 us
 preview result=FAIL reason=frame-timeout rc=-110 errno=110(Connection timed out) frames=0
 ```
 
-The same run produced `qcom-camss ... VFE0 rdi0 overflow` and repeated ARM
+That live-preview run produced `qcom-camss ... VFE0 rdi0 overflow` and repeated ARM
 SMMU `Unhandled context fault` messages with `WNR=1`. The previously validated
 AF helper (`e29d96f8ff44972ba5418ced1379fa83b90d9f448e4d699f40eea53c3e768b4f`)
-also timed out with `capture poll timeout frame=0` in the same post-failure
-device state. This means the current failure is not yet attributable only to
-the DRM renderer.
+also timed out with `capture poll timeout frame=0` in that post-failure state.
+The AF helper had passed immediately before the old-order preview on the clean
+boot, so the live-preview startup ordering is now the primary hypothesis.
 
 Conclusion: INCONCLUSIVE
-Uncertainties: The first live-preview run may have left CAMSS/VFE/SMMU in a
-faulted state; the second run and AF-helper comparison were not clean-boot
-evidence. `PASS frames=0` from the old preview was a reporting bug; the new
-diagnostic distinguishes a signal/key stop from a frame timeout.
+Uncertainties: The old preview started `STREAMON` before DRM modesetting. The
+new candidate `ef85820` moves DRM setup before `STREAMON`, but has not yet had
+a fresh-boot device test. `PASS frames=0` from the old preview was a reporting
+bug; the new diagnostic distinguishes a signal/key stop from a frame timeout.
 Recommended next experiment: perform a fresh `fastboot boot` of the already
 validated camera image, load the complete ordered module chain, run the known-
-good AF helper first, and only then run the diagnostic preview. Do not unload
 CAMSS/CCI or reuse the camera stream after an SMMU/VFE fault. If the AF helper
-passes but preview fails, compare the live-preview V4L2 buffer lifecycle; if
-both fail on a clean boot, investigate the CAMSS/SMMU buffer path before DRM.
+passes and the reordered preview passes, the startup gap was the cause; if the
+reordered preview still fails, investigate the CAMSS/SMMU buffer path before
+DRM.

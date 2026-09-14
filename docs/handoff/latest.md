@@ -1,5 +1,15 @@
 # Latest handoff
 
+## OP3 live camera preview startup-order experiment (2026-09-14)
+
+The no-frame diagnostic is recorded in
+[op3-camera-live-preview-diagnostics.md](op3-camera-live-preview-diagnostics.md).
+After a clean boot, the known-good AF helper captured `8/8` RAW10 frames and
+completed the VCM write at position `512` without VFE/SMMU errors. The old live
+preview then started `STREAMON` before DRM setup, timed out with `frames=0`, and
+produced VFE overflow plus ARM SMMU write faults. Candidate `ef85820` now sets
+up DRM before `STREAMON`; it still requires a fresh-boot device test.
+
 ## OP3 autofocus G5 checkerboard sweep (2026-09-14)
 
 The high-contrast checkerboard test is recorded in
