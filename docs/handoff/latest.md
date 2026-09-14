@@ -23,7 +23,11 @@ before its final clock/runtime-power shutdown. Nested-kernel commit
 `artifacts/op3-camera-ispif-reset-bundle-20260914.tar.gz` with SHA256
 `47b285f8619f7f3ff2857f98eef631c8bd8bece65df5bd3399b22c462388824a`.
 It has passed host-side archive and module-hash verification and is pending a
-fresh-boot two-session phone test.
+fresh-boot two-session phone test. That test is now complete: the first run
+captured `8/8`, but the second still timed out at frame 0, with the same ISPIF
+overflow beginning about 160 ms after the first power-off. The ISPIF-reset
+candidate is **FAIL**; the next isolated candidate adds a VFE reset after the
+final halt and before VFE clock/runtime-power shutdown.
 
 ## OP3 live camera preview startup-order experiment (2026-09-14)
 

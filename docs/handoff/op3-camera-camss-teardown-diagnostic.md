@@ -128,8 +128,10 @@ contains the changed `qcom-camss.ko`, its V4L2/VB2/MC dependencies, and the
 previously validated CCI, IMX298, and BU63165GWL modules. The archive was
 verified with `gzip -t` and all twelve entries passed `MODULES.sha256`.
 
-This candidate has not yet been tested on the phone. The required test is a
-fresh `fastboot boot`, explicit module load, then two consecutive AF helper
-runs without DRM preview or module unload. PASS for this experiment is both
-runs capturing `8/8` frames with no post-stop ISPIF overflow; a reset timeout,
-frame timeout, or any reboot is FAIL and must be retained in the handoff log.
+The fresh-boot phone test completed on 2026-09-14. The candidate reset did not
+report an error, and the first AF session captured `8/8` frames, but the
+second session still timed out at frame 0. The same post-stop ISPIF overflow
+started about 160 ms after the first power-off. This candidate is **FAIL** for
+the repeat-open hypothesis. The next isolated candidate adds a VFE hardware
+reset after the final VFE halt and before VFE clocks/runtime power are shut
+down.
