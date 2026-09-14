@@ -309,6 +309,7 @@ int main(void)
 	struct preview_input inputs[PREVIEW_MAX_INPUTS];
 	unsigned int input_count = 0;
 	unsigned int good_frames = 0;
+	int display_opened = 0;
 	int display_active = 0;
 	int focus = DEFAULT_FOCUS_POSITION;
 	int stream_type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
@@ -366,16 +367,9 @@ int main(void)
 
 	memset(&display, 0, sizeof(display));
 	display.fd = -1;
-	if (recovery_drm_open(&display) < 0) {
-		ret = -ENODEV;
-		goto out_video;
-	}
-	/* Keep the DRM buffer allocated, but defer SETCRTC until the first camera
-	 * buffer is ready.  This isolates KMS activation from the VFE startup path
-	 * and avoids presenting a misleading gray frame before capture works. */
 	ret = prepare_video(&context);
 	if (ret)
-		goto out_display;
+		goto out_video;
 	preview_open_inputs(inputs, &input_count);
 	printf("preview ready %ux%u; volume +/- focus step=16; power/back exits\n",
 	       context.width, context.height);
@@ -458,6 +452,16 @@ int main(void)
 				printf("preview first frame sequence=%u bytes=%u flags=0x%x\n",
 				       buffer.sequence, planes[0].bytesused,
 				       buffer.flags);
+			if (!display_opened) {
+				/* Keep the camera path identical to the known-good AF helper
+				 * until one DMA buffer has completed. */
+				if (recovery_drm_open(&display) < 0) {
+					stop_reason = PREVIEW_STOP_DISPLAY_ERROR;
+					ret = -ENODEV;
+					break;
+				}
+				display_opened = 1;
+			}
 			if (!display_active) {
 				if (recovery_drm_activate(&display) < 0) {
 					stop_reason = PREVIEW_STOP_DISPLAY_ERROR;
