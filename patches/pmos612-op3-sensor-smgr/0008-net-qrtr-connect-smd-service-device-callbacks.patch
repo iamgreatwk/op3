@@ -1,0 +1,28 @@
+From 76822cd7b4ae8b8f1a4821b0dd987dc4fcdf4fa3 Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Mon, 14 Sep 2026 23:23:59 +0800
+Subject: [PATCH] net: qrtr: connect SMD service device callbacks
+
+
+diff --git a/net/qrtr/smd.c b/net/qrtr/smd.c
+index 0a00ac626215..3f98afb609cb 100644
+--- a/net/qrtr/smd.c
++++ b/net/qrtr/smd.c
+@@ -108,7 +108,7 @@ static void qcom_smd_qrtr_dev_release(struct device *dev)
+ 	kfree(qdev);
+ }
+ 
+-static int qcom_smd_qrtr_match_device_by_port(struct device *dev, const void *data)
++static int qcom_smd_qrtr_match_device_by_port(struct device *dev, void *data)
+ {
+ 	struct qrtr_device *qdev = to_qrtr_device(dev);
+ 	unsigned const int *port = data;
+@@ -260,6 +260,8 @@ static int qcom_smd_qrtr_probe(struct rpmsg_device *rpdev)
+ 	qdev->channel = rpdev->ept;
+ 	qdev->dev = &rpdev->dev;
+ 	qdev->ep.xmit = qcom_smd_qrtr_send;
++	qdev->ep.add_device = qcom_smd_qrtr_add_device;
++	qdev->ep.del_device = qcom_smd_qrtr_del_device;
+ 
+ 	rc = qrtr_endpoint_register(&qdev->ep, QRTR_EP_NID_AUTO);
+ 	if (rc)
