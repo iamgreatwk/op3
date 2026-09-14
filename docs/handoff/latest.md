@@ -1,6 +1,6 @@
 # Latest handoff
 
-## OP3 autofocus G4 EEPROM read-only diagnostic prepared (2026-09-14)
+## OP3 autofocus G4 EEPROM read-only diagnostic and calibrated sweep (2026-09-14)
 
 The next autofocus experiment is a bounded userspace EEPROM read, recorded in
 [op3-af-g4-eeprom-read.md](op3-af-g4-eeprom-read.md). The source-backed OP3
@@ -15,9 +15,14 @@ four-byte read limit. The helper now performs bounded four-byte read transaction
 On a live camera stream, the read passed and returned candidate raw fields
 `0x24=610` and `0x26=316`; the same run captured 128/128 frames. A prior failed
 read after sensor power-off left CCI in a queue-timeout state, so the subsequent
-sweep produced VFE overflow and zero frames. The next sweep must use a clean boot
-and the calibrated `316..610` range; no kernel, DTS, flash, or Buildroot change
-was made.
+sweep produced VFE overflow and zero frames. A new clean boot then swept
+`316,360,400,440,480,520,560,610` during one continuous stream, captured
+`200/200` frames, and returned `ioctl_rc=0` for all eight VCM positions without
+new CCI/VFE errors or a reboot. The recorded Tenengrad values were
+`50.655, 50.938, 50.648, 50.624, 50.666, 50.697, 50.717, 50.532`; this is not
+a repeatable optical focus peak, so the result is **CAPTURE-PASS / OPTICAL-
+FOCUS-INCONCLUSIVE**. The VCM protocol, DTS, kernel, flash image, and Buildroot
+were not changed.
 
 ## OP3 autofocus G3 sweep tool correction and vendor G2 constraints (2026-09-13)
 

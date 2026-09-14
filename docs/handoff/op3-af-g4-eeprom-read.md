@@ -2,7 +2,7 @@
 
 阶段：`OP3-AF-G4`  
 日期：2026-09-14  
-状态：**READ-PASS / G1-PASS / CALIBRATED-SWEEP-PENDING / NO-WRITE**
+状态：**READ-PASS / G1-PASS / CAPTURE-PASS / OPTICAL-FOCUS-INCONCLUSIVE / NO-WRITE**
 
 ## 交接
 
@@ -77,5 +77,38 @@ BU63165GWL 模块。首次 48 字节单事务读取被内核拒绝，dmesg 报�
 注意：在传感器断电后执行首次失败读取时，CCI 进入 queue timeout；随后未重启就开始的
 扫焦得到 0 帧并出现 VFE overflow。因此后续校准区间扫焦必须从干净启动开始，不能通过
 `rmmod qcom_camss` 恢复状态。没有刷机、没有改 DTS、没有写 EEPROM，也没有重新编译内核
-或 Buildroot。下一 PASS 条件是：干净启动后只在 `316..610` 校准区间完成扫焦，并确认无
-CCI/VFE 错误或重启。
+或 Buildroot。
+
+## 干净启动后的校准区间扫焦
+
+2026-09-14 在同一枚临时 AF_PWDM boot 镜像上重新执行了干净启动，保持内核、DTS、
+CCI、IMX298、BU63165GWL、曝光 `893`、增益 `240` 和采集模式不变，只把 VCM 位置序列
+设为 EEPROM 两个候选值包围的区间：
+
+```text
+316, 360, 400, 440, 480, 520, 560, 610
+```
+
+每个位置等待 150 ms 并保存 3 帧，整轮保持一次连续 `STREAMON`。结果为：
+
+- `helper-rc=0`
+- `frames_good=200`, `frames_error=0`
+- 8 个位置的 `VIDIOC_S_CTRL` 均返回 `ioctl_rc=0`
+- 内核记录 8 次 CCI master 0、地址 `0x0e` 的 VCM 位置事务
+- 没有新的 CCI queue timeout、NACK、VFE overflow、SMMU fault 或重启
+
+RAW10 帧已保存到
+`artifacts/op3-af-evidence/device-g4-calibrated-sweep-20260914/`。中心/全幅
+Tenengrad 结果如下（每个位置取 3 帧平均）：
+
+```text
+position       316    360    400    440    480    520    560    610
+Tenengrad    50.655 50.938 50.648 50.624 50.666 50.697 50.717 50.532
+```
+
+曲线没有超过当前场景噪声的可重复峰值；因此本轮只能判定“校准区间采集和 VCM 控件
+通信通过”，不能判定镜头已经移动或自动对焦成功。直接在传感器停止出帧后打开
+`bu63165gwl` lens subdev 的独立测试还会在第一条位置写上返回 `-ETIMEDOUT`，进一步
+确认 VCM 必须与活动的 IMX298 电源/连续采集会话一起测试。下一步应继续保持该干净
+连续流路径，扩大到有明确纹理的远近目标并验证实际位置响应；在此之前不改 VCM 协议、
+不猜写初始化寄存器、不移植 OIS 固件，也不固化到 Buildroot。
