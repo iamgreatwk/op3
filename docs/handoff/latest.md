@@ -1728,3 +1728,14 @@ host-side code/debug cycles and cooked the phone. RULES:
   log / stop). Full-flow retest pending device cool-down + charge: deploy ->
   restart-session -> collect -> owner slides slider on the (now correctly
   oriented) touchscreen -> script fills/clicks -> collection -> feishu.
+## OP3 live camera preview no-frame diagnostic (2026-09-14)
+
+The temporary live-preview diagnostic is recorded in
+[op3-camera-live-preview-diagnostics.md](op3-camera-live-preview-diagnostics.md).
+It now filters input devices, records signal/key/`poll()`/`DQBUF` exit causes,
+and fails after three seconds without a frame. On the current post-failure
+device state it reported `frame-timeout ... frames=0`; the previously validated
+AF helper also timed out at frame 0. Both runs showed `VFE0 rdi0 overflow` and
+ARM SMMU write context faults, so the result is **CAMERA-NO-FRAME /
+INCONCLUSIVE** and is not a DRM-only verdict. The next run must start from a
+fresh `fastboot boot` and test the known-good AF helper before the preview.
