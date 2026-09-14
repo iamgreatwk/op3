@@ -11,6 +11,19 @@ from a clean boot and load the complete ordered module chain with
 The current AF test also requires an active IMX298 continuous stream; opening
 the VCM subdevice alone is not a valid test.
 
+## OP3 autofocus G5 full-range sweep (2026-09-14)
+
+The clean-boot full-range sweep is recorded in
+[op3-af-g5-full-range-sweep.md](op3-af-g5-full-range-sweep.md). With the complete
+camera module chain explicitly loaded, one continuous stream captured `256/256`
+frames and all eight VCM positions returned `ioctl_rc=0`. Tenengrad increased
+from `56.713` at position `0` to `59.066` at `1023`, but no repeatable optical
+peak was reached, so this is **CAPTURE-PASS / OPTICAL-FOCUS-INCONCLUSIVE**, not
+an autofocus pass. A later attempt to reopen the stream without rebooting
+timed out and produced VFE overflow with zero frames; that failure is recorded
+separately and has no optical meaning. Every future sweep must start from a
+clean `fastboot boot`.
+
 ## OP3 autofocus G4 EEPROM read-only diagnostic and calibrated sweep (2026-09-14)
 
 The next autofocus experiment is a bounded userspace EEPROM read, recorded in
