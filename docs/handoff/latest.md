@@ -1,5 +1,19 @@
 # Latest handoff
 
+## OP3 autofocus G5 high-end clean sweep (2026-09-14)
+
+The fresh-boot high-end sweep is recorded in
+[op3-af-g5-high-end-clean-sweep.md](op3-af-g5-high-end-clean-sweep.md). With
+the complete camera module chain loaded and one continuous RAW10 stream,
+positions `768,800,832,864,896,928,960,1023` each returned `ioctl_rc=0` and
+the run captured `200/200` frames without CCI timeout, VFE overflow, SMMU
+fault, or reboot. The all-pixel and text-region Tenengrad maxima were both at
+`800`, but the regional results were inconsistent and the display text stayed
+visibly blurred. This is **CAPTURE-PASS / OPTICAL-FOCUS-INCONCLUSIVE**; it does
+not establish useful lens travel or a calibrated VCM mapping. The previous
+same-boot retry that timed out is invalid optical evidence. No source, kernel,
+DTS, initramfs, Buildroot, or flash image changed.
+
 ## Device test operational contract (2026-09-14)
 
 The canonical host/device and temporary-camera rules are now recorded in
