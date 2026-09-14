@@ -5,7 +5,7 @@ Role: Implementation
 Baseline commit: `4f8595b13fbd0bc0caf18897bbb3361699cbb2e5` integrated recovery checkpoint; formal 6.12.1 baseline `67b0bbc3cbf46bae712a2606a43361756fcbd829`
 Working branch: top-level `agent/implementation/op3-sensor-smgr-001`; nested kernel `agent/implementation/op3-sensor-smgr-001`
 Changed files: Qualcomm Sensor Manager/IIO stack, sensor config fragment, registry staging script/manifest, patch archive, handoff and test records
-Commit SHA: top-level `7c4b06d`; nested kernel diagnostic commit `8b9430d14e2f`
+Commit SHA: top-level `9e565fa`; nested kernel diagnostic commit `8b9430d14e2f`
 
 Layer: Linux kernel sensor transport and IIO enumeration
 Hypothesis tested: The physical OP3 motion/environment sensors are exposed through the existing SLPI/SSC Sensor Manager path, so the 6.12 kernel can enumerate them without inventing direct HLOS I²C nodes.
@@ -25,9 +25,9 @@ b18c78299914d159f7d2fc32699aabe081c4b4dc46bc00b1352017b00ca020e4  out/pmos-msm89
 ```
 
 Device test run: Codex agent under explicit owner authorization on 2026-09-14
-Device result: PROVISIONAL PASS for SLPI/QRTR/IIO enumeration and buffered data
-stream; full hardware inventory is incomplete because no accelerometer IIO
-device appeared
+Device result: PROVISIONAL PASS for SLPI/QRTR/IIO transport and buffered data
+stream; full hardware inventory is incomplete because the runtime inventory
+does not expose all expected motion sensors
 Evidence links / log paths: Issue #13; vendor `sensor_def_qcomdev.conf` and `hals.conf` from the preserved OnePlus 3 backup; downstream OnePlus/Lineage kernel source; `/tmp/op3-snsreg.RYqTOf` source hash `2644c56bce535a7c8930e497d2f36601b302573a358493fad2732d1109518f06`; `/tmp/op3-sensor-smgr-kernel-build-final.log` (final clean incremental pass); `/tmp/op3-sensor-smgr-kernel-build.log` (earlier compatibility-fix attempts); `/tmp/op3-sensor-smgr-object-build.log`; `/tmp/op3-sensor-smgr-affected-build.log`; `/tmp/op3-sensor-smgr-pack.log`
 
 Temporary device-test package prepared on 2026-09-14 (not an accepted recovery
@@ -114,8 +114,8 @@ Archived patch: patches/pmos612-op3-sensor-smgr/0012-soc-qcom-log-sensor-registr
 Patch SHA256: 2324e8ae58f0913a420bc22854d837e03588b25a79eac1e2a5c6a483d1e94530
 ```
 
-The next owner-authorized build must use a new output directory and a fresh
-`fastboot boot` test. The previous two-device inventory result remains valid
+The owner-authorized build used a new output directory and a fresh
+`fastboot boot` test. The previous two-device inventory result was reproduced
 and is not overwritten.
 
 The registry-group audit build completed after the power interruption under
@@ -147,10 +147,14 @@ registry initrd. It has not been flashed:
 b1c791fcc24afd4ec52f28e7fb1daaa18c54e787581fd17d4304d289385bfbc1  artifacts/boot-oneplus3-pmos612-recovery-sensor-smgr-regaudit-test.img
 ```
 
-Device test status: PENDING. The required clean-boot capture is the
-`sns-reg`, `available sensor`, `qcom_smgr`, `serving group`, and `group
-request` dmesg lines plus the resulting IIO device names. Do not change the
-registry group map or client mapping until this evidence is reviewed.
+Device test status: COMPLETED. The clean-boot capture contained 70 registry
+group requests with `bad=0`: every request returned `result=0`, the expected
+data length, and `send_ret=0`. There were no unmapped groups or registry
+transport errors. SLPI then reported only two raw sensors, `MAG` (`0x14`) and
+`PROX_LIGHT` (`0x28`); IIO registered only `qcom-smgr-mag` and
+`qcom-smgr-prox-light`. The audit therefore passes the registry transport
+hypothesis but fails to explain the missing accelerometer and gyroscope. Do
+not change the registry group map or client mapping on this evidence.
 
 ## Static implementation record
 

@@ -51,7 +51,9 @@ build is in `out/pmos-msm8996-6.12-sensor-smgr-inventory`; its temporary boot
 image is `artifacts/boot-oneplus3-pmos612-recovery-sensor-smgr-inventory-test.img`
 with SHA256
 `6864133e7f7b99fc1eb4b027ce469f3a7a79ebdcd965e0326b5b02824605e215`.
-Device testing is pending after the power interruption.
+After the power interruption, the image was boot-tested twice; both runs
+returned only `MAG` (`0x14`) and `PROX_LIGHT` (`0x28`) from SLPI and registered
+only the corresponding two IIO devices.
 
 The diagnostic image was then booted twice on 2026-09-15. Both runs returned
 only `MAG` (id `0x14`) and `PROX_LIGHT` (id `0x28`) from SLPI and registered
@@ -74,8 +76,13 @@ DTB is unchanged at
 temporary packaged image is
 `artifacts/boot-oneplus3-pmos612-recovery-sensor-smgr-regaudit-test.img`
 (`b1c791fcc24afd4ec52f28e7fb1daaa18c54e787581fd17d4304d289385bfbc1`). A
-fresh `fastboot boot` test remains pending; no registry group map or IIO
-mapping change is justified before its logs are reviewed.
+fresh `fastboot boot` test completed successfully. The capture contained 70
+registry group requests with `bad=0`: every request returned `result=0`, the
+expected data length, and `send_ret=0`, with no unmapped groups or registry
+transport errors. SLPI still reported only `MAG` (`0x14`) and `PROX_LIGHT`
+(`0x28`), so IIO exposed only `qcom-smgr-mag` and `qcom-smgr-prox-light`.
+Registry transport passes; complete sensor inventory fails. No registry group
+map or IIO mapping change is justified on this evidence.
 
 ## OP3 CAMSS/VFE stream-teardown diagnostic (2026-09-14)
 
