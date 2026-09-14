@@ -1,5 +1,20 @@
 # Latest handoff
 
+## Camera work paused; sensor and Bluetooth work prioritized (2026-09-14)
+
+The OP3 camera line is frozen at its current evidence checkpoint. RAW capture
+and VCM communication are working, but autofocus remains optically
+inconclusive and the same-boot second-open failure remains unresolved despite
+multiple isolated CAMSS/VFE teardown candidates. Because the remaining work
+depends on closed-source initialization and hardware timing evidence, no new
+camera changes or Buildroot/rootfs integration should be started by default.
+
+Preserve the camera source history, module bundles, hashes, and diagnostic
+handoffs. Resume camera work only with new source-backed initialization data,
+successful same-model code, or new electrical/hardware evidence. The next
+hardware work should prioritize IIO sensor enumeration and validation, then
+Bluetooth UART/HCI, firmware, power, and pairing validation.
+
 ## OP3 CAMSS/VFE stream-teardown diagnostic (2026-09-14)
 
 The active camera worktree is

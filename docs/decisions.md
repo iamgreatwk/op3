@@ -48,3 +48,19 @@ and Cog/WPE browser rendering (OP3-BROWSER-003).
 Linux 7.x is shelved, not a default alternative baseline. Its early-boot
 failure remains historical evidence and may be resumed only in an explicitly
 authorised `SHELVED-7X` task with physical MSM8996 UART evidence.
+
+## 2026-09-14 — Pause camera port and prioritize sensors/Bluetooth
+
+The camera port is frozen at the current evidence checkpoint. The IMX298
+produces RAW frames and the BU63165GWL VCM accepts position commands, but
+autofocus has not produced a repeatable optical peak and reopening the camera
+twice in one boot still fails at frame 0 with an ISPIF/VFE overflow. Multiple
+isolated teardown candidates were tested and rejected; the current camera
+kernel state retains diagnostics only.
+
+Do not spend more default recovery integration, Buildroot, or rootfs effort on
+the camera. Preserve its source history, test bundles, hashes, and handoffs.
+Resume only when new source-backed sensor/actuator initialization, successful
+same-model code, or electrical/hardware evidence becomes available. The next
+hardware priorities are IIO sensor enumeration and validation, followed by
+Bluetooth UART/HCI, firmware, power, and pairing validation.
