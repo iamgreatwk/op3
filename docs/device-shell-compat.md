@@ -10,7 +10,7 @@ list before running them. The PC and the device are DIFFERENT worlds.
 | Need | NOT available | Use instead |
 |---|---|---|
 | process match/kill | pgrep/pkill | /proc cmdline scan (rule 1) |
-| gz tar extract | tar -z, tar -a | zcat x.tar.gz | tar -xf - |
+| gz tar extract | tar -z, tar -a, `tar -x -a` | `busybox gzip -dc x.tar.gz \| busybox tar -x -C DEST` |
 | per-file sizes | find -printf | find . -type f | sort | xargs sha256sum |
 | clock sync | ntpd | HTTP Date header + manual parse (browser run.sh) |
 | RFC1123 dates | date -s "Mon, 01 ..." | convert to YYYY-MM-DD hh:mm:ss |
@@ -24,9 +24,12 @@ list before running them. The PC and the device are DIFFERENT worlds.
    remote one-liner - the remote shell own cmdline CONTAINS your match
    patterns, so it kills itself (SSH dies with 255). Push the sweep as a
    script FILE and run it; exclude /proc/$$.
-2. tar extraction: zcat | tar -xf - has produced 0-byte files silently.
-   ALWAYS verify afterwards - full manifest (find . -type f | sort |
-   xargs sha256sum | sha256sum) or at minimum spot-check executables.
+2. tar extraction: the device BusyBox tar does not support GNU `-z`, and its
+   `-a` behavior is not a reliable substitute for gzip extraction. ALWAYS use
+   `busybox gzip -dc ARCHIVE.tar.gz | busybox tar -x -C DEST`, then verify
+   afterwards - full manifest (find . -type f | sort | xargs sha256sum |
+   sha256sum) or at minimum spot-check executables. Never continue after a
+   tar/gzip error or silently reuse a partially extracted bundle.
 3. Never extract over the live bundle: use versioned directories plus a
    symlink switch (tests/browser/deploy-bundle.sh) - extractions clobber
    runtime assets (run.sh, fonts, udev rules, helper wrappers).
@@ -76,3 +79,60 @@ list before running them. The PC and the device are DIFFERENT worlds.
     (frontend/main.c load_configuration). Output rotation for the portrait
     DSI-1 panel: [output] name=DSI-1 transform=rotate-90/270 = landscape
     (1920x1080); rotate-180 = upside-down portrait.
+
+## Camera temporary-module checklist
+
+The recovery initramfs and the Buildroot rootfs are separate filesystems. A
+camera `.ko` copied below `/newroot/tmp` is not loaded merely because it is
+present, and `modprobe` is only valid when the matching running-kernel
+`modules.dep` is available. For a temporary camera experiment:
+
+1. After every `fastboot boot` image change, remove the old host key before
+   SSH/scp reconnect:
+
+   ```sh
+   ssh-keygen -f "$HOME/.ssh/known_hosts" -R 172.16.42.1
+   scp -O bundle.tar.gz root@172.16.42.1:/newroot/tmp/
+   ```
+
+2. Extract the gzip archive with the device-compatible pipeline, never with
+   `tar -x -a` or `tar -xzf`:
+
+   ```sh
+   ssh root@172.16.42.1 \
+     'busybox gzip -dc /newroot/tmp/bundle.tar.gz | busybox tar -x -C /newroot'
+   ```
+
+   Check the archive and each selected module SHA256 before loading it.
+
+3. A clean camera test must explicitly load this complete dependency chain
+   (using the exact modules built for the running 6.12.1 kernel):
+
+   ```text
+   mc
+   videodev
+   v4l2-async
+   v4l2-fwnode
+   videobuf2-common
+   videobuf2-memops
+   videobuf2-dma-sg
+   videobuf2-v4l2
+   i2c-qcom-cci
+   qcom-camss
+   bu63165gwl
+   imx298
+   ```
+
+   The repository helper `scripts/op3-camera-load-modules.sh` implements this
+   exact ordered absolute-path `insmod` sequence and prints every module SHA.
+   Do not use a bare `modprobe` from an unknown `modules.dep`. Verify every
+   return code, then verify `/sys/class/video4linux`, `/dev/media0`,
+   `/dev/video*`, and the two named lens/sensor subdevices. If the loaded set
+   or module provenance is uncertain, reboot through the same clean
+   `fastboot boot` path; do not unload CAMSS/CCI to recover a failed
+   experiment.
+
+4. For autofocus, the VCM position command is valid only while the IMX298
+   sensor is powered and the same continuous `STREAMON` is producing frames.
+   Opening `bu63165gwl` alone is not a valid communication test and previously
+   returned CCI `-ETIMEDOUT`.
