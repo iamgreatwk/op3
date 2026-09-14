@@ -6,7 +6,7 @@ Role: implementation/test
 Baseline commit: top-level `4fa5cd9` (`test: add DRM camera live preview`)
 Working branch: `agent/implementation/recovery-browser-001`
 Changed files: `scripts/op3-v4l2-live-preview.c`
-Commit SHA: `350bce0`, `7d5ef6c`, `ef85820`
+Commit SHA: `350bce0`, `7d5ef6c`, `ef85820`, `91472ab`
 
 Layer: userspace camera preview diagnostic
 Hypothesis tested: the gray screen and apparent self-exit might be caused by
@@ -50,12 +50,13 @@ boot, so the live-preview startup ordering is now the primary hypothesis.
 
 Conclusion: INCONCLUSIVE
 Uncertainties: The old preview started `STREAMON` before DRM modesetting. The
-new candidate `ef85820` moves DRM setup before `STREAMON`, but has not yet had
-a fresh-boot device test. `PASS frames=0` from the old preview was a reporting
-bug; the new diagnostic distinguishes a signal/key stop from a frame timeout.
-Recommended next experiment: perform a fresh `fastboot boot` of the already
-validated camera image, load the complete ordered module chain, run the known-
-CAMSS/CCI or reuse the camera stream after an SMMU/VFE fault. If the AF helper
-passes and the reordered preview passes, the startup gap was the cause; if the
-reordered preview still fails, investigate the CAMSS/SMMU buffer path before
-DRM.
+fresh-boot test of candidate `ef85820` moved DRM setup before `STREAMON`, but
+still timed out after the AF helper had passed and reproduced VFE/SMMU faults.
+`PASS frames=0` from the old preview was a reporting bug; the new diagnostic
+distinguishes a signal/key stop from a frame timeout.
+Recommended next experiment: candidate `91472ab` defers `SETCRTC` until after
+the first valid camera buffer. Perform another fresh `fastboot boot`, load the
+complete ordered module chain, run the known-good AF helper first, and only
+then run the `91472ab` diagnostic preview. Do not unload CAMSS/CCI or reuse the
+camera stream after an SMMU/VFE fault. If the reordered preview still fails,
+investigate the CAMSS/SMMU buffer path before DRM.

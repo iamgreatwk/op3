@@ -7,8 +7,10 @@ The no-frame diagnostic is recorded in
 After a clean boot, the known-good AF helper captured `8/8` RAW10 frames and
 completed the VCM write at position `512` without VFE/SMMU errors. The old live
 preview then started `STREAMON` before DRM setup, timed out with `frames=0`, and
-produced VFE overflow plus ARM SMMU write faults. Candidate `ef85820` now sets
-up DRM before `STREAMON`; it still requires a fresh-boot device test.
+produced VFE overflow plus ARM SMMU write faults. Candidate `ef85820` set up
+DRM before `STREAMON`, but the fresh-boot test still failed after the AF helper
+passed. Candidate `91472ab` now defers `SETCRTC` until after the first valid
+camera buffer and requires another fresh-boot test.
 
 ## OP3 autofocus G5 checkerboard sweep (2026-09-14)
 
