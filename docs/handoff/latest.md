@@ -44,6 +44,15 @@ accelerometer IIO device appeared; the line remains an experiment and is not
 integrated into the default recovery profile. See
 `docs/handoff/op3-sensor-smgr-001.md` and the test-matrix row.
 
+A one-variable inventory diagnostic is now committed at nested kernel commit
+`9eb796adcee8`. It logs every raw Sensor Manager item returned by SLPI before
+the existing client mapping, without changing behavior. The clean diagnostic
+build is in `out/pmos-msm8996-6.12-sensor-smgr-inventory`; its temporary boot
+image is `artifacts/boot-oneplus3-pmos612-recovery-sensor-smgr-inventory-test.img`
+with SHA256
+`6864133e7f7b99fc1eb4b027ce469f3a7a79ebdcd965e0326b5b02824605e215`.
+Device testing is pending after the power interruption.
+
 ## OP3 CAMSS/VFE stream-teardown diagnostic (2026-09-14)
 
 The active camera worktree is

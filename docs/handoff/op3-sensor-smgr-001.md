@@ -5,7 +5,7 @@ Role: Implementation
 Baseline commit: `4f8595b13fbd0bc0caf18897bbb3361699cbb2e5` integrated recovery checkpoint; formal 6.12.1 baseline `67b0bbc3cbf46bae712a2606a43361756fcbd829`
 Working branch: top-level `agent/implementation/op3-sensor-smgr-001`; nested kernel `agent/implementation/op3-sensor-smgr-001`
 Changed files: Qualcomm Sensor Manager/IIO stack, sensor config fragment, registry staging script/manifest, patch archive, handoff and test records
-Commit SHA: top-level `e5c61a0`; nested kernel through diagnostic commit `9eb796adcee8`
+Commit SHA: top-level `e38a0b4`; nested kernel diagnostic commit `9eb796adcee8`
 
 Layer: Linux kernel sensor transport and IIO enumeration
 Hypothesis tested: The physical OP3 motion/environment sensors are exposed through the existing SLPI/SSC Sensor Manager path, so the 6.12 kernel can enumerate them without inventing direct HLOS I²C nodes.
@@ -59,6 +59,28 @@ missing accelerometer (first determine whether the vendor registry/SLPI report
 contains an `ACCEL` entry, then change only the matching or client mapping).
 Keep timestamp validation as another isolated follow-up. Test pressure and
 other sensor classes only after those gates.
+
+## Inventory diagnostic build
+
+The follow-up diagnostic adds only `dev_info()` output for the raw Sensor
+Manager inventory returned by SLPI. It does not change sensor mapping,
+registration, timing, DTS, initramfs, or Buildroot. The clean build was run by
+Codex under explicit owner authorization after the power interruption.
+
+```text
+Nested source commit: 9eb796adcee8
+Output directory: out/pmos-msm8996-6.12-sensor-smgr-inventory
+Image.gz: ac99cae3f8fafe562c3785a550fd44b64916d64720adc6afbb090c34848ebba9
+DTB:      acf85fd6ae148861374ec4d65feee0e3d909cce9b75e96d09c2f44a102914d1b
+Module.symvers: b18c78299914d159f7d2fc32699aabe081c4b4dc46bc00b1352017b00ca020e4
+.config: c9db8711c24544950f1020a10231ca6718b900b9d7cbd23ba699073491c65acf
+Temporary boot image: artifacts/boot-oneplus3-pmos612-recovery-sensor-smgr-inventory-test.img
+Boot image SHA256: 6864133e7f7b99fc1eb4b027ce469f3a7a79ebdcd965e0326b5b02824605e215
+Temporary initrd SHA256: 3f193f242b6c500a1c62d2b8176c834bf3365bd28dd3c5bf975b3e688c53b2b8
+```
+
+Device test status: PENDING. The image is intended for `fastboot boot` only;
+it is not a Buildroot artifact and has not been flashed.
 
 ## Static implementation record
 
