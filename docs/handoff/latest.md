@@ -11,6 +11,10 @@ now committed as nested-kernel commit
 and buffer pointers. It does not alter behavior or touch DRM, DTS, rootfs, or
 Buildroot. The exact module build and fresh-boot two-session test are in
 [op3-camera-camss-teardown-diagnostic.md](op3-camera-camss-teardown-diagnostic.md).
+The host-only module bundle is ready at
+`artifacts/op3-camera-camss-teardown-diag-bundle-20260914-v2.tar.gz` with
+SHA256 `064f6bceb7703c0ffb1ac097332b4955128ada8b48decb410babedb793f44fe9`;
+no device test has been run with it yet.
 
 ## OP3 live camera preview startup-order experiment (2026-09-14)
 

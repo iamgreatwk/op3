@@ -68,6 +68,22 @@ CAMSS/CCI in a running session. On the device, load the diagnostic
 then load `bu63165gwl.ko` and `imx298.ko`; verify the module SHA256 before
 `insmod`.
 
+The host-only module build passed. The versioned test bundle is
+`artifacts/op3-camera-camss-teardown-diag-bundle-20260914-v2.tar.gz` with
+SHA256
+`064f6bceb7703c0ffb1ac097332b4955128ada8b48decb410babedb793f44fe9`.
+It contains 12 modules. The diagnostic CAMSS module hash is
+`b92933dbb649c4094d908f13de67157344ec361b894b838ac920fbe39535c874` and
+the current-branch CCI module hash is
+`8e7b5159271ce46414a56335990ae2037bca32509f4f855da3073275e7070223`.
+The IMX298 and BU63165GWL modules are the previously validated unchanged AF
+modules, with hashes recorded in the bundle's `MODULES.sha256`.
+
+The CAMSS module was built from output directory
+`out/pmos-msm8996-6.12-camera-imx298-camss-teardown-diag-modules-20260914`;
+the standalone CCI module was built from
+`out/pmos-msm8996-6.12-camera-imx298-cci-diag-20260914`.
+
 ## Test
 
 Run the known-good AF helper twice in one boot, without DRM preview and without
