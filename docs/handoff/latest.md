@@ -22,9 +22,10 @@ independent top-level branch `agent/implementation/op3-sensor-smgr-001` and
 nested kernel worktree
 `source/linux-pmos-msm8996-6.12-sensor-smgr` on the same branch. The line is
 based on the tested integrated recovery kernel commit `4f8595b13fbd` and adds
-the Qualcomm sns-reg service, SLPI/SSC Sensor Manager transport, and IIO
-motion-sensor client as three archived kernel patches. It does not change the
-camera, DRM, recovery UI, or default Buildroot profile.
+the Qualcomm sns-reg service, SLPI/SSC Sensor Manager transport, IIO
+motion-sensor client, and their QRTR bus prerequisites as a ten-patch kernel
+series. It does not change the camera, DRM, recovery UI, or default Buildroot
+profile.
 
 Static vendor/downstream evidence points to the SLPI/SSC path rather than
 guessed HLOS I²C nodes. The likely hardware set is LSM6DS3 (accelerometer and
@@ -36,7 +37,11 @@ The required vendor registry is preserved outside GitHub as
 `manifests/op3-sensor-smgr.env`, and staged with
 `scripts/stage-op3-sensor-registry.sh`. Build and device status are
 **NOT_RUN / INCONCLUSIVE**; see
-`docs/handoff/op3-sensor-smgr-001.md` and the pending test-matrix row.
+`docs/handoff/op3-sensor-smgr-001.md` and the test-matrix row. The sensor
+kernel build now passes at nested commit `23b5bfc599738e10960cfa8c91e10012b64f1595`
+with `Image.gz` SHA256
+`df8b5a032542f0c0ebba952e2260afdf4e85eeacf2b705636188d4fe69ec725e`, but no
+device boot or IIO enumeration has been run yet.
 
 ## OP3 CAMSS/VFE stream-teardown diagnostic (2026-09-14)
 

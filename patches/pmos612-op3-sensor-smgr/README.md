@@ -108,6 +108,30 @@ copy is needed once this staging command succeeds.
 
 ## Kernel configuration and owner build
 
+The recovery configuration embeds the verified ath10k firmware. A fresh
+sensor worktree therefore needs the same external files under its ignored
+`extfw/` path before kbuild is started:
+
+```bash
+external=${OP3_EXTERNAL_INPUTS:?set OP3_EXTERNAL_INPUTS first}
+kernel=/path/to/linux-pmos-msm8996-6.12-sensor-smgr
+ath10k="$kernel/extfw/ath10k/QCA6174/hw3.0"
+mkdir -p "$ath10k"
+install -m 0644 \
+  "$external/ath10k/QCA6174/hw3.0/firmware-6.bin" \
+  "$ath10k/firmware-6.bin"
+install -m 0644 \
+  "$external/ath10k/QCA6174/hw3.0/board-2.bin" \
+  "$ath10k/board-2.bin"
+install -m 0644 \
+  "$external/ath10k/QCA6174/hw3.0/board.bin" \
+  "$ath10k/board.bin"
+sha256sum "$ath10k"/{firmware-6.bin,board-2.bin,board.bin}
+```
+
+These three files are not committed; their locked hashes are in
+`manifests/op3-recovery-audio-full.env`.
+
 Merge the sensor-only fragment into a copy of the tested recovery config:
 
 ```bash
