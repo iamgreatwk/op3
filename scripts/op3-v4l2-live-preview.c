@@ -309,6 +309,7 @@ int main(void)
 	struct preview_input inputs[PREVIEW_MAX_INPUTS];
 	unsigned int input_count = 0;
 	unsigned int good_frames = 0;
+	int display_active = 0;
 	int focus = DEFAULT_FOCUS_POSITION;
 	int stream_type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
 	enum preview_stop_reason stop_reason = PREVIEW_STOP_NONE;
@@ -369,14 +370,9 @@ int main(void)
 		ret = -ENODEV;
 		goto out_video;
 	}
-	preview_fill(&display, 0, 0, display.width, display.height, 0xff101010U);
-	if (recovery_drm_activate(&display) < 0) {
-		ret = -EIO;
-		goto out_display;
-	}
-	/* Do not leave STREAMON running while setting up the display.  The
-	 * MSM8996 VFE has only a small queue and can overflow before the first
-	 * DQBUF if DRM modesetting blocks on the command-mode panel. */
+	/* Keep the DRM buffer allocated, but defer SETCRTC until the first camera
+	 * buffer is ready.  This isolates KMS activation from the VFE startup path
+	 * and avoids presenting a misleading gray frame before capture works. */
 	ret = prepare_video(&context);
 	if (ret)
 		goto out_display;
@@ -462,6 +458,15 @@ int main(void)
 				printf("preview first frame sequence=%u bytes=%u flags=0x%x\n",
 				       buffer.sequence, planes[0].bytesused,
 				       buffer.flags);
+			if (!display_active) {
+				if (recovery_drm_activate(&display) < 0) {
+					stop_reason = PREVIEW_STOP_DISPLAY_ERROR;
+					ret = -EIO;
+					break;
+				}
+				display_active = 1;
+				printf("preview DRM activated after first frame\n");
+			}
 			if (now - last_present >= PREVIEW_FPS_LIMIT_US) {
 				ret = preview_render(&display,
 						     context.buffers[index].address,
