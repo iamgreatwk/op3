@@ -13,8 +13,17 @@ Buildroot. The exact module build and fresh-boot two-session test are in
 [op3-camera-camss-teardown-diagnostic.md](op3-camera-camss-teardown-diagnostic.md).
 The host-only module bundle is ready at
 `artifacts/op3-camera-camss-teardown-diag-bundle-20260914-v2.tar.gz` with
-SHA256 `064f6bceb7703c0ffb1ac097332b4955128ada8b48decb410babedb793f44fe9`;
-no device test has been run with it yet.
+SHA256 `064f6bceb7703c0ffb1ac097332b4955128ada8b48decb410babedb793f44fe9`.
+The bundle was tested after a fresh boot: AF run 1 captured `8/8` frames, AF
+run 2 timed out at frame 0, and repeated `VFE0 rdi0 overflow` messages began
+about 150 ms after the first power-off. All recorded VFE and sub-device
+stop/power/halt returns were 0. The next isolated candidate resets ISPIF
+before its final clock/runtime-power shutdown. Nested-kernel commit
+`3ef48e38df32` implements this candidate; the replacement module bundle is
+`artifacts/op3-camera-ispif-reset-bundle-20260914.tar.gz` with SHA256
+`47b285f8619f7f3ff2857f98eef631c8bd8bece65df5bd3399b22c462388824a`.
+It has passed host-side archive and module-hash verification and is pending a
+fresh-boot two-session phone test.
 
 ## OP3 live camera preview startup-order experiment (2026-09-14)
 

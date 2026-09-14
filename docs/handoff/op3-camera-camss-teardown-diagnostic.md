@@ -10,7 +10,7 @@ The camera kernel worktree is
 `source/linux-pmos-msm8996-6.12-camera-imx298` on branch
 `agent/implementation/op3-camera-imx298-001`.
 
-Source commit:
+Diagnostic source commit:
 `36118b36d58d7235ab9a1cef9840ae64cdfcf526`
 
 This commit adds diagnostic messages only. It does not change the stream,
@@ -22,9 +22,13 @@ power, buffer, DRM, DTS, rootfs, or Buildroot behavior. The messages record:
 - VFE output buffer pointers during buffer flush.
 
 The purpose is to distinguish a failed VFE stop, an incomplete pipeline stop,
-and a stale output state after the first capture. The observed failure remains:
-first AF session `8/8` frames, second same-boot session frame-0 timeout with
-`VFE0 rdi0 overflow`.
+and a stale output state after the first capture. The device test completed on
+2026-09-14: the first AF session captured `8/8` frames, while the second
+same-boot session timed out at frame 0 with repeated `VFE0 rdi0 overflow`.
+Every recorded VFE and sub-device stop/power/halt return was 0. The overflow
+was emitted by the ISPIF interrupt handler about 150 ms after the first
+power-off, so the diagnostic points to stale ISPIF state rather than a failed
+VFE stop.
 
 ## Build boundary
 
@@ -102,7 +106,30 @@ Expected comparison:
 | First | `8/8` frames, normal stop sequence |
 | Second | Determine the first failed stop/state transition; do not accept a frame timeout alone |
 
-This candidate is diagnostic only. It must not be promoted as a fix. If the
-logs show a clean stop but the second run still overflows, the next isolated
-change should target VFE hardware reset/state reinitialization. If a stop
-return or timeout is exposed, repair that specific teardown path first.
+This candidate is diagnostic only. It must not be promoted as a fix. The next
+isolated candidate calls the existing `ispif_reset()` before the final ISPIF
+clock/runtime-power shutdown, so the post-stop overflow can be tested without
+changing VFE, sensor, DTS, DRM, or userspace behavior.
+
+## ISPIF power-off reset candidate
+
+Nested-kernel source commit:
+`3ef48e38df32` (`media: camss: reset ISPIF before power-off`). This is the
+only behavior change in the candidate: when ISPIF's power reference reaches
+zero, it invokes the existing `ispif_reset()` for the active VFE before
+disabling ISPIF clocks and runtime power. A reset error is logged but does not
+skip the normal clock/runtime-power shutdown. No VFE, sensor, DTS, DRM,
+initramfs, or Buildroot file changed.
+
+The host-built replacement module bundle is
+`artifacts/op3-camera-ispif-reset-bundle-20260914.tar.gz` with SHA256
+`47b285f8619f7f3ff2857f98eef631c8bd8bece65df5bd3399b22c462388824a`. It
+contains the changed `qcom-camss.ko`, its V4L2/VB2/MC dependencies, and the
+previously validated CCI, IMX298, and BU63165GWL modules. The archive was
+verified with `gzip -t` and all twelve entries passed `MODULES.sha256`.
+
+This candidate has not yet been tested on the phone. The required test is a
+fresh `fastboot boot`, explicit module load, then two consecutive AF helper
+runs without DRM preview or module unload. PASS for this experiment is both
+runs capturing `8/8` frames with no post-stop ISPIF overflow; a reset timeout,
+frame timeout, or any reboot is FAIL and must be retained in the handoff log.
