@@ -35,13 +35,14 @@ but the runtime IIO names and channels still need owner confirmation.
 The required vendor registry is preserved outside GitHub as
 `$OP3_EXTERNAL_INPUTS/sensors/sns.reg`, locked by
 `manifests/op3-sensor-smgr.env`, and staged with
-`scripts/stage-op3-sensor-registry.sh`. Build and device status are
-**NOT_RUN / INCONCLUSIVE**; see
-`docs/handoff/op3-sensor-smgr-001.md` and the test-matrix row. The sensor
-kernel build now passes at nested commit `23b5bfc599738e10960cfa8c91e10012b64f1595`
-with `Image.gz` SHA256
-`df8b5a032542f0c0ebba952e2260afdf4e85eeacf2b705636188d4fe69ec725e`, but no
-device boot or IIO enumeration has been run yet.
+`scripts/stage-op3-sensor-registry.sh`. The sensor kernel build passes at
+nested commit `23b5bfc599738e10960cfa8c91e10012b64f1595` with `Image.gz`
+SHA256 `df8b5a032542f0c0ebba952e2260afdf4e85eeacf2b705636188d4fe69ec725e`.
+A temporary owner-authorized boot test provisionally passed SLPI/QRTR/IIO
+enumeration and buffered gyro, magnetometer, and proximity data. No
+accelerometer IIO device appeared; the line remains an experiment and is not
+integrated into the default recovery profile. See
+`docs/handoff/op3-sensor-smgr-001.md` and the test-matrix row.
 
 ## OP3 CAMSS/VFE stream-teardown diagnostic (2026-09-14)
 

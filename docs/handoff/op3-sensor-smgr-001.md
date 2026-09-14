@@ -5,7 +5,7 @@ Role: Implementation
 Baseline commit: `4f8595b13fbd0bc0caf18897bbb3361699cbb2e5` integrated recovery checkpoint; formal 6.12.1 baseline `67b0bbc3cbf46bae712a2606a43361756fcbd829`
 Working branch: top-level `agent/implementation/op3-sensor-smgr-001`; nested kernel `agent/implementation/op3-sensor-smgr-001`
 Changed files: Qualcomm Sensor Manager/IIO stack, sensor config fragment, registry staging script/manifest, patch archive, handoff and test records
-Commit SHA: top-level archive checkpoint pending; nested kernel through `23b5bfc59973`
+Commit SHA: top-level `e5c61a0`; nested kernel through `23b5bfc59973`
 
 Layer: Linux kernel sensor transport and IIO enumeration
 Hypothesis tested: The physical OP3 motion/environment sensors are exposed through the existing SLPI/SSC Sensor Manager path, so the 6.12 kernel can enumerate them without inventing direct HLOS I²C nodes.
@@ -24,8 +24,10 @@ acf85fd6ae148861374ec4d65feee0e3d909cce9b75e96d09c2f44a102914d1b  out/pmos-msm89
 b18c78299914d159f7d2fc32699aabe081c4b4dc46bc00b1352017b00ca020e4  out/pmos-msm8996-6.12-sensor-smgr/Module.symvers
 ```
 
-Device test run by project owner: NOT_RUN
-Device result: NOT_RUN
+Device test run: Codex agent under explicit owner authorization on 2026-09-14
+Device result: PROVISIONAL PASS for SLPI/QRTR/IIO enumeration and buffered data
+stream; full hardware inventory is incomplete because no accelerometer IIO
+device appeared
 Evidence links / log paths: Issue #13; vendor `sensor_def_qcomdev.conf` and `hals.conf` from the preserved OnePlus 3 backup; downstream OnePlus/Lineage kernel source; `/tmp/op3-snsreg.RYqTOf` source hash `2644c56bce535a7c8930e497d2f36601b302573a358493fad2732d1109518f06`; `/tmp/op3-sensor-smgr-kernel-build-final.log` (final clean incremental pass); `/tmp/op3-sensor-smgr-kernel-build.log` (earlier compatibility-fix attempts); `/tmp/op3-sensor-smgr-object-build.log`; `/tmp/op3-sensor-smgr-affected-build.log`; `/tmp/op3-sensor-smgr-pack.log`
 
 Temporary device-test package prepared on 2026-09-14 (not an accepted recovery
@@ -39,14 +41,24 @@ artifact and not flashed): the existing Buildroot initrd was repacked with only
 8c94cbf7914dc6511a5727c711489e9cfcae23f5df7d0d0cd1c63953ba9df625  artifacts/boot-oneplus3-pmos612-recovery-sensor-smgr-test.img
 ```
 
-The next gate is one fresh temporary `fastboot boot` run. After boot, collect
-`dmesg`, `/sys/bus/iio/devices`, and `iio_info`/raw channel data. Do not unload
-QRTR, SLPI, or Sensor Manager drivers during this run. No device action has
-been performed by the agent yet.
+Device evidence from the fresh temporary `fastboot boot` run: the phone stayed
+in recovery and SSH became available. The generic registry fallback loaded
+successfully after the board-specific lookup returned `-ENOENT`. The kernel
+enumerated `qcom-smgr-gyro` at 200 Hz, `qcom-smgr-mag` at 52 Hz, and
+`qcom-smgr-prox-light` at 5 Hz. Enabling and disabling each IIO buffer returned
+zero; buffered reads returned 96, 96, and 32 bytes respectively, with changing
+non-zero gyro, magnetometer, and proximity values. `iio_info` is not installed
+in this recovery image. The next isolated follow-up is to account for the
+missing accelerometer and validate/fix the IIO timestamp field; no Buildroot
+integration or default recovery promotion is justified yet.
 
 Conclusion: INCONCLUSIVE
 Uncertainties: The vendor registry is a required external binary and is now locked but not committed; the exact physical sensor variants must be confirmed from runtime IIO channels; the SLPI firmware must be present and must accept this registry on the device build. The build embeds the separately locked ath10k files from the external-input directory; they are not part of the sensor source archive.
-Recommended next experiment: stage `sensors/sns.reg` into `artifacts/op3-initramfs-firmware`, build the sensor fragment into the clean recovery kernel, boot once, and collect `dmesg`, `/sys/bus/iio/devices`, and `iio_info`/raw channel data. Treat one stable accelerometer or gyroscope stream as the first PASS gate; test magnetometer, proximity/light, and pressure only after that gate.
+Recommended next experiment: create a separate one-variable follow-up for the
+missing accelerometer (first determine whether the vendor registry/SLPI report
+contains an `ACCEL` entry, then change only the matching or client mapping).
+Keep timestamp validation as another isolated follow-up. Test pressure and
+other sensor classes only after those gates.
 
 ## Static implementation record
 
