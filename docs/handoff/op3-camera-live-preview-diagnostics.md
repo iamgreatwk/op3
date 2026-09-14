@@ -6,7 +6,7 @@ Role: implementation/test
 Baseline commit: top-level `4fa5cd9` (`test: add DRM camera live preview`)
 Working branch: `agent/implementation/recovery-browser-001`
 Changed files: `scripts/op3-v4l2-live-preview.c`
-Commit SHA: `350bce0`, `7d5ef6c`, `ef85820`, `91472ab`
+Commit SHA: `350bce0`, `7d5ef6c`, `ef85820`, `91472ab`, `a96e86c`
 
 Layer: userspace camera preview diagnostic
 Hypothesis tested: the gray screen and apparent self-exit might be caused by
@@ -60,3 +60,14 @@ complete ordered module chain, run the known-good AF helper first, and only
 then run the `91472ab` diagnostic preview. Do not unload CAMSS/CCI or reuse the
 camera stream after an SMMU/VFE fault. If the reordered preview still fails,
 investigate the CAMSS/SMMU buffer path before DRM.
+
+The next candidate `a96e86c` goes one step further: it does not open
+`/dev/dri/card0` or allocate a DRM dumb buffer until after the first valid
+camera buffer has been dequeued. Its host-built ARM64 executable is:
+
+```text
+60c85dcc61d9ae388092d6c1c095684306a27ee7cd61e7a9972667eaed128210  out/recovery/op3-v4l2-live-preview-diagnostics
+```
+
+It requires another clean boot because the `91472ab` test ended with VFE/SMMU
+faults.

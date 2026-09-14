@@ -12,6 +12,10 @@ DRM before `STREAMON`, but the fresh-boot test still failed after the AF helper
 passed. Candidate `91472ab` now defers `SETCRTC` until after the first valid
 camera buffer and requires another fresh-boot test.
 
+Candidate `a96e86c` goes one step further by opening `/dev/dri/card0` only
+after the first valid camera buffer is dequeued. It is compiled but requires a
+new clean boot because the preceding preview test ended with VFE/SMMU faults.
+
 ## OP3 autofocus G5 checkerboard sweep (2026-09-14)
 
 The high-contrast checkerboard test is recorded in
