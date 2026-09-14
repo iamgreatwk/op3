@@ -385,6 +385,15 @@ int main(void)
 	while (!preview_stop) {
 		int poll_count;
 		unsigned int index;
+		long long now = monotonic_us();
+
+		if (now - last_frame >= PREVIEW_FRAME_TIMEOUT_US) {
+			fprintf(stderr, "preview frame timeout after %lld us\n",
+				now - last_frame);
+			stop_reason = PREVIEW_STOP_FRAME_TIMEOUT;
+			ret = -ETIMEDOUT;
+			break;
+		}
 
 		memset(pollfds, 0, sizeof(pollfds));
 		pollfds[0].fd = context.video_fd;
@@ -403,16 +412,8 @@ int main(void)
 			ret = -errno;
 			break;
 		}
-		if (!poll_count) {
-			if (monotonic_us() - last_frame >= PREVIEW_FRAME_TIMEOUT_US) {
-				fprintf(stderr, "preview frame timeout after %lld us\n",
-					monotonic_us() - last_frame);
-				stop_reason = PREVIEW_STOP_FRAME_TIMEOUT;
-				ret = -ETIMEDOUT;
-				break;
-			}
+		if (!poll_count)
 			continue;
-		}
 		if (preview_handle_inputs(inputs, input_count, &context, &focus,
 					  &stop_reason) > 0)
 			break;
