@@ -1,5 +1,17 @@
 # Latest handoff
 
+## OP3 CAMSS/VFE stream-teardown diagnostic (2026-09-14)
+
+The same-boot camera test passed once and then failed at frame 0 on the second
+open with `VFE0 rdi0 overflow`. A diagnostic-only camera-kernel candidate is
+now committed as nested-kernel commit
+`36118b36d58d7235ab9a1cef9840ae64cdfcf526` on
+`agent/implementation/op3-camera-imx298-001`. It records sub-device
+`s_stream(0)` order/return values, VFE output and power state, halt results,
+and buffer pointers. It does not alter behavior or touch DRM, DTS, rootfs, or
+Buildroot. The exact module build and fresh-boot two-session test are in
+[op3-camera-camss-teardown-diagnostic.md](op3-camera-camss-teardown-diagnostic.md).
+
 ## OP3 live camera preview startup-order experiment (2026-09-14)
 
 The no-frame diagnostic is recorded in
