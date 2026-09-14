@@ -24,6 +24,7 @@
 #define OP3_EEPROM_DEFAULT_OFFSET 0x0000
 #define OP3_EEPROM_DEFAULT_LENGTH 0x30
 #define OP3_EEPROM_MAX_LENGTH 0x100
+#define OP3_EEPROM_MAX_READ 4
 
 static void usage(const char *program)
 {
@@ -79,8 +80,9 @@ int main(int argc, char **argv)
 	uint8_t data[OP3_EEPROM_MAX_LENGTH];
 	struct i2c_msg messages[2];
 	struct i2c_rdwr_ioctl_data transaction;
+	size_t position;
 	int fd;
-	int result;
+	int result = 0;
 
 	if (argc < 2 || argc > 4) {
 		usage(argv[0]);
@@ -109,30 +111,42 @@ int main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	address_bytes[0] = (uint8_t)(offset >> 8);
-	address_bytes[1] = (uint8_t)offset;
 	memset(data, 0, sizeof(data));
 	memset(messages, 0, sizeof(messages));
-	messages[0].addr = OP3_EEPROM_ADDR;
-	messages[0].flags = 0;
-	messages[0].len = sizeof(address_bytes);
-	messages[0].buf = address_bytes;
-	messages[1].addr = OP3_EEPROM_ADDR;
-	messages[1].flags = I2C_M_RD;
-	messages[1].len = (uint16_t)length;
-	messages[1].buf = data;
 	transaction.msgs = messages;
 	transaction.nmsgs = 2;
 
-	result = ioctl(fd, I2C_RDWR, &transaction);
-	if (result != 2) {
-		if (result < 0)
-			fprintf(stderr, "I2C_RDWR addr=0x%02x offset=0x%04lx length=0x%lx: %s\n",
-				OP3_EEPROM_ADDR, offset, length, strerror(errno));
-		else
-			fprintf(stderr, "I2C_RDWR completed %d/2 messages\n", result);
-		close(fd);
-		return EXIT_FAILURE;
+	/* CCI on MSM8996 advertises a four-byte maximum read message. */
+	for (position = 0; position < length; position += OP3_EEPROM_MAX_READ) {
+		size_t chunk = length - position;
+		unsigned long current_offset = offset + position;
+
+		if (chunk > OP3_EEPROM_MAX_READ)
+			chunk = OP3_EEPROM_MAX_READ;
+		address_bytes[0] = (uint8_t)(current_offset >> 8);
+		address_bytes[1] = (uint8_t)current_offset;
+		messages[0].addr = OP3_EEPROM_ADDR;
+		messages[0].flags = 0;
+		messages[0].len = sizeof(address_bytes);
+		messages[0].buf = address_bytes;
+		messages[1].addr = OP3_EEPROM_ADDR;
+		messages[1].flags = I2C_M_RD;
+		messages[1].len = (uint16_t)chunk;
+		messages[1].buf = data + position;
+
+		result = ioctl(fd, I2C_RDWR, &transaction);
+		if (result != 2) {
+			if (result < 0)
+				fprintf(stderr,
+					"I2C_RDWR addr=0x%02x offset=0x%04lx length=0x%zx: %s\n",
+					OP3_EEPROM_ADDR, current_offset, chunk,
+					strerror(errno));
+			else
+				fprintf(stderr, "I2C_RDWR completed %d/2 messages at 0x%04lx\n",
+					result, current_offset);
+			close(fd);
+			return EXIT_FAILURE;
+		}
 	}
 
 	printf("adapter=%s address=0x%02x offset=0x%04lx length=0x%lx\n",

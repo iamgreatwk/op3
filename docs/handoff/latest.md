@@ -9,8 +9,10 @@ Linux 7-bit address `0x50`, on CCI master 0. The new helper reads only
 `0x0000..0x002f` through `I2C_RDWR`, does not scan addresses, and does not send
 an EEPROM data-write command. Static vendor-library analysis makes raw offsets
 `0x24` and `0x26` candidate little-endian AF calibration fields, not accepted
-macro/infinity values. The helper is ready, but the device read has not run
-because the SSH banner currently times out; no kernel, DTS, flash, or Buildroot
+macro/infinity values. After loading the verified camera modules, CCI0 appeared
+as `/dev/i2c-5`; the first 48-byte transaction was rejected by the MSM8996 CCI
+four-byte read limit. The helper is now changed to perform bounded four-byte
+read transactions, with the retry pending; no kernel, DTS, flash, or Buildroot
 change was made.
 
 ## OP3 autofocus G3 sweep tool correction and vendor G2 constraints (2026-09-13)
