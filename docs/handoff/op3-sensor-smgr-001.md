@@ -79,8 +79,27 @@ Boot image SHA256: 6864133e7f7b99fc1eb4b027ce469f3a7a79ebdcd965e0326b5b02824605e
 Temporary initrd SHA256: 3f193f242b6c500a1c62d2b8176c834bf3365bd28dd3c5bf975b3e688c53b2b8
 ```
 
-Device test status: PENDING. The image is intended for `fastboot boot` only;
-it is not a Buildroot artifact and has not been flashed.
+The inventory diagnostic image was boot-tested twice on 2026-09-15. Both boots
+reported exactly two raw SLPI entries (`MAG`, id `0x14`, and `PROX_LIGHT`, id
+`0x28`) and registered only `qcom-smgr-mag` and `qcom-smgr-prox-light`. The
+second boot used an additional byte-identical
+`sns.reg-oneplus,oneplus3` file; the board-specific lookup then succeeded, but
+the inventory remained unchanged. This rules out the generic-registry
+fallback/name as the cause of the missing accelerometer and gyroscope. The
+image is intended for `fastboot boot` only; it is not a Buildroot artifact and
+has not been flashed.
+
+Naming A/B artifacts:
+
+```text
+Board-name initrd: 63556b8c16a11a184bd7239873a08e1faa4c133eb48878850554ff7b1b80b472
+Board-name boot image: 640aed56eb30cbd8debbe79fa20be1526cd3444e002f14837f187ce57fd017fb
+```
+
+The next experiment must remain separate: inspect or validate the SLPI
+registry/firmware sensor availability, without changing IIO type mapping or
+adding guessed HLOS sensor nodes. Timestamp validation remains a separate
+follow-up.
 
 ## Static implementation record
 

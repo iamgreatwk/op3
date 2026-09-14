@@ -53,6 +53,15 @@ with SHA256
 `6864133e7f7b99fc1eb4b027ce469f3a7a79ebdcd965e0326b5b02824605e215`.
 Device testing is pending after the power interruption.
 
+The diagnostic image was then booted twice on 2026-09-15. Both runs returned
+only `MAG` (id `0x14`) and `PROX_LIGHT` (id `0x28`) from SLPI and registered
+only the corresponding two IIO devices. A registry naming A/B added the
+byte-identical board-specific file `sns.reg-oneplus,oneplus3`; the fallback
+warning disappeared, but the sensor inventory did not change. Registry file
+naming is therefore ruled out as the cause of the missing accelerometer and
+gyroscope. The next sensor experiment should inspect SLPI registry/firmware
+availability, with no guessed IIO mapping or HLOS I2C nodes.
+
 ## OP3 CAMSS/VFE stream-teardown diagnostic (2026-09-14)
 
 The active camera worktree is
