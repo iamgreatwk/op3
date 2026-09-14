@@ -1,5 +1,17 @@
 # Latest handoff
 
+## OP3 autofocus G5 checkerboard sweep (2026-09-14)
+
+The high-contrast checkerboard test is recorded in
+[op3-af-g5-checkerboard-sweep.md](op3-af-g5-checkerboard-sweep.md). After a
+clean boot, all eight VCM positions returned `ioctl_rc=0`, and the continuous
+RAW10 stream captured `200/200` frames without focused CCI, VFE, CAMSS, or SMMU
+errors. Tenengrad and Laplacian metrics both numerically peaked at `512`, but
+the full-range difference was only about `0.36%`, the board occupied only part
+of the field, and the result does not prove useful lens travel. Status remains
+**CAPTURE-PASS / OPTICAL-FOCUS-INCONCLUSIVE**. The next run should centre and
+fill the field with the same target before any driver change.
+
 ## OP3 autofocus G5 high-end clean sweep (2026-09-14)
 
 The fresh-boot high-end sweep is recorded in
