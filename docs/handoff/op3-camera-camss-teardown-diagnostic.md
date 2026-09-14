@@ -44,12 +44,19 @@ make -C "$kernel" O="$kout" ARCH=arm64 \
   CROSS_COMPILE=aarch64-linux-gnu- \
   CC=aarch64-linux-gnu-gcc-11 olddefconfig modules_prepare
 
-ln -sfn "$fullout/vmlinux.o" "$kout/vmlinux.o"
-ln -sfn "$fullout/Module.symvers" "$kout/Module.symvers"
+ln -s "$fullout/vmlinux.o" "$kout/vmlinux.o"
 
 make -C "$kernel" O="$kout" ARCH=arm64 \
   CROSS_COMPILE=aarch64-linux-gnu- \
   CC=aarch64-linux-gnu-gcc-11 \
+  drivers/media/common/videobuf2/videobuf2-common.ko \
+  drivers/media/common/videobuf2/videobuf2-dma-sg.ko \
+  drivers/media/common/videobuf2/videobuf2-memops.ko \
+  drivers/media/common/videobuf2/videobuf2-v4l2.ko \
+  drivers/media/mc/mc.ko \
+  drivers/media/v4l2-core/v4l2-async.ko \
+  drivers/media/v4l2-core/v4l2-fwnode.ko \
+  drivers/media/v4l2-core/videodev.ko \
   drivers/media/platform/qcom/camss/qcom-camss.ko
 
 sha256sum "$kout/drivers/media/platform/qcom/camss/qcom-camss.ko"
