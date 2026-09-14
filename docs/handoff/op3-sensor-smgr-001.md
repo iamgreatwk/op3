@@ -5,7 +5,7 @@ Role: Implementation
 Baseline commit: `4f8595b13fbd0bc0caf18897bbb3361699cbb2e5` integrated recovery checkpoint; formal 6.12.1 baseline `67b0bbc3cbf46bae712a2606a43361756fcbd829`
 Working branch: top-level `agent/implementation/op3-sensor-smgr-001`; nested kernel `agent/implementation/op3-sensor-smgr-001`
 Changed files: Qualcomm Sensor Manager/IIO stack, sensor config fragment, registry staging script/manifest, patch archive, handoff and test records
-Commit SHA: top-level `ee2f815`; nested kernel diagnostic commit `8b9430d14e2f`
+Commit SHA: top-level `7c4b06d`; nested kernel diagnostic commit `8b9430d14e2f`
 
 Layer: Linux kernel sensor transport and IIO enumeration
 Hypothesis tested: The physical OP3 motion/environment sensors are exposed through the existing SLPI/SSC Sensor Manager path, so the 6.12 kernel can enumerate them without inventing direct HLOS I²C nodes.
@@ -117,6 +117,40 @@ Patch SHA256: 2324e8ae58f0913a420bc22854d837e03588b25a79eac1e2a5c6a483d1e94530
 The next owner-authorized build must use a new output directory and a fresh
 `fastboot boot` test. The previous two-device inventory result remains valid
 and is not overwritten.
+
+The registry-group audit build completed after the power interruption under
+explicit owner authorization. It used the clean nested sensor branch at
+`8b9430d14e2f3d0187add1dc5f7f1ae3eef413b9` and did not modify the registry
+data, IIO mapping, DTS, or Buildroot. The exact build command was:
+
+```text
+make -C source/linux-pmos-msm8996-6.12-sensor-smgr \
+  O=out/pmos-msm8996-6.12-sensor-smgr-regaudit ARCH=arm64 \
+  CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
+  -j$(nproc) Image.gz dtbs modules
+```
+
+Build artifacts:
+
+```text
+c9db8711c24544950f1020a10231ca6718b900b9d7cbd23ba699073491c65acf  out/pmos-msm8996-6.12-sensor-smgr-regaudit/.config
+f4a1d8446ac752eac3e6bb094b4f3ac8ca89905e9e52e1bbfc93df6eb971207e  out/pmos-msm8996-6.12-sensor-smgr-regaudit/arch/arm64/boot/Image.gz
+acf85fd6ae148861374ec4d65feee0e3d909cce9b75e96d09c2f44a102914d1b  out/pmos-msm8996-6.12-sensor-smgr-regaudit/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dtb
+b18c78299914d159f7d2fc32699aabe081c4b4dc46bc00b1352017b00ca020e4  out/pmos-msm8996-6.12-sensor-smgr-regaudit/Module.symvers
+```
+
+The temporary boot image was packaged with the byte-identical board-name
+registry initrd. It has not been flashed:
+
+```text
+63556b8c16a11a184bd7239873a08e1faa4c133eb48878850554ff7b1b80b472  artifacts/initrd-op3-recovery-buildroot-sensor-smgr-boardname-test.cpio.gz
+b1c791fcc24afd4ec52f28e7fb1daaa18c54e787581fd17d4304d289385bfbc1  artifacts/boot-oneplus3-pmos612-recovery-sensor-smgr-regaudit-test.img
+```
+
+Device test status: PENDING. The required clean-boot capture is the
+`sns-reg`, `available sensor`, `qcom_smgr`, `serving group`, and `group
+request` dmesg lines plus the resulting IIO device names. Do not change the
+registry group map or client mapping until this evidence is reviewed.
 
 ## Static implementation record
 

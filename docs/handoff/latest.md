@@ -66,7 +66,16 @@ The next isolated diagnostic is committed at nested kernel commit
 `8b9430d14e2f`: it logs each SLPI Sensor Registry group request and the static
 registry map used to answer it. The diagnostic does not alter registry bytes,
 IIO mapping, DTS, or Buildroot. It is ready for an owner-authorized kernel
-build and fresh `fastboot boot` test.
+build and fresh `fastboot boot` test. The build completed after the power
+interruption in `out/pmos-msm8996-6.12-sensor-smgr-regaudit`; `Image.gz` is
+`f4a1d8446ac752eac3e6bb094b4f3ac8ca89905e9e52e1bbfc93df6eb971207e`, the OP3
+DTB is unchanged at
+`acf85fd6ae148861374ec4d65feee0e3d909cce9b75e96d09c2f44a102914d1b`, and the
+temporary packaged image is
+`artifacts/boot-oneplus3-pmos612-recovery-sensor-smgr-regaudit-test.img`
+(`b1c791fcc24afd4ec52f28e7fb1daaa18c54e787581fd17d4304d289385bfbc1`). A
+fresh `fastboot boot` test remains pending; no registry group map or IIO
+mapping change is justified before its logs are reviewed.
 
 ## OP3 CAMSS/VFE stream-teardown diagnostic (2026-09-14)
 
