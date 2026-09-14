@@ -1,0 +1,35 @@
+From b93eacd248c313c7c7b3bc821e2ef1c67c8122a7 Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Mon, 14 Sep 2026 23:25:24 +0800
+Subject: [PATCH] net: qrtr: use token namespace for Linux 6.12 exports
+
+
+diff --git a/net/qrtr/smd.c b/net/qrtr/smd.c
+index 3f98afb609cb..e831555fb9f0 100644
+--- a/net/qrtr/smd.c
++++ b/net/qrtr/smd.c
+@@ -84,7 +84,7 @@ const struct bus_type qrtr_bus = {
+ 	.probe		= qcom_smd_qrtr_device_probe,
+ 	.remove		= qcom_smd_qrtr_device_remove,
+ };
+-EXPORT_SYMBOL_NS_GPL(qrtr_bus, "QRTR");
++EXPORT_SYMBOL_NS_GPL(qrtr_bus, QRTR);
+ 
+ int __qrtr_driver_register(struct qrtr_driver *drv, struct module *owner)
+ {
+@@ -93,13 +93,13 @@ int __qrtr_driver_register(struct qrtr_driver *drv, struct module *owner)
+ 
+ 	return driver_register(&drv->driver);
+ }
+-EXPORT_SYMBOL_NS_GPL(__qrtr_driver_register, "QRTR");
++EXPORT_SYMBOL_NS_GPL(__qrtr_driver_register, QRTR);
+ 
+ void qrtr_driver_unregister(struct qrtr_driver *drv)
+ {
+ 	driver_unregister(&drv->driver);
+ }
+-EXPORT_SYMBOL_NS_GPL(qrtr_driver_unregister, "QRTR");
++EXPORT_SYMBOL_NS_GPL(qrtr_driver_unregister, QRTR);
+ 
+ static void qcom_smd_qrtr_dev_release(struct device *dev)
+ {
