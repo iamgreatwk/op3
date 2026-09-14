@@ -1,0 +1,8 @@
+# Qualcomm MSM8996 Sensor Manager over SLPI/SSC.
+#
+# The OP3 vendor sensor stack is exposed by the SLPI Sensor Manager service,
+# not by guessed HLOS I2C clients.  Keep this built in for the first bring-up
+# so the owner does not need to stage or load a second module just to test the
+# transport.
+CONFIG_QCOM_SNS_REG=y
+CONFIG_IIO_QCOM_SMGR=y

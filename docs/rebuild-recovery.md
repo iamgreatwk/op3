@@ -443,6 +443,27 @@ make -C source/buildroot-browser O="$PWD/out/buildroot-op3-egl" \
 浏览器 bundle 使用外部 CJK 字体，部署到设备后才由 recovery 的 browser
 命令调用；它不改变默认 initramfs。
 
+## 10a. 可选传感器移植线：SLPI/SSC Sensor Manager
+
+默认 recovery 镜像暂不包含这条实验线。OP3 原厂传感器 HAL 使用 SLPI/SSC
+Sensor Manager，因此不要根据候选配置表直接增加猜测的 HLOS I²C 传感器
+节点。独立补丁、配置片段、外部 `sns.reg` 说明和下一步命令见
+`patches/pmos612-op3-sensor-smgr/README.md`。
+
+先从已恢复的 `artifacts/op3-initramfs-firmware` 生成目录中加入外部注册
+表：
+
+~~~bash
+export OP3_EXTERNAL_INPUTS=/home/kai/op3-recovery-external-inputs
+./scripts/stage-op3-sensor-registry.sh \
+  "$OP3_EXTERNAL_INPUTS" artifacts/op3-initramfs-firmware
+~~~
+
+它会校验 `sensors/sns.reg` 的 SHA256，并把它放到
+`lib/firmware/qcom/sensors/sns.reg`。Buildroot 的 recovery post-build hook
+会随完整 firmware tree 自动复制该文件；只有传感器内核分支合入并通过
+设备测试后，才把它纳入正式 artifact 锁。
+
 ## 10. 删除本地文件后的恢复
 
 可以删除 checkout、source/、out/ 和 artifacts/。以后只需重新 clone 本文

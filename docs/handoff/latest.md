@@ -15,6 +15,29 @@ successful same-model code, or new electrical/hardware evidence. The next
 hardware work should prioritize IIO sensor enumeration and validation, then
 Bluetooth UART/HCI, firmware, power, and pairing validation.
 
+## OP3 sensor transport / IIO enumeration started (2026-09-14)
+
+GitHub Issue [#13](https://github.com/iamgreatwk/op3/issues/13) now has the
+independent top-level branch `agent/implementation/op3-sensor-smgr-001` and
+nested kernel worktree
+`source/linux-pmos-msm8996-6.12-sensor-smgr` on the same branch. The line is
+based on the tested integrated recovery kernel commit `4f8595b13fbd` and adds
+the Qualcomm sns-reg service, SLPI/SSC Sensor Manager transport, and IIO
+motion-sensor client as three archived kernel patches. It does not change the
+camera, DRM, recovery UI, or default Buildroot profile.
+
+Static vendor/downstream evidence points to the SLPI/SSC path rather than
+guessed HLOS I²C nodes. The likely hardware set is LSM6DS3 (accelerometer and
+gyroscope), MMC3416PJ (magnetometer), and APDS9921/APDS-9922 (proximity/light),
+but the runtime IIO names and channels still need owner confirmation.
+
+The required vendor registry is preserved outside GitHub as
+`$OP3_EXTERNAL_INPUTS/sensors/sns.reg`, locked by
+`manifests/op3-sensor-smgr.env`, and staged with
+`scripts/stage-op3-sensor-registry.sh`. Build and device status are
+**NOT_RUN / INCONCLUSIVE**; see
+`docs/handoff/op3-sensor-smgr-001.md` and the pending test-matrix row.
+
 ## OP3 CAMSS/VFE stream-teardown diagnostic (2026-09-14)
 
 The active camera worktree is
