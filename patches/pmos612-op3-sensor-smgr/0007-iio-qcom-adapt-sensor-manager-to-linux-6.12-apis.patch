@@ -1,0 +1,43 @@
+From f6d4b4706f831929155fdeb2a630f6aeb0aa595c Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Mon, 14 Sep 2026 23:21:12 +0800
+Subject: [PATCH] iio: qcom: Adapt Sensor Manager to Linux 6.12 APIs
+
+
+diff --git a/drivers/iio/common/qcom_smgr/qcom_smgr.c b/drivers/iio/common/qcom_smgr/qcom_smgr.c
+index f8ee48d075bc..c6aa7379f09a 100644
+--- a/drivers/iio/common/qcom_smgr/qcom_smgr.c
++++ b/drivers/iio/common/qcom_smgr/qcom_smgr.c
+@@ -143,9 +143,9 @@ static int qcom_smgr_request_single_sensor_info(struct qcom_smgr *smgr,
+ 			resp.native_sample_rates[i].rate_count;
+ 		if (sensor->data_types[i].native_sample_rate_count) {
+ 			sensor->data_types[i]
+-				.native_sample_rates = devm_kmemdup_array(
++				.native_sample_rates = devm_kmemdup(
+ 				smgr->dev, resp.native_sample_rates[i].rates,
+-				sensor->data_types[i].native_sample_rate_count,
++				sensor->data_types[i].native_sample_rate_count *
+ 				sizeof(u16), GFP_KERNEL);
+ 			if (!sensor->data_types[i].native_sample_rates)
+ 				return -ENOMEM;
+@@ -396,15 +396,17 @@ static int qcom_smgr_iio_write_raw(struct iio_dev *iio_dev,
+ 				   int val2, long mask)
+ {
+ 	struct qcom_smgr_iio_priv *priv = iio_priv(iio_dev);
++	int ret;
+ 
+ 	switch (mask) {
+ 	case IIO_CHAN_INFO_SAMP_FREQ:
+-		if (!iio_device_claim_direct(iio_dev))
+-			return -EBUSY;
++		ret = iio_device_claim_direct_mode(iio_dev);
++		if (ret)
++			return ret;
+ 
+ 		priv->sensor->data_types[0].cur_sample_rate = val;
+ 
+-		iio_device_release_direct(iio_dev);
++		iio_device_release_direct_mode(iio_dev);
+ 		return 0;
+ 	default:
+ 		return -EINVAL;

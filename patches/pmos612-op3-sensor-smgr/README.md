@@ -11,7 +11,7 @@ The series is based on the already-tested recovery kernel checkpoint:
 agent/implementation/recovery-browser-audio-full-001
 ```
 
-The six commits are:
+The seven commits are:
 
 ```text
 b853c4b962fa  iio: Add Qualcomm Sensor Manager driver
@@ -20,6 +20,7 @@ d19b3b6bddaa  remoteproc: qcom: Enable in-kernel sns-reg
 8c1093c17676  net: qrtr: Turn QRTR into a bus
 a2af2e73df40  net: qrtr: Define macro to convert QMI version and instance to QRTR instance
 603c36de0534  modpost: keep QRTR alias in current devtable API
+f6d4b4706f83  iio: qcom: Adapt Sensor Manager to Linux 6.12 APIs
 ```
 
 The first two commits are based on the Linux v6.16 MSM8996 Sensor Manager
@@ -35,6 +36,9 @@ series, with the fourth patch kept compatible with the 6.12 tree's newer
 The sixth patch removes duplicate legacy `modpost` table entries that were
 already handled by the current 6.12 `file2alias.c` special-case path; it keeps
 only the new QRTR table entry so the host-side modpost tool builds cleanly.
+
+The seventh patch adapts the Sensor Manager allocation and IIO direct-mode
+calls to the APIs available in the 6.12 baseline.
 
 ## Fresh checkout
 
@@ -61,7 +65,7 @@ git -C /path/to/linux-pmos-msm8996-6.12-sensor-smgr am \
 The `git worktree add` command above is illustrative: when the recovery worktree
 already has the requested branch or path, create the sensor worktree from the
 recovery worktree's `HEAD` using the normal nested-repository worktree rules.
-The expected source commits are the six IDs listed above; the resulting
+The expected source commits are the seven IDs listed above; the resulting
 commit IDs are allowed to differ on a fresh host, but the tree must contain
 the same files and changes.
 

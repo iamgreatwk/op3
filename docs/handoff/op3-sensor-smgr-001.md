@@ -5,7 +5,7 @@ Role: Implementation
 Baseline commit: `4f8595b13fbd0bc0caf18897bbb3361699cbb2e5` integrated recovery checkpoint; formal 6.12.1 baseline `67b0bbc3cbf46bae712a2606a43361756fcbd829`
 Working branch: top-level `agent/implementation/op3-sensor-smgr-001`; nested kernel `agent/implementation/op3-sensor-smgr-001`
 Changed files: Qualcomm Sensor Manager/IIO stack, sensor config fragment, registry staging script/manifest, patch archive, handoff and test records
-Commit SHA: top-level archive checkpoint pending; nested kernel through `603c36de0534`
+Commit SHA: top-level archive checkpoint pending; nested kernel through `f6d4b4706f83`
 
 Layer: Linux kernel sensor transport and IIO enumeration
 Hypothesis tested: The physical OP3 motion/environment sensors are exposed through the existing SLPI/SSC Sensor Manager path, so the 6.12 kernel can enumerate them without inventing direct HLOS I²C nodes.
@@ -34,6 +34,7 @@ d19b3b6bddaa  remoteproc: qcom: Enable in-kernel sns-reg
 8c1093c17676  net: qrtr: Turn QRTR into a bus
 a2af2e73df40  net: qrtr: Define macro to convert QMI version and instance to QRTR instance
 603c36de0534  modpost: keep QRTR alias in current devtable API
+f6d4b4706f83  iio: qcom: Adapt Sensor Manager to Linux 6.12 APIs
 ```
 
 The OP3 device tree already enables `slpi_pil` with
