@@ -26,13 +26,58 @@
 #define PREVIEW_MARGIN 30
 #define PREVIEW_STATUS_H 110
 #define PREVIEW_MAX_INPUTS 32
+#define PREVIEW_FRAME_TIMEOUT_US 3000000
+#define PREVIEW_KEY_BITS ((KEY_MAX + 8U) / 8U)
+
+struct preview_input {
+	int fd;
+	char path[64];
+	char name[128];
+};
+
+enum preview_stop_reason {
+	PREVIEW_STOP_NONE,
+	PREVIEW_STOP_POWER,
+	PREVIEW_STOP_BACK,
+	PREVIEW_STOP_SIGNAL,
+	PREVIEW_STOP_FRAME_TIMEOUT,
+	PREVIEW_STOP_VIDEO_POLL_ERROR,
+	PREVIEW_STOP_DQBUF_ERROR,
+	PREVIEW_STOP_DISPLAY_ERROR,
+	PREVIEW_STOP_NO_FRAME,
+};
 
 static volatile sig_atomic_t preview_stop;
+static volatile sig_atomic_t preview_signal_number;
 
 static void preview_signal(int signal_number)
 {
-	(void)signal_number;
+	preview_signal_number = signal_number;
 	preview_stop = 1;
+}
+
+static const char *preview_stop_reason_name(enum preview_stop_reason reason)
+{
+	switch (reason) {
+	case PREVIEW_STOP_POWER:
+		return "power-key";
+	case PREVIEW_STOP_BACK:
+		return "back-key";
+	case PREVIEW_STOP_SIGNAL:
+		return "signal";
+	case PREVIEW_STOP_FRAME_TIMEOUT:
+		return "frame-timeout";
+	case PREVIEW_STOP_VIDEO_POLL_ERROR:
+		return "video-poll-error";
+	case PREVIEW_STOP_DQBUF_ERROR:
+		return "dqbuf-error";
+	case PREVIEW_STOP_DISPLAY_ERROR:
+		return "display-error";
+	case PREVIEW_STOP_NO_FRAME:
+		return "no-frame";
+	default:
+		return "none";
+	}
 }
 
 static uint16_t raw10_pixel(const uint8_t *row, unsigned int x)
@@ -151,25 +196,56 @@ static int preview_render(struct recovery_drm_display *display,
 	return recovery_drm_present(display);
 }
 
-static int preview_open_inputs(int *inputs, unsigned int *count)
+static int preview_input_has_code(int fd, unsigned int code)
+{
+	unsigned char key_bits[PREVIEW_KEY_BITS];
+
+	if (code > KEY_MAX)
+		return 0;
+	memset(key_bits, 0, sizeof(key_bits));
+	if (ioctl(fd, EVIOCGBIT(EV_KEY, sizeof(key_bits)), key_bits) < 0)
+		return 0;
+	return !!(key_bits[code / 8U] & (1U << (code % 8U)));
+}
+
+static int preview_open_inputs(struct preview_input *inputs,
+			       unsigned int *count)
 {
 	*count = 0;
 	for (unsigned int i = 0; i < PREVIEW_MAX_INPUTS; i++) {
 		char path[64];
+		char name[128] = "unknown";
 		int fd;
 
 		snprintf(path, sizeof(path), "/dev/input/event%u", i);
 		fd = open(path, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
-		if (fd >= 0)
-			inputs[(*count)++] = fd;
+		if (fd < 0)
+			continue;
+		if (!preview_input_has_code(fd, KEY_POWER) &&
+		    !preview_input_has_code(fd, KEY_BACK) &&
+		    !preview_input_has_code(fd, KEY_VOLUMEUP) &&
+		    !preview_input_has_code(fd, KEY_VOLUMEDOWN)) {
+			close(fd);
+			continue;
+		}
+		(void)ioctl(fd, EVIOCGNAME(sizeof(name)), name);
+		inputs[*count].fd = fd;
+		snprintf(inputs[*count].path, sizeof(inputs[*count].path),
+			 "%s", path);
+		snprintf(inputs[*count].name, sizeof(inputs[*count].name),
+			 "%s", name);
+		printf("preview input path=%s name=%s\n", inputs[*count].path,
+		       inputs[*count].name);
+		(*count)++;
 	}
 	return 0;
 }
 
-static void preview_close_inputs(const int *inputs, unsigned int count)
+static void preview_close_inputs(const struct preview_input *inputs,
+				 unsigned int count)
 {
 	for (unsigned int i = 0; i < count; i++)
-		close(inputs[i]);
+		close(inputs[i].fd);
 }
 
 static int preview_focus_set(struct test_context *context, int *focus,
@@ -196,17 +272,23 @@ static int preview_focus_set(struct test_context *context, int *focus,
 	return 0;
 }
 
-static int preview_handle_inputs(const int *inputs, unsigned int count,
-				 struct test_context *context, int *focus)
+static int preview_handle_inputs(const struct preview_input *inputs,
+				 unsigned int count, struct test_context *context,
+				 int *focus, enum preview_stop_reason *reason)
 {
 	struct input_event event;
 
 	for (unsigned int i = 0; i < count; i++) {
-		while (read(inputs[i], &event, sizeof(event)) == sizeof(event)) {
+		while (read(inputs[i].fd, &event, sizeof(event)) == sizeof(event)) {
 			if (event.type != EV_KEY || event.value != 1)
 				continue;
-			if (event.code == KEY_POWER || event.code == KEY_BACK)
+			if (event.code == KEY_POWER || event.code == KEY_BACK) {
+				*reason = event.code == KEY_POWER ? PREVIEW_STOP_POWER :
+					PREVIEW_STOP_BACK;
+				fprintf(stderr, "preview input exit path=%s name=%s code=%u\n",
+					inputs[i].path, inputs[i].name, event.code);
 				return 1;
+			}
 			if (context->lens_fd >= 0 && event.code == KEY_VOLUMEUP)
 				(void)preview_focus_set(context, focus, 16);
 			else if (context->lens_fd >= 0 && event.code == KEY_VOLUMEDOWN)
@@ -224,13 +306,15 @@ int main(void)
 	struct pollfd pollfds[1 + PREVIEW_MAX_INPUTS];
 	struct v4l2_plane planes[VIDEO_MAX_PLANES];
 	struct v4l2_buffer buffer;
-	int inputs[PREVIEW_MAX_INPUTS];
+	struct preview_input inputs[PREVIEW_MAX_INPUTS];
 	unsigned int input_count = 0;
 	unsigned int good_frames = 0;
 	int focus = DEFAULT_FOCUS_POSITION;
 	int stream_type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+	enum preview_stop_reason stop_reason = PREVIEW_STOP_NONE;
 	int ret = 0;
 	long long last_present = 0;
+	long long last_frame;
 
 	memset(&context, 0, sizeof(context));
 	context.media_fd = -1;
@@ -296,6 +380,7 @@ int main(void)
 	preview_open_inputs(inputs, &input_count);
 	printf("preview ready %ux%u; volume +/- focus step=16; power/back exits\n",
 	       context.width, context.height);
+	last_frame = monotonic_us();
 
 	while (!preview_stop) {
 		int poll_count;
@@ -305,20 +390,39 @@ int main(void)
 		pollfds[0].fd = context.video_fd;
 		pollfds[0].events = POLLIN;
 		for (unsigned int i = 0; i < input_count; i++) {
-			pollfds[1 + i].fd = inputs[i];
+			pollfds[1 + i].fd = inputs[i].fd;
 			pollfds[1 + i].events = POLLIN;
 		}
 		poll_count = poll(pollfds, 1 + input_count, 1000);
 		if (poll_count < 0) {
 			if (errno == EINTR)
 				continue;
+			fprintf(stderr, "preview poll failed errno=%d(%s)\n",
+				errno, strerror(errno));
+			stop_reason = PREVIEW_STOP_VIDEO_POLL_ERROR;
 			ret = -errno;
 			break;
 		}
-		if (!poll_count)
+		if (!poll_count) {
+			if (monotonic_us() - last_frame >= PREVIEW_FRAME_TIMEOUT_US) {
+				fprintf(stderr, "preview frame timeout after %lld us\n",
+					monotonic_us() - last_frame);
+				stop_reason = PREVIEW_STOP_FRAME_TIMEOUT;
+				ret = -ETIMEDOUT;
+				break;
+			}
 			continue;
-		if (preview_handle_inputs(inputs, input_count, &context, &focus) > 0)
+		}
+		if (preview_handle_inputs(inputs, input_count, &context, &focus,
+					  &stop_reason) > 0)
 			break;
+		if (pollfds[0].revents & (POLLERR | POLLHUP | POLLNVAL)) {
+			fprintf(stderr, "preview video poll revents=0x%x\n",
+				pollfds[0].revents);
+			stop_reason = PREVIEW_STOP_VIDEO_POLL_ERROR;
+			ret = -EIO;
+			break;
+		}
 		if (!(pollfds[0].revents & POLLIN))
 			continue;
 
@@ -331,11 +435,17 @@ int main(void)
 		if (xioctl(context.video_fd, VIDIOC_DQBUF, &buffer) < 0) {
 			if (errno == EAGAIN)
 				continue;
+			fprintf(stderr, "preview VIDIOC_DQBUF failed errno=%d(%s)\n",
+				errno, strerror(errno));
+			stop_reason = PREVIEW_STOP_DQBUF_ERROR;
 			ret = -errno;
 			break;
 		}
 		index = buffer.index;
 		if (index >= context.buffer_count) {
+			fprintf(stderr, "preview invalid buffer index=%u count=%u\n",
+				index, context.buffer_count);
+			stop_reason = PREVIEW_STOP_DQBUF_ERROR;
 			ret = -EINVAL;
 			break;
 		}
@@ -343,11 +453,18 @@ int main(void)
 			long long now = monotonic_us();
 
 			good_frames++;
+			last_frame = now;
+			if (good_frames == 1)
+				printf("preview first frame sequence=%u bytes=%u flags=0x%x\n",
+				       buffer.sequence, planes[0].bytesused,
+				       buffer.flags);
 			if (now - last_present >= PREVIEW_FPS_LIMIT_US) {
 				ret = preview_render(&display,
 						     context.buffers[index].address,
 						     context.bytesperline, context.width,
 						     context.height, focus);
+				if (ret)
+					stop_reason = PREVIEW_STOP_DISPLAY_ERROR;
 				if (ret)
 					break;
 				last_present = now;
@@ -363,6 +480,11 @@ int main(void)
 				(void)preview_focus_set(&context, &focus, 0);
 			}
 		}
+		else {
+			fprintf(stderr, "preview rejected frame sequence=%u flags=0x%x "
+				"bytes=%u\n", buffer.sequence, buffer.flags,
+				planes[0].bytesused);
+		}
 
 		memset(&buffer, 0, sizeof(buffer));
 		memset(planes, 0, sizeof(planes));
@@ -372,9 +494,23 @@ int main(void)
 		buffer.length = 1;
 		buffer.m.planes = planes;
 		if (xioctl(context.video_fd, VIDIOC_QBUF, &buffer) < 0) {
+			fprintf(stderr, "preview VIDIOC_QBUF failed errno=%d(%s)\n",
+				errno, strerror(errno));
+			stop_reason = PREVIEW_STOP_DQBUF_ERROR;
 			ret = -errno;
 			break;
 		}
+	}
+	if (preview_signal_number) {
+		stop_reason = PREVIEW_STOP_SIGNAL;
+		if (!ret)
+			fprintf(stderr, "preview stopped by signal=%d\n",
+				preview_signal_number);
+	}
+	if (!ret && good_frames == 0) {
+		stop_reason = stop_reason == PREVIEW_STOP_NONE ?
+			PREVIEW_STOP_NO_FRAME : stop_reason;
+		ret = -EIO;
 	}
 
 	preview_close_inputs(inputs, input_count);
@@ -390,10 +526,13 @@ out_sync:
 	pthread_cond_destroy(&context.condition);
 	pthread_mutex_destroy(&context.lock);
 	if (ret < 0)
-		fprintf(stderr, "preview result=FAIL rc=%d errno=%d(%s) frames=%u\n",
-			ret, -ret, strerror(-ret), good_frames);
+		fprintf(stderr, "preview result=FAIL reason=%s rc=%d errno=%d(%s) "
+			"frames=%u\n", preview_stop_reason_name(stop_reason), ret,
+			-ret, strerror(-ret), good_frames);
+	else if (stop_reason != PREVIEW_STOP_NONE)
+		printf("preview result=STOP reason=%s frames=%u\n",
+		       preview_stop_reason_name(stop_reason), good_frames);
 	else
 		printf("preview result=PASS frames=%u\n", good_frames);
 	return ret < 0 ? 1 : 0;
 }
-
