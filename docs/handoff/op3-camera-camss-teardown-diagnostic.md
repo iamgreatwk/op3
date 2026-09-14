@@ -228,9 +228,8 @@ a new CAMSS/VFE diagnostic or an isolated reset-sequencing test; do not change
 Buildroot, the recovery rootfs, DRM, DTS, or userspace while this repeat-open
 failure remains unresolved.
 
-The nested camera worktree is clean at `1a51c46794e0`. Its branch push to the
-GitHub project remote was attempted with both normal and `--no-thin` packs, but
-the remote rejected both with `did not receive expected object
-ef4af66b54baac7dea616d2d772ba841d3dae125`; no force-push was used. The source
-history therefore remains available locally and is not yet published on that
-remote branch.
+The nested camera worktree is clean at `1a51c46794e0` and now tracks
+`github/agent/implementation/op3-camera-imx298-001` in the public
+[op3-linux-msm8996](https://github.com/iamgreatwk/op3-linux-msm8996) repository.
+The initial push required completing the shallow kernel history; no force-push
+or history rewrite was used.

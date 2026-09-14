@@ -40,10 +40,12 @@ The next camera task must isolate reset sequencing or the underlying hardware
 state with one changed variable and a fresh-boot two-session test.
 
 The top-level handoff commit is pushed to GitHub. The independent nested camera
-kernel branch remains clean locally at `1a51c46794e0`; both normal and
-`--no-thin` pushes to the GitHub project remote were rejected by the remote
-with `did not receive expected object ef4af66b54ba...`. No force-push or history
-rewrite was performed.
+kernel is now published in the public
+[op3-linux-msm8996](https://github.com/iamgreatwk/op3-linux-msm8996) repository;
+branch `agent/implementation/op3-camera-imx298-001` points to the same clean
+commit `1a51c46794e0` as the local worktree and is the repository default
+branch. The initial push required completing the shallow kernel history; no
+force-push or history rewrite was performed.
 
 ## OP3 live camera preview startup-order experiment (2026-09-14)
 
