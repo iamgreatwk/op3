@@ -1,0 +1,21 @@
+From 603c36de0534ed219e9ee146c36d1a5d393adf3f Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Mon, 14 Sep 2026 23:19:36 +0800
+Subject: [PATCH] modpost: keep QRTR alias in current devtable API
+
+
+diff --git a/scripts/mod/file2alias.c b/scripts/mod/file2alias.c
+index 9032b79843b7..ac814ac5e815 100644
+--- a/scripts/mod/file2alias.c
++++ b/scripts/mod/file2alias.c
+@@ -1606,10 +1606,6 @@ static const struct devtable devtable[] = {
+ 	{"cdx", SIZE_cdx_device_id, do_cdx_entry},
+ 	{"vchiq", SIZE_vchiq_device_id, do_vchiq_entry},
+ 	{"coreboot", SIZE_coreboot_device_id, do_coreboot_entry},
+-	{"of", SIZE_of_device_id, do_of_entry},
+-	{"usb", SIZE_usb_device_id, do_usb_entry_multi},
+-	{"pnp", SIZE_pnp_device_id, do_pnp_device_entry},
+-	{"pnp_card", SIZE_pnp_card_device_id, do_pnp_card_entry},
+ 	{"qrtr", SIZE_qrtr_device_id, do_qrtr_entry},
+ };
+ 
