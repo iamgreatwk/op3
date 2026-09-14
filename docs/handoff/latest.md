@@ -2,32 +2,27 @@
 
 ## OP3 CAMSS/VFE stream-teardown diagnostic (2026-09-14)
 
-The same-boot camera test passed once and then failed at frame 0 on the second
-open with `VFE0 rdi0 overflow`. A diagnostic-only camera-kernel candidate is
-now committed as nested-kernel commit
-`36118b36d58d7235ab9a1cef9840ae64cdfcf526` on
-`agent/implementation/op3-camera-imx298-001`. It records sub-device
-`s_stream(0)` order/return values, VFE output and power state, halt results,
-and buffer pointers. It does not alter behavior or touch DRM, DTS, rootfs, or
-Buildroot. The exact module build and fresh-boot two-session test are in
+The active camera worktree is
+`source/linux-pmos-msm8996-6.12-camera-imx298` on
+`agent/implementation/op3-camera-imx298-001`, currently at nested-kernel
+commit `1a51c46794e0`. Its effective source change is diagnostic logging only
+(`5a2b9b6be870`); every behavioral teardown candidate tested today has been
+reverted. The full evidence and bundle hashes are in
 [op3-camera-camss-teardown-diagnostic.md](op3-camera-camss-teardown-diagnostic.md).
-The host-only module bundle is ready at
-`artifacts/op3-camera-camss-teardown-diag-bundle-20260914-v2.tar.gz` with
-SHA256 `064f6bceb7703c0ffb1ac097332b4955128ada8b48decb410babedb793f44fe9`.
-The bundle was tested after a fresh boot: AF run 1 captured `8/8` frames, AF
-run 2 timed out at frame 0, and repeated `VFE0 rdi0 overflow` messages began
-about 150 ms after the first power-off. All recorded VFE and sub-device
-stop/power/halt returns were 0. The next isolated candidate resets ISPIF
-before its final clock/runtime-power shutdown. Nested-kernel commit
-`3ef48e38df32` implements this candidate; the replacement module bundle is
-`artifacts/op3-camera-ispif-reset-bundle-20260914.tar.gz` with SHA256
-`47b285f8619f7f3ff2857f98eef631c8bd8bece65df5bd3399b22c462388824a`.
-It has passed host-side archive and module-hash verification and is pending a
-fresh-boot two-session phone test. That test is now complete: the first run
-captured `8/8`, but the second still timed out at frame 0, with the same ISPIF
-overflow beginning about 160 ms after the first power-off. The ISPIF-reset
-candidate is **FAIL**; the next isolated candidate adds a VFE reset after the
-final halt and before VFE clock/runtime-power shutdown.
+
+The invariant device result is **AF1 8/8, AF2 frame-0 timeout** after a fresh
+boot. VFE reset, ISPIF immediate stop, source-first stop ordering, ISPIF
+reset, final IRQ quiescing, and `CMD_ALL_DISABLE_IMMEDIATELY` all failed to
+make the second open reliable. The strongest current evidence is that normal
+teardown returns success, but ISPIF retains state (`status0=0000c000`,
+`mask0=08000000`); a later `VFE0 rdi0 overflow` appears before the second
+stream and the second capture receives no frame. Masking/clearing the state and
+disabling all interfaces did not remove the failure.
+
+Status is **FAIL / DIAGNOSTIC ONLY**. Do not promote any candidate, rebuild
+Buildroot/rootfs, change DRM/DTS, or integrate a camera image on this basis.
+The next camera task must isolate reset sequencing or the underlying hardware
+state with one changed variable and a fresh-boot two-session test.
 
 ## OP3 live camera preview startup-order experiment (2026-09-14)
 
