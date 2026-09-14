@@ -1,5 +1,18 @@
 # Latest handoff
 
+## OP3 autofocus G4 EEPROM read-only diagnostic prepared (2026-09-14)
+
+The next autofocus experiment is a bounded userspace EEPROM read, recorded in
+[op3-af-g4-eeprom-read.md](op3-af-g4-eeprom-read.md). The source-backed OP3
+camera DTS identifies the rear Sony IMX298 EEPROM as 8-bit address `0xa0`,
+Linux 7-bit address `0x50`, on CCI master 0. The new helper reads only
+`0x0000..0x002f` through `I2C_RDWR`, does not scan addresses, and does not send
+an EEPROM data-write command. Static vendor-library analysis makes raw offsets
+`0x24` and `0x26` candidate little-endian AF calibration fields, not accepted
+macro/infinity values. The helper is ready, but the device read has not run
+because the SSH banner currently times out; no kernel, DTS, flash, or Buildroot
+change was made.
+
 ## OP3 autofocus G3 sweep tool correction and vendor G2 constraints (2026-09-13)
 
 The G3 helper now waits 150 ms after each VCM command and saves three consecutive
