@@ -1,0 +1,18 @@
+From 23b5bfc599738e10960cfa8c91e10012b64f1595 Mon Sep 17 00:00:00 2001
+From: kai <249905534@qq.com>
+Date: Mon, 14 Sep 2026 23:26:27 +0800
+Subject: [PATCH] iio: qcom: Select kfifo buffer for Sensor Manager
+
+
+diff --git a/drivers/iio/common/qcom_smgr/Kconfig b/drivers/iio/common/qcom_smgr/Kconfig
+index 30baee9b0eff..8147118e9912 100644
+--- a/drivers/iio/common/qcom_smgr/Kconfig
++++ b/drivers/iio/common/qcom_smgr/Kconfig
+@@ -8,6 +8,7 @@ config IIO_QCOM_SMGR
+ 	depends on QRTR_SMD
+ 	select QCOM_QMI_HELPERS
+ 	select IIO_BUFFER
++	select IIO_KFIFO_BUF
+ 	help
+ 	  Say yes here to build support for the Sensor Manager (SMGR)
+ 	  service provided by the Qualcomm Snapdragon Sensor Core (SSC).
