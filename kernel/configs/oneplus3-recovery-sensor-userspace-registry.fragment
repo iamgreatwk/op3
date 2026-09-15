@@ -1,0 +1,5 @@
+# One-variable Sensor Manager A/B experiment.
+# The registry server is supplied by the pmOS userspace sns-reg binary;
+# keep the kernel-internal server disabled so both implementations do not
+# publish the same QRTR service.
+CONFIG_QCOM_SNS_REG=n
