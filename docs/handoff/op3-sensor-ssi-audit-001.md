@@ -12,7 +12,7 @@ Role: Research / offline SSI and Sensor Registry audit
 Baseline commit: formal pmOS MSM8996 Linux 6.12.1 `67b0bbc3cbf46bae712a2606a43361756fcbd829`; project checkout `789c3c39b5f4b1fb9b6be98748f9a71e79f779b7`
 Working branch: `agent/research/op3-imu-ssi-audit-001`
 Changed files: `docs/handoff/op3-sensor-ssi-audit-001.md`, `docs/handoff/op3-six-axis-sensor-review-001.md`, `docs/handoff/op3-sensor-smgr-001.md`, `docs/handoff/latest.md`, `docs/test-matrix.md`
-Commit SHA: pending until this report is reviewed and committed
+Commit SHA: `89c4295` (report and wording corrections)
 
 Layer: host-side evidence / sensor registry and SLPI transport audit
 Hypothesis tested: the missing ACCEL/GYRO may be explained by a wrong registry-group interpretation, a wrong binary offset/width map, a mismatch between the kernel and userspace SNS_REG response paths, or an unexamined SSI/SPI clue.
