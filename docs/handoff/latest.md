@@ -45,9 +45,10 @@ integrated into the default recovery profile. See
 `docs/handoff/op3-sensor-smgr-001.md` and the test-matrix row.
 
 A one-variable inventory diagnostic is now committed at nested kernel commit
-`9eb796adcee8`. It logs every raw Sensor Manager item returned by SLPI before
-the existing client mapping, without changing behavior. The clean diagnostic
-build is in `out/pmos-msm8996-6.12-sensor-smgr-inventory`; its temporary boot
+`9eb796adcee8`. It logs every Sensor Manager item returned through the decoded
+QMI response before the existing client mapping, without changing behavior; it
+is not a wire-level packet capture. The clean diagnostic build is in
+`out/pmos-msm8996-6.12-sensor-smgr-inventory`; its temporary boot
 image is `artifacts/boot-oneplus3-pmos612-recovery-sensor-smgr-inventory-test.img`
 with SHA256
 `6864133e7f7b99fc1eb4b027ce469f3a7a79ebdcd965e0326b5b02824605e215`.
@@ -87,7 +88,7 @@ map or IIO mapping change is justified on this evidence.
 The next A/B controls are now recorded in
 `docs/handoff/op3-sensor-smgr-001.md`: the older sensor image reproduced the
 two-device inventory, while the audit image served ACCEL/GYRO registry groups
-`2900/2910` successfully but still received only MAG/PROX_LIGHT from SLPI.
+`2692/2693` successfully but still received only MAG/PROX_LIGHT from SLPI.
 All local SLPI firmware copies are byte-identical, and safe HLOS I2C identity
 reads found no candidate motion sensor on I2C-0/1/2/3/4. The I2C-3/4 probe did
 not alter the existing `s1302-capkey` or `rmi4-i2c` clients. The remaining
@@ -95,6 +96,15 @@ sensor hypothesis is SLPI-side hardware/bus/power or firmware probing. No
 guessed HLOS sensor node, registry-map change, or default recovery integration
 is justified; without new SLPI-side or handset-specific hardware evidence,
 move the next implementation effort to another hardware class.
+
+The registry audit corrected an earlier group-label error. `2692` is the
+DEVINFO ACCEL group and `2693` is the DEVINFO GYRO group. `2900` contains item
+`2800` (`basic ges`) and `2910` contains item `2900` (`Facing`); these are SAM
+configuration groups, not ACCEL/GYRO. The existing Sensor Manager inventory
+lines are decoded response data after QMI transaction completion, not a
+wire-level raw inventory capture. The complete offline audit, including exact
+binary offsets, widths, values, and the generator padding-write defect, is in
+`docs/handoff/op3-sensor-ssi-audit-001.md`.
 
 ## OP3 QCA6174 Bluetooth UART/HCI bring-up started (2026-09-15)
 

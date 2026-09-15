@@ -62,7 +62,7 @@ other sensor classes only after those gates.
 
 ## Inventory diagnostic build
 
-The follow-up diagnostic adds only `dev_info()` output for the raw Sensor
+The follow-up diagnostic adds only `dev_info()` output for the decoded Sensor
 Manager inventory returned by SLPI. It does not change sensor mapping,
 registration, timing, DTS, initramfs, or Buildroot. The clean build was run by
 Codex under explicit owner authorization after the power interruption.
@@ -80,7 +80,7 @@ Temporary initrd SHA256: 3f193f242b6c500a1c62d2b8176c834bf3365bd28dd3c5bf975b3e6
 ```
 
 The inventory diagnostic image was boot-tested twice on 2026-09-15. Both boots
-reported exactly two raw SLPI entries (`MAG`, id `0x14`, and `PROX_LIGHT`, id
+reported exactly two decoded SLPI entries (`MAG`, id `0x14`, and `PROX_LIGHT`, id
 `0x28`) and registered only `qcom-smgr-mag` and `qcom-smgr-prox-light`. The
 second boot used an additional byte-identical
 `sns.reg-oneplus,oneplus3` file; the board-specific lookup then succeeded, but
@@ -150,7 +150,7 @@ b1c791fcc24afd4ec52f28e7fb1daaa18c54e787581fd17d4304d289385bfbc1  artifacts/boot
 Device test status: COMPLETED. The clean-boot capture contained 70 registry
 group requests with `bad=0`: every request returned `result=0`, the expected
 data length, and `send_ret=0`. There were no unmapped groups or registry
-transport errors. SLPI then reported only two raw sensors, `MAG` (`0x14`) and
+transport errors. SLPI then reported only two decoded sensors, `MAG` (`0x14`) and
 `PROX_LIGHT` (`0x28`); IIO registered only `qcom-smgr-mag` and
 `qcom-smgr-prox-light`. The audit therefore passes the registry transport
 hypothesis but fails to explain the missing accelerometer and gyroscope. Do
@@ -168,11 +168,11 @@ The registry-audit image was then booted again. Its board-specific registry
 lookup served both motion-sensor groups successfully:
 
 ```text
-group id=2900 (ACCEL): result=0 data_len=4 send_ret=0
-group id=2910 (GYRO):  result=0 data_len=4 send_ret=0
+group id=2692 (DEVINFO ACCEL): result=0 data_len=256 send_ret=0
+group id=2693 (DEVINFO GYRO):  result=0 data_len=256 send_ret=0
 ```
 
-The same boot still returned exactly two raw SLPI inventory entries:
+The same boot still returned exactly two decoded SLPI inventory entries:
 `MAG(0x14)` and `PROX_LIGHT(0x28)`. All local `slpi.mbn` copies, including the
 verified firmware tree and preserved mainline-test copy, are byte-identical
 (`5398c39071c4154cce71195848a522729ac1ff1c58f1e434bf2f821d62c2d902`). A

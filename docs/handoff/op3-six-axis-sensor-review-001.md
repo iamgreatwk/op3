@@ -163,11 +163,11 @@ send_ret=0
 重点请求：
 
 ~~~
-group id=2900 (ACCEL): result=0 data_len=4 send_ret=0
-group id=2910 (GYRO):  result=0 data_len=4 send_ret=0
+group id=2692 (DEVINFO ACCEL): result=0 data_len=256 send_ret=0
+group id=2693 (DEVINFO GYRO):  result=0 data_len=256 send_ret=0
 ~~~
 
-这只证明 registry group 读取路径和传输请求成功；它没有证明 ACCEL/GYRO 已被探测、已被 SLPI inventory 公布，也没有证明返回的 4 字节是实时传感器数据。
+这只证明 registry group 读取路径和传输请求成功；它没有证明 ACCEL/GYRO 已被探测、已被 SLPI inventory 公布。`2900` 和 `2910` 不是 ACCEL/GYRO：它们分别返回 item `2800`（`basic ges`）和 item `2900`（`Facing`）的 4 字节 SAM 配置值。现有 inventory 日志也是 QMI 解码后的结果，不是线上的原始 inventory 报文。
 
 ### 4.5 firmware / HLOS A/B
 
@@ -229,7 +229,7 @@ iio:device1 qcom-smgr-prox-light
 - 不是因为只缺少 sns.reg-oneplus,oneplus3 这类文件名 fallback；加上 byte-identical board 文件后 inventory 不变。
 - 不是因为 registry group 请求整体失败；ACCEL/GYRO group audit 全部成功。
 - 不是因为 userspace/kernel sns-reg 二选一导致当前两个设备消失；A/B 结果一致。
-- 不能把当前两个 IIO 设备误判为六轴传感器已经注册；raw inventory 根本没有 ACCEL/GYRO。
+- 不能把当前两个 IIO 设备误判为六轴传感器已经注册；当前解码后的 inventory 根本没有 ACCEL/GYRO，尚未取得 wire-level 原始 inventory 报文。
 - 不要凭 LSM6DS3、BMI160 或网络资料猜测新增 HLOS I2C 节点、地址、GPIO 或中断。
 - 不要再次加入此前会导致启动重启的 lvs1 {} 电源节点；六轴传感器由 SLPI 访问时，盲改 HLOS regulator 不能证明正确性。
 - 不要因为一次不可复现的 gyro 200 Hz 输出就修改 Linux 映射或采样率。
@@ -300,13 +300,13 @@ Linux 当前只看到 inventory 数量和结果，未看到 SLPI 内部对六轴
 - SLPI 是否需要特定启动顺序或等待时间；
 - sns-reg 请求是否在 SLPI 完成 sensor probe 前过早发送。
 
-如果要加 Linux 诊断，只允许在当前 transport response 边界增加只读日志，记录原始 response 的长度、sensor count 和 type/id；不要同时改 registry、映射和 DTS。
+如果要加 Linux 诊断，只允许在当前 transport response 边界增加只读日志，记录 wire-level response 的长度、sensor count 和 type/id；不要同时改 registry、映射和 DTS。
 
-### E. 重新核对 raw sensor type/id 与 Linux 映射
+### E. 重新核对 wire-level sensor type/id 与 Linux 映射
 
-只有在 wire-level inventory 中出现疑似 ACCEL/GYRO 条目时，才检查 Linux 的 type/id 映射和 parser。当前 raw inventory 没有这两个条目，因此“映射错误”不是首要假设。
+只有在 wire-level inventory 中出现疑似 ACCEL/GYRO 条目时，才检查 Linux 的 type/id 映射和 parser。当前解码后的 inventory 没有这两个条目，且尚未取得 wire-level 原始 inventory 报文，因此“映射错误”不是首要假设。
 
-同样，group id=2900/2910 的成功读取必须先确认其协议语义；它们可能是校准/配置 group，而不是“设备存在”标志。
+同样，group id=2900/2910 不是 ACCEL/GYRO：`2900` 返回 item `2800`（`basic ges`），`2910` 返回 item `2900`（`Facing`），两者都是 SAM 配置 group，而不是“设备存在”标志。
 
 ### F. 检查是否缺少可选的 SLPI 服务依赖
 
@@ -328,8 +328,8 @@ FAIL：仍只有 MAG/PROX_LIGHT，则转向硬件/SLPI probe 路径。
 
 假设：SLPI 实际返回了更多条目，但 Linux parser 或消息边界只解析到两个。  
 唯一变量：仅增加 response count/长度/type/id 的只读日志，不改变 parser 结果。  
-PASS：原始 response 含 ACCEL/GYRO，而解析结果丢失，才进入 parser 修复。  
-FAIL：原始 response 本身只有两个，则 parser 方向停止。
+PASS：wire-level response 含 ACCEL/GYRO，而解析结果丢失，才进入 parser 修复。
+FAIL：wire-level response 本身只有两个，则 parser 方向停止。
 
 ### 实验 3：物理硬件证据后的 SLPI 电源/总线验证
 
@@ -409,4 +409,3 @@ source/linux-pmos-msm8996-6.12-sensor-smgr
 ~~~
 
 请注意：顶层项目仓库和 nested kernel 仓库是两个独立 Git 仓库；顶层分支名不能选择或修改 nested kernel 分支。
-
