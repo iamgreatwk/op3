@@ -156,6 +156,39 @@ transport errors. SLPI then reported only two raw sensors, `MAG` (`0x14`) and
 hypothesis but fails to explain the missing accelerometer and gyroscope. Do
 not change the registry group map or client mapping on this evidence.
 
+## Follow-up: firmware and HLOS bus A/B
+
+After the power interruption, the previously recorded sensor test image was
+booted again as an A/B control. It used the older Sensor Manager kernel at
+`23b5bfc59973` and the generic-registry initrd. This image also exposed only
+`qcom-smgr-mag` and `qcom-smgr-prox-light`; the earlier provisional gyro result
+was not reproduced.
+
+The registry-audit image was then booted again. Its board-specific registry
+lookup served both motion-sensor groups successfully:
+
+```text
+group id=2900 (ACCEL): result=0 data_len=4 send_ret=0
+group id=2910 (GYRO):  result=0 data_len=4 send_ret=0
+```
+
+The same boot still returned exactly two raw SLPI inventory entries:
+`MAG(0x14)` and `PROX_LIGHT(0x28)`. All local `slpi.mbn` copies, including the
+verified firmware tree and preserved mainline-test copy, are byte-identical
+(`5398c39071c4154cce71195848a522729ac1ff1c58f1e434bf2f821d62c2d902`). A
+read-only HLOS check found clients only on I2C-0 through I2C-4 for the known
+audio/power/USB/touch devices. Candidate WHO_AM_I reads for LSM6DS3/BMI160 on
+the unused I2C-0/1/2 buses all returned `ENXIO`; I2C-3/4 were intentionally
+not probed to avoid disturbing the capacitive-key and touch controllers.
+
+This A/B rules out the Sensor Manager source revision, registry filename,
+registry group transport, and a directly visible HLOS I2C sensor as the
+current explanation. The remaining evidence-backed hypothesis is an SLPI
+sensor-core hardware/bus/power or firmware-side probe issue. Do not add
+guessed HLOS sensor nodes or modify the registry map. The next valid change
+requires new SLPI-side evidence, a different verified SLPI firmware, or a
+vendor power/bus description that can be tied to this handset.
+
 ## Static implementation record
 
 Nested kernel commits:

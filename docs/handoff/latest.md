@@ -84,6 +84,16 @@ transport errors. SLPI still reported only `MAG` (`0x14`) and `PROX_LIGHT`
 Registry transport passes; complete sensor inventory fails. No registry group
 map or IIO mapping change is justified on this evidence.
 
+The next A/B controls are now recorded in
+`docs/handoff/op3-sensor-smgr-001.md`: the older sensor image reproduced the
+two-device inventory, while the audit image served ACCEL/GYRO registry groups
+`2900/2910` successfully but still received only MAG/PROX_LIGHT from SLPI.
+All local SLPI firmware copies are byte-identical, and safe HLOS I2C identity
+reads found no candidate motion sensor on I2C-0/1/2. The remaining sensor
+hypothesis is SLPI-side hardware/bus/power or firmware probing. No guessed
+HLOS sensor node, registry-map change, or default recovery integration is
+justified.
+
 ## OP3 CAMSS/VFE stream-teardown diagnostic (2026-09-14)
 
 The active camera worktree is
