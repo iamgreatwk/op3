@@ -1,5 +1,20 @@
 # Latest handoff
 
+## Six-axis review corrections and bounded SSI audit (2026-09-15)
+
+The independent [route review](op3-six-axis-route-review-001.md) found that
+historical labels `2900 (ACCEL)` / `2910 (GYRO)` are incorrect: those registry
+groups map to SAM configuration keys 2800/2900. DEVINFO ACCEL/GYRO are mapped
+through groups 2692/2693 in the checked source; both were also served in the
+existing audit log. Successful static file-slice responses do not establish
+configuration correctness, and the current inventory logs are after QMI
+decoding, not raw-TLV captures. Historical test outcomes below are preserved.
+
+Luna has been directed to perform a bounded offline SSI audit in its own
+research worktree. The `0x1001` bus value and SPI chip-select comments are a
+concrete lead that needs source-backed decoding. No runtime fix, build,
+device test, or integration result is claimed by this review.
+
 ## Camera work paused; sensor and Bluetooth work prioritized (2026-09-14)
 
 The OP3 camera line is frozen at its current evidence checkpoint. RAW capture
