@@ -262,6 +262,35 @@ result at the owner's request.
 
 No Buildroot compilation was performed for this test.
 
+## Long-duration A2DP playback retry (2026-09-15)
+
+The public-domain `The Entertainer` WAV was then played as a longer
+continuous-stream test. The playback did not reach the end of the 3-minute
+34-second file. The phone reported:
+
+```text
+aplay: pcm_write:2127: write error: No such device
+```
+
+BlueALSA recorded the corresponding transport failure:
+
+```text
+BT socket disconnected: Connection timed out
+```
+
+The A2DP transport was released and the PCM was closed. A later
+`bluetoothctl info` showed `Connected: yes` again, so the device did
+reconnect after the interruption. This is a long-duration transport
+stability failure, not an audio-file or pairing failure.
+
+Updated evidence:
+
+```text
+short PCM playback: PASS
+long-duration PCM playback: FAIL (A2DP transport timeout)
+post-failure S01 connection: PASS (automatic reconnection observed)
+```
+
 ## Next isolated implementation
 
 Add only the userspace/runtime integration:
