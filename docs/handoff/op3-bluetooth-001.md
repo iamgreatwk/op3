@@ -182,18 +182,23 @@ type BR/EDR
 rssi -52
 ```
 
-Pairing was attempted twice. Each attempt established a BR/EDR connection,
-then disconnected with reason `1` and ended with status `0x08 (Timeout)`.
+The first two pairing attempts established a BR/EDR connection, then
+disconnected with reason `1` and ended with status `0x08 (Timeout)`. After the
+iPhone had forgotten S01, a retry through the ACM console reached an explicit
+`request PIN` event. Supplying the common `0000` code was not accepted before
+the transaction timed out. One immediate retry then failed to connect with
+status `0x04 (Connect Failed)`.
+
 The owner confirms that S01 normally pairs with the iPhone without displaying
-or requesting a PIN, so the absence of a PIN event is not itself a failure.
-The more relevant possibilities are that S01 was still connected to the
-iPhone, or that it was not advertising a new-host pairing state. Therefore
-the result is:
+a code, so a PIN request from this Linux controller may reflect a different
+IO-capability path rather than a required S01 code. The more relevant
+remaining condition is whether S01 stays in a new-host pairing state for the
+whole transaction. Therefore the result is:
 
 ```text
 scan: PASS
 S01 discovery: PASS
-S01 pairing: INCONCLUSIVE / NOT ACCEPTED
+S01 pairing: NOT SUCCESSFUL; protocol cause still INCONCLUSIVE
 ```
 
 The next test must disconnect S01 from the iPhone, place the speaker in its
