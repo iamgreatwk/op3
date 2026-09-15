@@ -89,10 +89,12 @@ The next A/B controls are now recorded in
 two-device inventory, while the audit image served ACCEL/GYRO registry groups
 `2900/2910` successfully but still received only MAG/PROX_LIGHT from SLPI.
 All local SLPI firmware copies are byte-identical, and safe HLOS I2C identity
-reads found no candidate motion sensor on I2C-0/1/2. The remaining sensor
-hypothesis is SLPI-side hardware/bus/power or firmware probing. No guessed
-HLOS sensor node, registry-map change, or default recovery integration is
-justified.
+reads found no candidate motion sensor on I2C-0/1/2/3/4. The I2C-3/4 probe did
+not alter the existing `s1302-capkey` or `rmi4-i2c` clients. The remaining
+sensor hypothesis is SLPI-side hardware/bus/power or firmware probing. No
+guessed HLOS sensor node, registry-map change, or default recovery integration
+is justified; without new SLPI-side or handset-specific hardware evidence,
+move the next implementation effort to another hardware class.
 
 ## OP3 CAMSS/VFE stream-teardown diagnostic (2026-09-14)
 

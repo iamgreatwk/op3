@@ -178,8 +178,10 @@ verified firmware tree and preserved mainline-test copy, are byte-identical
 (`5398c39071c4154cce71195848a522729ac1ff1c58f1e434bf2f821d62c2d902`). A
 read-only HLOS check found clients only on I2C-0 through I2C-4 for the known
 audio/power/USB/touch devices. Candidate WHO_AM_I reads for LSM6DS3/BMI160 on
-the unused I2C-0/1/2 buses all returned `ENXIO`; I2C-3/4 were intentionally
-not probed to avoid disturbing the capacitive-key and touch controllers.
+I2C-0/1/2 and then I2C-3/4 all returned `ENXIO`; the latter probe was limited
+to the four candidate addresses and did not unload or alter the capacitive-key
+or touch clients. After the probe, the clients remained `s1302-capkey` on
+I2C-3 and `rmi4-i2c` on I2C-4.
 
 This A/B rules out the Sensor Manager source revision, registry filename,
 registry group transport, and a directly visible HLOS I2C sensor as the
@@ -187,7 +189,9 @@ current explanation. The remaining evidence-backed hypothesis is an SLPI
 sensor-core hardware/bus/power or firmware-side probe issue. Do not add
 guessed HLOS sensor nodes or modify the registry map. The next valid change
 requires new SLPI-side evidence, a different verified SLPI firmware, or a
-vendor power/bus description that can be tied to this handset.
+vendor power/bus description that can be tied to this handset. No further
+HLOS motion-sensor change is justified by the current evidence; the task
+should move to another hardware class unless such evidence becomes available.
 
 ## Static implementation record
 
