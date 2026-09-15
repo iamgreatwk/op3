@@ -122,6 +122,47 @@ DIAGNOSTIC PASS; firmware patch transport INCONCLUSIVE; Bluetooth feature
 NOT ACCEPTED**. BlueZ was not present in this running rootfs, so scanning and
 pairing were not tested.
 
+## Read-only follow-up and NVM A/B test (2026-09-15)
+
+The live device-tree node was inspected on the running phone. It contains
+`qcom,qca6174-bt`, `enable-gpios`, `clocks`, and the RTS/CTS UART property, but
+no `vdd*-supply` properties. This matches the 6.12 driver path: the
+`qcom,qca6174-bt` match has no `qca_device_data`, so the controller uses the
+QCA_ROME path, which toggles BT_EN and SUSCLK but does not initialize the
+newer generic regulator table. The runtime HCI device is bound to
+`hci_uart_qca` and exposes an rfkill node.
+
+The preserved downstream DTS documents four vendor power consumers (S3 core,
+S4 I/O, L30 XTAL, and a board-specific `rome_vreg` PA rail), but the latter is
+not defined in the mainline DTS. The runtime regulator states alone do not
+prove which consumer owns those rails, so no guessed `rome_vreg` node or
+unrelated power change was added.
+
+One reversible runtime A/B test copied the preserved `btnv32.b15` over the
+temporary `qca/nvm_00440302.bin` path, unloaded and reloaded the temporary
+Bluetooth modules, and then restored the original `btnv32.bin`. The result was
+unchanged:
+
+```text
+QCA Downloading qca/rampatch_00440302.bin
+Frame reassembly failed (-84)
+QCA Downloading qca/nvm_00440302.bin
+QCA setup on UART is completed
+```
+
+This isolates the visible `-84` from the NVM variant: it occurs before the NVM
+download and does not prevent the controller setup from completing. The same
+QCA6174/Rome `0x00440302` sequence, including a single `-84` followed by the
+NVM step, is also present in independent Linux runtime logs. Treat `-84` as a
+transport diagnostic until a real HCI operation fails; it is not by itself a
+reason to alter H4 parsing or add guessed power rails.
+
+Current acceptance remains pending because this recovery rootfs has no
+`bluetoothctl`, `btmgmt`, or `btmon`. The next single-variable step is to use
+the already staged BlueZ userspace and module/firmware init integration, then
+test `hci0` with `btmgmt info`, `btmon`, and a real scan/pair operation. No
+kernel, DTS, or Buildroot artifact was changed by this follow-up.
+
 ## Next isolated implementation
 
 Add only the userspace/runtime integration:
