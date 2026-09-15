@@ -216,7 +216,7 @@ when the complete BlueZ agent is present. Therefore the result is:
 scan: PASS
 S01 discovery: PASS
 S01 pairing and bonding: PASS
-S01 A2DP connection: NOT TESTED / profile backend missing
+S01 A2DP connection: PASS (after BlueALSA endpoint was added)
 ```
 
 ## Temporary BlueALSA A2DP playback test (2026-09-15)
@@ -242,8 +242,8 @@ Bluetooth codec: SBC
 ```
 
 The software audio path therefore passed from ALSA through BlueALSA, SBC,
-and the S01 A2DP transport. Physical speaker output still requires owner
-confirmation; this agent cannot hear the phone's speaker.
+and the S01 A2DP transport. The owner confirmed that S01 physically played
+the test sound, closing the acoustic verification.
 
 Current evidence:
 
@@ -252,7 +252,7 @@ scan: PASS
 S01 pairing and bonding: PASS
 S01 A2DP transport: PASS
 S01 PCM playback path: PASS
-owner acoustic confirmation: pending
+owner acoustic confirmation: PASS
 ```
 
 All BlueZ, D-Bus, BlueALSA, and ALSA files used here were temporary runtime
@@ -275,6 +275,7 @@ Add only the userspace/runtime integration:
 5. boot a clean owner-built image and check `hci0`, `bluetoothctl show`,
    `btmon`, and the phone's ability to discover/pair with a real peer.
 
-PASS requires a clean boot with `hci0` automatically present, no firmware or
-HCI frame errors, a working `bluetoothctl show`, and a successful scan or
-pairing test. Until then the task remains **DIAGNOSTIC / INCONCLUSIVE**.
+The temporary runtime milestone is **PASS**. Persistent acceptance still
+requires a clean boot with `hci0` automatically present, the verified
+firmware/module closure, BlueZ and the selected audio backend in Buildroot,
+and a repeat of the S01 playback test after reboot.
