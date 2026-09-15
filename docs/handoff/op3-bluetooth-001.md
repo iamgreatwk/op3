@@ -184,7 +184,11 @@ rssi -52
 
 Pairing was attempted twice. Each attempt established a BR/EDR connection,
 then disconnected with reason `1` and ended with status `0x08 (Timeout)`.
-There was no PIN request or confirmation event. Therefore the result is:
+The owner confirms that S01 normally pairs with the iPhone without displaying
+or requesting a PIN, so the absence of a PIN event is not itself a failure.
+The more relevant possibilities are that S01 was still connected to the
+iPhone, or that it was not advertising a new-host pairing state. Therefore
+the result is:
 
 ```text
 scan: PASS
@@ -192,9 +196,9 @@ S01 discovery: PASS
 S01 pairing: INCONCLUSIVE / NOT ACCEPTED
 ```
 
-The most likely remaining test condition is that S01 was powered on but not
-in its explicit pairing mode. The next test must be performed only after the
-speaker is placed in pairing mode, using the same temporary runtime setup.
+The next test must disconnect S01 from the iPhone, place the speaker in its
+new-host pairing mode, and retry the same Just-Works flow. No PIN should be
+assumed unless S01 actually requests one.
 The previously attempted iPhone pairing is deliberately excluded from this
 result at the owner's request.
 
