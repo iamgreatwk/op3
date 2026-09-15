@@ -182,28 +182,46 @@ type BR/EDR
 rssi -52
 ```
 
-The first two pairing attempts established a BR/EDR connection, then
+The first two raw `btmgmt pair` attempts established a BR/EDR connection, then
 disconnected with reason `1` and ended with status `0x08 (Timeout)`. After the
 iPhone had forgotten S01, a retry through the ACM console reached an explicit
 `request PIN` event. Supplying the common `0000` code was not accepted before
 the transaction timed out. One immediate retry then failed to connect with
 status `0x04 (Connect Failed)`.
 
+For the complete userspace test, a temporary ARM64 Debian BlueZ 5.66 bundle
+was copied to the running phone. It included `dbus-daemon`, `bluetoothd`,
+`bluetoothctl`, and their shared libraries. A private temporary D-Bus system
+bus was started, followed by `bluetoothd`; `bluetoothctl` was configured with
+the `NoInputNoOutput` agent and `default-agent`. After rediscovery, the normal
+BlueZ command succeeded:
+
+```text
+Pairing successful
+Paired: yes
+Bonded: yes
+```
+
+BlueZ also reported S01's Audio Sink and AVRCP UUIDs. A subsequent
+`connect` returned `org.bluez.Error.Failed br-connection-profile-unavailable`.
+This is a separate audio-profile limitation: the temporary rootfs has no
+PulseAudio, PipeWire, or BlueALSA endpoint to register an A2DP sink/source.
+It does not invalidate the successful BR/EDR pairing.
+
 The owner confirms that S01 normally pairs with the iPhone without displaying
-a code, so a PIN request from this Linux controller may reflect a different
-IO-capability path rather than a required S01 code. The more relevant
-remaining condition is whether S01 stays in a new-host pairing state for the
-whole transaction. Therefore the result is:
+a code. The successful `NoInputNoOutput` run confirms that no PIN is required
+when the complete BlueZ agent is present. Therefore the result is:
 
 ```text
 scan: PASS
 S01 discovery: PASS
-S01 pairing: NOT SUCCESSFUL; protocol cause still INCONCLUSIVE
+S01 pairing and bonding: PASS
+S01 A2DP connection: NOT TESTED / profile backend missing
 ```
 
-The next test must disconnect S01 from the iPhone, place the speaker in its
-new-host pairing mode, and retry the same Just-Works flow. No PIN should be
-assumed unless S01 actually requests one.
+The next isolated Bluetooth step is an audio-profile test with a minimal
+BlueALSA or PipeWire/PulseAudio endpoint. No PIN should be assumed unless a
+future controller configuration actually requests one.
 The previously attempted iPhone pairing is deliberately excluded from this
 result at the owner's request.
 
