@@ -113,6 +113,15 @@ is **INCONCLUSIVE**, not a pass. The exact evidence, external-input hashes,
 and the next isolated userspace/runtime change are recorded in
 [`op3-bluetooth-001.md`](op3-bluetooth-001.md).
 
+An owner-authorized temporary runtime test then uploaded the existing module
+closure and the two verified QCA files without rebuilding Buildroot. The
+phone created `/sys/class/bluetooth/hci0` and identified controller
+`0x00440302`; after the patch download reported `Frame reassembly failed
+(-84)`, NVM loading and UART setup completed. This proves the DTS/UART/module
+path but does not prove a usable Bluetooth controller. BlueZ scanning and
+pairing remain untested; the next change must isolate the QCA patch transport
+or firmware-format compatibility.
+
 ## OP3 CAMSS/VFE stream-teardown diagnostic (2026-09-14)
 
 The active camera worktree is
