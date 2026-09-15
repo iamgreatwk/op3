@@ -215,3 +215,53 @@ The OP3 device tree already enables `slpi_pil` with
 `qcom/msm8996/oneplus3/slpi.mbn`, so this experiment intentionally adds no
 new sensor DTS node. The default recovery profile remains unchanged until an
 owner-run sensor build and device result are available.
+
+## Follow-up: userspace `sns-reg` A/B
+
+This follow-up isolates whether the in-kernel registry service was masking or
+competing with the pmOS userspace registry. The top-level A/B configuration
+commit is `3a11b30` (`sensor: add userspace registry A/B config`); it sets
+`CONFIG_QCOM_SNS_REG=n` while retaining QRTR and Sensor Manager. No DTS,
+IIO mapping, SLPI firmware, or Buildroot source was changed.
+
+The owner-authorized kernel build used the clean nested sensor worktree at
+`8b9430d14e2f` and output directory
+`out/pmos-msm8996-6.12-sensor-smgr-userspace-registry`:
+
+```text
+9480e82306b033d4085142361728e4d06679bf83df09fc08f93e5c987eb04532  out/pmos-msm8996-6.12-sensor-smgr-userspace-registry/.config
+2d1421ff69ae9f65cc6cc82cf12b5445c2c1f022bd5ba8b7e65659aad52e3f7e  out/pmos-msm8996-6.12-sensor-smgr-userspace-registry/arch/arm64/boot/Image.gz
+acf85fd6ae148861374ec4d65feee0e3d909cce9b75e96d09c2f44a102914d1b  out/pmos-msm8996-6.12-sensor-smgr-userspace-registry/arch/arm64/boot/dts/qcom/msm8996-oneplus3.dtb
+```
+
+The temporary initramfs used the static pmOS `sns-reg` binary and the real
+`sns.reg` converted by `sns-reg-generator`, not Android's
+`sensor_def_qcomdev.conf`:
+
+```text
+9941bbb3dcc16d53c80668b6b53289f14cc73dd96df465446649c128737b1fc9  sns-reg
+f206f6eeb93ee1c797108eb791149b7e756b2f1723c4a6e0bd36a18eb13e3f3a  generated registry.conf (1437 numeric entries)
+27e903075bb4e1519df435ea5474fe8378fc4beb3969e0ffa3d3987a2cdc9f87  temporary initrd
+5f273591249130775f5ca58a60980f4f2163eeab9a1f078cdb2181463b8b5f18  temporary boot image
+```
+
+The v2 image was booted with `fastboot boot` on 2026-09-15. Device evidence:
+
+```text
+CONFIG_QCOM_SNS_REG is not set
+/usr/bin/sns-reg: PID 175, PPid 1, sleeping in do_sys_poll
+qcom_smgr: available sensor count=2
+qcom_smgr: sensor[0]: id=0x14 type=MAG
+qcom_smgr: sensor[1]: id=0x28 type=PROX_LIGHT
+```
+
+The first temporary image used the wrong Android-format text and returned
+`available sensor count=0`. The corrected v2 image returned two sensors, so
+the userspace registry process, QRTR transport, and numeric registry format
+are active. ACCEL/GYRO still do not appear and no IIO motion devices are
+created. Therefore the A/B hypothesis is disproved: disabling the kernel
+registry and supplying the pmOS userspace registry does not restore the
+missing motion sensors. The remaining evidence-backed cause is on the SLPI
+sensor-core hardware/bus/power or firmware-side probe path. Do not promote
+this temporary userspace registry into the default recovery image or change
+the registry map without new SLPI-side evidence.
