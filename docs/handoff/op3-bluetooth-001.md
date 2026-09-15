@@ -219,9 +219,44 @@ S01 pairing and bonding: PASS
 S01 A2DP connection: NOT TESTED / profile backend missing
 ```
 
-The next isolated Bluetooth step is an audio-profile test with a minimal
-BlueALSA or PipeWire/PulseAudio endpoint. No PIN should be assumed unless a
-future controller configuration actually requests one.
+## Temporary BlueALSA A2DP playback test (2026-09-15)
+
+The missing audio endpoint was supplied temporarily with BlueALSA 4.0.0 and
+its ALSA PCM plugin, together with `aplay`. BlueALSA was started as an A2DP
+source and successfully acquired the `org.bluealsa` D-Bus name. After the
+controller was powered on, the normal BlueZ connection completed:
+
+```text
+Connection successful
+Endpoint .../sep1
+Transport .../sep1/fd0
+```
+
+BlueALSA then enumerated S01 as a two-channel, 48 kHz SBC playback device. A
+44100 Hz stereo WAV was sent through the BlueALSA PCM:
+
+```text
+aplay -D 'bluealsa:DEV=16:6E:52:FA:45:A0,PROFILE=a2dp' speaker_test.wav
+aplay_rc=0
+Bluetooth codec: SBC
+```
+
+The software audio path therefore passed from ALSA through BlueALSA, SBC,
+and the S01 A2DP transport. Physical speaker output still requires owner
+confirmation; this agent cannot hear the phone's speaker.
+
+Current evidence:
+
+```text
+scan: PASS
+S01 pairing and bonding: PASS
+S01 A2DP transport: PASS
+S01 PCM playback path: PASS
+owner acoustic confirmation: pending
+```
+
+All BlueZ, D-Bus, BlueALSA, and ALSA files used here were temporary runtime
+files. No Buildroot compilation or persistent rootfs change was performed.
 The previously attempted iPhone pairing is deliberately excluded from this
 result at the owner's request.
 
