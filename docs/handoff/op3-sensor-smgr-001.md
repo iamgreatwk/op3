@@ -265,3 +265,32 @@ missing motion sensors. The remaining evidence-backed cause is on the SLPI
 sensor-core hardware/bus/power or firmware-side probe path. Do not promote
 this temporary userspace registry into the default recovery image or change
 the registry map without new SLPI-side evidence.
+
+## Owner live verification: SLPI and Sensor Manager are running (2026-09-15)
+
+A read-only SSH inspection of the currently booted recovery image confirmed
+that the transport is genuinely active, rather than merely present in the
+kernel log:
+
+```text
+/sys/class/remoteproc/remoteproc0: state=running
+  firmware=qcom/msm8996/oneplus3/slpi.mbn
+/sys/class/remoteproc/remoteproc1: state=running
+  firmware=qcom/msm8996/oneplus3/adsp.mbn
+
+remote processor 1c00000.remoteproc is now up
+qcom_smgr 9-17: available sensor count=2
+qcom_smgr 9-17: sensor[0]: id=0x14 type=MAG parsed=3
+qcom_smgr 9-17: sensor[1]: id=0x28 type=PROX_LIGHT parsed=4
+
+/usr/bin/sns-reg: PID 175
+iio:device0: qcom-smgr-mag
+iio:device1: qcom-smgr-prox-light
+```
+
+This confirms the complete path `SLPI firmware -> QRTR/IPCRTR -> sns-reg ->
+Sensor Manager -> IIO` is operational. It also reconfirms that the missing
+ACCEL/GYRO inventory is an SLPI-side sensor-core hardware/bus/power or
+firmware-probe issue, not a failure to start SLPI, register `sns-reg`, or
+register the Sensor Manager IIO clients. No source or artifact was changed by
+this read-only verification.
