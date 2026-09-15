@@ -96,6 +96,23 @@ guessed HLOS sensor node, registry-map change, or default recovery integration
 is justified; without new SLPI-side or handset-specific hardware evidence,
 move the next implementation effort to another hardware class.
 
+## OP3 QCA6174 Bluetooth UART/HCI bring-up started (2026-09-15)
+
+GitHub Issue [#14](https://github.com/iamgreatwk/op3/issues/14) now has the
+independent top-level branch `agent/implementation/op3-bluetooth-001`. The
+existing OP3 device tree already enables the QCA6174 Bluetooth UART at
+`serial@7570000`; the first Bluetooth diagnostic therefore made no kernel or
+DTS change. It loaded the existing module closure temporarily and recovered
+the controller firmware from the preserved `firmware/bluetooth.img` backup.
+
+The phone identified controller revision `0x00440302` and created `hci0` after
+the temporary firmware aliases were installed. The driver nevertheless logged
+`Frame reassembly failed (-84)` during patch download, and the recovery image
+had no BlueZ tools or persistent Bluetooth module/firmware staging. The result
+is **INCONCLUSIVE**, not a pass. The exact evidence, external-input hashes,
+and the next isolated userspace/runtime change are recorded in
+[`op3-bluetooth-001.md`](op3-bluetooth-001.md).
+
 ## OP3 CAMSS/VFE stream-teardown diagnostic (2026-09-14)
 
 The active camera worktree is

@@ -260,6 +260,20 @@ artifacts/op3-initramfs-firmware-s1302-poll-drm100/lib/firmware/
 └── qcom/msm8996/oneplus3/{adsp.mbn,modem.mbn,slpi.mbn,venus.mbn,mba.mbn,a530_zap.mbn}
 ~~~
 
+蓝牙控制器固件是独立的外部输入，按手机实际报告的 QCA6174 控制器版本
+`0x00440302` 暂存：
+
+~~~bash
+bluetooth_root="$PWD/artifacts/op3-bluetooth-firmware"
+./scripts/stage-op3-bluetooth-firmware.sh \
+  "$OP3_EXTERNAL_INPUTS" "$bluetooth_root"
+export OP3_BLUETOOTH_FIRMWARE_ROOT="$bluetooth_root"
+~~~
+
+脚本只接受 `bluetooth/lib/firmware/qca/` 下的两个已锁定文件，并拒绝覆盖
+已有输出目录。它们的来源、校验值和控制器版本见
+`manifests/op3-bluetooth.env`；文件本身保留在 GitHub 之外。
+
 ## 6. 准备并编译默认 recovery Buildroot
 
 准备脚本必须对全新的、干净的 Buildroot 源树运行：
@@ -270,8 +284,19 @@ artifacts/op3-initramfs-firmware-s1302-poll-drm100/lib/firmware/
 
 它会安装项目跟踪的 op3-recovery 和 op3-initramfs 包、启动源文件、Wi-Fi
 脚本和 post-build hook，并启用 op3_recovery_defconfig。默认配置包含
-recovery、TinyALSA、Wi-Fi 工具和诊断工具；Mesa/Freedreno、Weston、
-WPE WebKit、Cog、WPEWebDriver 均不启用。
+recovery、TinyALSA、Wi-Fi 工具、QCA6174 Bluetooth/BlueZ 工具和诊断工具；
+Mesa/Freedreno、Weston、WPE WebKit、Cog、WPEWebDriver 均不启用。
+`S25op3-bluetooth-modules` 会在 DBus 和 `bluetoothd` 之前加载 Bluetooth
+模块闭包。
+
+蓝牙仍处在独立实验分支，不能直接改写正式 recovery manifest。若要构建
+本次蓝牙实验，准备 Buildroot 前先选择它的 overlay manifest：
+
+~~~bash
+export OP3_BUILDROOT_MANIFEST="$PWD/manifests/op3-bluetooth.env"
+~~~
+
+不设置该变量时，脚本仍使用正式 recovery manifest。
 
 如果主机的 `install --version` 显示 `uutils coreutils 0.8.0`，Buildroot
 会主动停止。Ubuntu 当前可使用本地 GNU 工具优先路径，不必修改系统：
@@ -292,11 +317,13 @@ firmware_root="${OP3_INITRAMFS_FIRMWARE_ROOT:-$PWD/artifacts/op3-initramfs-firmw
 
 OP3_WIFI_MODULES_ROOT="$PWD/artifacts/op3-wifi-modules-root" \
 OP3_INITRAMFS_FIRMWARE_ROOT="$firmware_root" \
+OP3_BLUETOOTH_FIRMWARE_ROOT="$PWD/artifacts/op3-bluetooth-firmware" \
 make -C source/buildroot O="$PWD/out/buildroot-op3-recovery" \
   op3_recovery_defconfig
 
 OP3_WIFI_MODULES_ROOT="$PWD/artifacts/op3-wifi-modules-root" \
 OP3_INITRAMFS_FIRMWARE_ROOT="$firmware_root" \
+OP3_BLUETOOTH_FIRMWARE_ROOT="$PWD/artifacts/op3-bluetooth-firmware" \
 make -C source/buildroot O="$PWD/out/buildroot-op3-recovery" \
   BR2_PRIMARY_SITE=https://sources.buildroot.net \
   BR2_JLEVEL=3 2>&1 | tee /tmp/buildroot-op3-recovery.log
@@ -311,6 +338,13 @@ bring-up，部署到其他设备或公开环境前应替换为新的哈希。
 脚本会拒绝覆盖目录，而 Buildroot post-build 也会在缺少任一固件时停止，避免
 生成不完整的 rootfs。应使用新的版本化目录，并在 defconfig 和正式构建中传入
 同一个 `OP3_INITRAMFS_FIRMWARE_ROOT`。
+
+蓝牙固件目录同样不能省略；post-build hook 会同时检查两个 QCA 文件、复制
+到 `lib/firmware/qca/`，并从 `OP3_WIFI_MODULES_ROOT` 的同一份 owner-built
+模块树中提取 `bluetooth`、`btqca`、`hci_uart` 及其依赖。第一次干净启动时
+请保留 `dmesg`、`btmon` 和 `bluetoothctl show` 输出；此前临时加载已经出现
+`hci0`，但有 `Frame reassembly failed (-84)`，因此必须重新验证，不能仅凭
+模块加载成功判定蓝牙已完成。
 
 `BR2_PRIMARY_SITE` 只改变下载候选顺序，Buildroot 仍会在该源缺少文件时
 继续尝试包自身的上游地址；它不改变源码版本或校验值。构建中断后重新

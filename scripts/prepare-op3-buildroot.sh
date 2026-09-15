@@ -10,11 +10,18 @@ set -euo pipefail
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=/dev/null
 source "$project_root/manifests/op3-recovery-audio-full.env"
+if [ -n "${OP3_BUILDROOT_MANIFEST:-}" ]; then
+	# An experiment may override only its Buildroot lock/output variables while
+	# retaining the integrated recovery source and kernel definitions.
+	# shellcheck source=/dev/null
+	source "$(readlink -f "$OP3_BUILDROOT_MANIFEST")"
+fi
 
 buildroot_dir="${1:-$project_root/$BUILDROOT_SOURCE_DIR}"
 buildroot_dir="$(readlink -m "$buildroot_dir")"
 patch_dir="$project_root/$BUILDROOT_COG_PATCH_SOURCE_DIR"
 recovery_postbuild="$project_root/buildroot/op3-recovery-post-build.sh"
+recovery_bluetooth_init="$project_root/buildroot/board/oneplus3/recovery/bluetooth/S25op3-bluetooth-modules"
 recovery_package="$project_root/buildroot/package-patches/op3-recovery"
 initramfs_package="$project_root/buildroot/package-patches/op3-initramfs"
 initramfs_source="$project_root/boot/initramfs"
@@ -59,6 +66,7 @@ config_hash="$(sha256sum "$config_source" | awk '{print $1}')"
 
 if [ "$profile" = recovery ]; then
 	test -f "$recovery_postbuild" || die "missing recovery post-build hook: $recovery_postbuild"
+	test -x "$recovery_bluetooth_init" || die "missing Bluetooth init script: $recovery_bluetooth_init"
 	test -d "$wifi_source" || die "missing Wi-Fi sources: $wifi_source"
 	for input in \
 		"$recovery_package/Config.in" \
@@ -117,6 +125,8 @@ if [ "$profile" = recovery ]; then
 	recovery_board="$buildroot_dir/board/oneplus3/recovery"
 	install -D -m 0755 "$recovery_postbuild" \
 		"$recovery_board/post-build.sh"
+	install -D -m 0755 "$recovery_bluetooth_init" \
+		"$recovery_board/bluetooth/S25op3-bluetooth-modules"
 	mkdir -p "$recovery_board/wifi"
 	cp -a "$wifi_source/." "$recovery_board/wifi/"
 	recovery_package_dir="$buildroot_dir/package/op3-recovery"
@@ -205,7 +215,8 @@ if [ "$profile" = recovery ]; then
 	printf '  OP3_WIFI_MODULES_ROOT=%q make -C %q O=%q %s\n' \
 		"$project_root/$BUILDROOT_WIFI_MODULES_ROOT" \
 		"$buildroot_dir" "$buildroot_output" "$config_name"
-	printf '  OP3_INITRAMFS_FIRMWARE_ROOT=%q OP3_WIFI_MODULES_ROOT=%q make -C %q O=%q BR2_JLEVEL=3\n' \
+	printf '  OP3_BLUETOOTH_FIRMWARE_ROOT=%q OP3_INITRAMFS_FIRMWARE_ROOT=%q OP3_WIFI_MODULES_ROOT=%q make -C %q O=%q BR2_JLEVEL=3\n' \
+		"$project_root/artifacts/op3-bluetooth-firmware" \
 		"$recovery_firmware_root" \
 		"$project_root/$BUILDROOT_WIFI_MODULES_ROOT" \
 		"$buildroot_dir" "$buildroot_output"

@@ -12,6 +12,8 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 wifi_dir="$script_dir/wifi"
 modules_root="${OP3_WIFI_MODULES_ROOT:-}"
 firmware_root="${OP3_INITRAMFS_FIRMWARE_ROOT:-}"
+bluetooth_firmware_root="${OP3_BLUETOOTH_FIRMWARE_ROOT:-}"
+bluetooth_init="$script_dir/bluetooth/S25op3-bluetooth-modules"
 
 die() {
 	printf 'OP3 recovery post-build failed: %s\n' "$*" >&2
@@ -24,6 +26,11 @@ test -n "$modules_root" || die 'set OP3_WIFI_MODULES_ROOT to owner-built modules
 test -d "$modules_root/lib/modules" || die "missing modules root: $modules_root"
 test -n "$firmware_root" || die 'set OP3_INITRAMFS_FIRMWARE_ROOT to staged firmware tree'
 test -d "$firmware_root/lib/firmware" || die "missing firmware root: $firmware_root"
+test -n "$bluetooth_firmware_root" || \
+	die 'set OP3_BLUETOOTH_FIRMWARE_ROOT to staged Bluetooth firmware tree'
+test -d "$bluetooth_firmware_root/lib/firmware/qca" || \
+	die "missing Bluetooth firmware root: $bluetooth_firmware_root"
+test -x "$bluetooth_init" || die "missing Bluetooth init script: $bluetooth_init"
 
 for required in \
 	"$firmware_root/lib/firmware/qcom/a530_pm4.fw" \
@@ -36,7 +43,15 @@ for required in \
 	test -f "$required" || die "missing staged firmware: $required"
 done
 
+for required in \
+	"$bluetooth_firmware_root/lib/firmware/qca/rampatch_00440302.bin" \
+	"$bluetooth_firmware_root/lib/firmware/qca/nvm_00440302.bin"; do
+	test -f "$required" || die "missing staged Bluetooth firmware: $required"
+done
+
 cp -a "$firmware_root/." "$target_dir/"
+cp -a "$bluetooth_firmware_root/lib/firmware/qca" \
+	"$target_dir/lib/firmware/"
 
 install -D -m 0755 "$wifi_dir/opt/op3-wifi/wifi" \
 	"$target_dir/opt/op3-wifi/wifi"
@@ -58,7 +73,7 @@ release="$(basename "${releases[0]}")"
 depfile="${releases[0]}/modules.dep"
 test -f "$depfile" || die "missing modules.dep: $depfile"
 
-required_modules=(cfg80211 rfkill mac80211 ath ath10k_core ath10k_pci)
+required_modules=(cfg80211 rfkill mac80211 ath ath10k_core ath10k_pci bluetooth btqca hci_uart)
 declare -A selected=()
 
 collect() {
@@ -93,6 +108,10 @@ printf '%s\n' "${!selected[@]}" | LC_ALL=C sort | while IFS= read -r path; do
 	printf '%s: %s\n' "$path" "$deps"
 done > "$module_target/modules.dep"
 
+install -D -m 0755 "$bluetooth_init" \
+	"$target_dir/etc/init.d/S25op3-bluetooth-modules"
+
 printf 'OP3 Wi-Fi integrated into Buildroot target: %s\n' "$target_dir"
+printf 'OP3 Bluetooth integrated into Buildroot target: %s\n' "$target_dir"
 printf 'Kernel module release: %s\n' "$release"
 printf 'Selected modules: %s\n' "${#selected[@]}"

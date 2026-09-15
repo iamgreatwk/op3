@@ -36,6 +36,15 @@ BR2_PACKAGE_WPA_SUPPLICANT_NL80211=y
 BR2_PACKAGE_WPA_SUPPLICANT_CLI=y
 BR2_PACKAGE_IW=y
 BR2_PACKAGE_WIRELESS_REGDB=y
+
+# Bluetooth userspace is intentionally limited to the daemon and diagnostics.
+# Audio profiles remain disabled until the recovery audio path is validated.
+BR2_PACKAGE_BLUEZ5_UTILS=y
+BR2_PACKAGE_BLUEZ5_UTILS_CLIENT=y
+BR2_PACKAGE_BLUEZ5_UTILS_MONITOR=y
+BR2_PACKAGE_BLUEZ5_UTILS_TOOLS=y
+BR2_PACKAGE_BLUEZ5_UTILS_DEPRECATED=y
+
 BR2_ROOTFS_POST_BUILD_SCRIPT="board/oneplus3/recovery/post-build.sh"
 
 # Small helpers for device-side diagnostics.
