@@ -157,11 +157,48 @@ NVM step, is also present in independent Linux runtime logs. Treat `-84` as a
 transport diagnostic until a real HCI operation fails; it is not by itself a
 reason to alter H4 parsing or add guessed power rails.
 
-Current acceptance remains pending because this recovery rootfs has no
-`bluetoothctl`, `btmgmt`, or `btmon`. The next single-variable step is to use
-the already staged BlueZ userspace and module/firmware init integration, then
-test `hci0` with `btmgmt info`, `btmon`, and a real scan/pair operation. No
-kernel, DTS, or Buildroot artifact was changed by this follow-up.
+## Temporary BlueZ scan and S01 test (2026-09-15)
+
+The running phone was booted with the existing recovery image and was not
+flashed. To avoid a Buildroot rebuild, only a temporary BlueZ tool bundle,
+the three Bluetooth kernel modules, and the two verified QCA firmware files
+were copied into `/tmp` and `/lib/firmware/qca` on the phone. No persistent
+rootfs or Buildroot artifact was changed.
+
+The controller's stock temporary NVM contained the invalid address
+`00:00:00:00:5A:AD`, so the volatile test used:
+
+```text
+btmgmt --index 0 public-addr 02:00:00:00:00:01
+```
+
+After that workaround, `hci0` initialized and a real BR/EDR/LE discovery
+passed. The S01 speaker was found as:
+
+```text
+name S01
+address 16:6E:52:FA:45:A0
+type BR/EDR
+rssi -52
+```
+
+Pairing was attempted twice. Each attempt established a BR/EDR connection,
+then disconnected with reason `1` and ended with status `0x08 (Timeout)`.
+There was no PIN request or confirmation event. Therefore the result is:
+
+```text
+scan: PASS
+S01 discovery: PASS
+S01 pairing: INCONCLUSIVE / NOT ACCEPTED
+```
+
+The most likely remaining test condition is that S01 was powered on but not
+in its explicit pairing mode. The next test must be performed only after the
+speaker is placed in pairing mode, using the same temporary runtime setup.
+The previously attempted iPhone pairing is deliberately excluded from this
+result at the owner's request.
+
+No Buildroot compilation was performed for this test.
 
 ## Next isolated implementation
 
