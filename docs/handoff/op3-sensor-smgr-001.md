@@ -480,3 +480,60 @@ Droidian image has a `root=/dev/dm-0` Droidian command line; `_mainline_test/boo
 has pmOS root UUIDs. None is a matching stock Android boot image. No candidate
 was booted or flashed. This optional Android comparison is unavailable from
 the current archive and does not block the standalone Linux/SLPI port.
+
+## Standalone firmware provenance and Mi Note 2 reference audit (2026-09-20)
+
+No Android runtime is required for this work. The recovery boots the OP3 SLPI
+firmware and serves the preserved OP3 `sns.reg` directly through the Sensor
+Registry service. Android partition contents are only possible offline source
+inputs; they are not a boot dependency.
+
+The external Qualcomm firmware input was checked without booting Android:
+
+```text
+/home/kai/op3-recovery-external-inputs/qualcomm/NON-HLOS.bin
+SHA256: 761e51f67c0daa3246d7f7e8a141613c5a44b4a6a29e8904fa83d7303435e86b
+```
+
+The project `stage-msm8996-oneplus3-firmware.sh` script was run into a fresh
+temporary directory using the preserved `mcopy` and `pil-squasher` tools. It
+validated the external NON-HLOS SHA512 and every staged firmware size/hash
+against `boot/base-initramfs/msm8996-oneplus3-firmware.tsv`. The reconstructed
+`slpi.mbn` SHA256 was
+`5398c39071c4154cce71195848a522729ac1ff1c58f1e434bf2f821d62c2d902`, exactly
+matching the SLPI image previously used by the recovery build and test boots.
+The temporary output is under `/tmp/op3-sensor-fw-audit.VuhDex/staged/`; no
+tracked artifact or phone partition was changed.
+
+A read-only string-table check of that verified SLPI image found
+`BOSCH BMI160 Driver`, `STMicroelectronics LSM6DS3 Driver`, `LSM6DS3`, and
+`APDS-9921 Proximity & Light`. This proves those driver code/name strings are
+present in the image; it does not prove which IMU is physically installed or
+that SLPI successfully probed it. The preserved OnePlus 3 downstream
+`lineage-19.0` defconfig also sets `CONFIG_SENSORS_SSC=y`, corroborating the
+SSC/SLPI transport path without requiring an Android boot.
+
+The public postmarketOS Xiaomi Mi Note 2 (`scorpio`, MSM8996) reference reports
+working auto-rotation and an SMGR inventory naming an LSM6DSM accelerometer and
+gyroscope. Its checked-in generated registry has three ACCEL/GYRO candidates;
+the OP3 vendor-default registry has two, named LSM6DS3 and BMI160. The Mi Note
+2 file is device-specific evidence, not an OP3 hardware description. In
+particular, do not copy its registry or substitute LSM6DSM into OP3: the OP3
+firmware and OP3 registry both point to LSM6DS3/BMI160 candidates, and the
+physical OP3 part is still unconfirmed.
+
+This narrows but does not solve the failure. The current evidence rules out
+“wrong SLPI file accidentally staged” and “OP3 SLPI image lacks both declared
+candidate DDFs” as leading explanations. The unanswered question is the
+OP3-specific sensor hardware/SSC bus and power configuration (or a remaining
+SLPI probe failure). No new kernel build, device boot, registry change, DTS
+change, or Android runtime test was performed in this audit. The next safe
+change still requires authoritative OP3-specific wiring/configuration or
+SLPI-side probe evidence; the Mi Note 2 registry alone is not sufficient.
+
+Evidence sources:
+
+- [postmarketOS Qualcomm Sensor Manager MR !4118](https://gitlab.com/postmarketOS/pmaports/-/merge_requests/4118)
+  (Mi Note 2 runtime inventory and registry workflow).
+- [OnePlus-3 downstream OnePlus 3 defconfig](https://github.com/OnePlus-3/android_kernel_oneplus_msm8996/blob/lineage-19.0/arch/arm64/configs/lineageos_oneplus3_defconfig)
+  (`CONFIG_SENSORS_SSC=y`).
