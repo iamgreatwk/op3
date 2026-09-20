@@ -327,17 +327,19 @@ Updated result:
 ```text
 short PCM playback: PASS (owner acoustic confirmation recorded previously)
 long playback run 1: PCM drained; no timeout; aplay exit status not captured
-long playback run 2: PASS (full playback, aplay_rc=0, no HCI disconnect)
+long playback run 2: PASS (full audible playback confirmed by owner,
+  aplay_rc=0, no HCI disconnect)
 post-playback S01 connection: PASS
 previous 2026-09-15 timeout: NOT REPRODUCED in two repeat runs; intermittent
   stability issue remains unresolved, not fixed/accepted
 ```
 
 This is evidence that the current temporary path can stream a full-length
-track; it does not prove the previous intermittent timeout is fixed. Acoustic
-confirmation for the two repeat runs was not recorded. Keep persistent
-Buildroot integration and acceptance separate until the owner confirms the
-long-run speaker output and a clean-boot test is planned.
+track; it does not prove the previous intermittent timeout is fixed. The
+owner confirmed that the second repeat was audible from beginning to end; no
+separate acoustic confirmation was recorded for the first repeat. Long-run
+speaker output is therefore confirmed for the second temporary run, while
+persistent Buildroot integration and clean-boot acceptance remain separate.
 
 ## Next isolated implementation
 

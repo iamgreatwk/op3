@@ -126,10 +126,11 @@ On 2026-09-20, the temporary BlueZ 5.66 / BlueALSA 4.0.0 path played the same
 3:53.850 track twice end-to-end. The second run recorded `aplay_rc=0`; the
 second `btmon` capture spans the complete run with no HCI disconnect, BlueALSA
 logged `PCM drained` followed by normal transport release, and S01 remained
-`Connected: yes`. The single 2026-09-15 long-playback timeout was not
-reproduced in either run, so intermittent stability is still unresolved and
-not accepted as fixed. No Buildroot build or persistent device change was
-made. Full evidence and hashes are in
+`Connected: yes`; the owner confirmed the second run was audible from start to
+finish. The single 2026-09-15 long-playback timeout was not reproduced in
+either run, so intermittent stability is still unresolved and not accepted as
+fixed. No Buildroot build or persistent device change was made. Full evidence
+and hashes are in
 [`op3-bluetooth-001.md`](op3-bluetooth-001.md).
 
 ## OP3 CAMSS/VFE stream-teardown diagnostic (2026-09-14)
