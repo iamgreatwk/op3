@@ -28,9 +28,12 @@ series. It does not change the camera, DRM, recovery UI, or default Buildroot
 profile.
 
 Static vendor/downstream evidence points to the SLPI/SSC path rather than
-guessed HLOS I²C nodes. The likely hardware set is LSM6DS3 (accelerometer and
-gyroscope), MMC3416PJ (magnetometer), and APDS9921/APDS-9922 (proximity/light),
-but the runtime IIO names and channels still need owner confirmation.
+guessed HLOS I²C nodes. The preserved OnePlus 3 `sensor_def_qcomdev.conf` is
+explicitly a Qualcomm development-platform default for `msm8996`; it lists
+LSM6DS3 and BMI160 as accelerometer/gyroscope auto-detection candidates, not
+as confirmation of the physically populated IMU. It also lists multiple
+magnetometer and proximity/light candidates. Runtime inventory is incomplete
+and varies across boots, so the exact sensor variants remain unconfirmed.
 
 The required vendor registry is preserved outside GitHub as
 `$OP3_EXTERNAL_INPUTS/sensors/sns.reg`, locked by

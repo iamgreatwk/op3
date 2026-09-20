@@ -446,10 +446,16 @@ entries; IIO again exposed only MAG and PROX_LIGHT. Registry groups 2692 and
 2693 were served successfully. A temporary debugfs mount exposed only generic
 remoteproc files (`resource_table`, `coredump`, etc.), with no SLPI trace
 buffer; it was unmounted after inspection. The archived partition backup has
-system/vendor images but no saved stock sensor-runtime log. The expected
-Qualcomm `sns_reg_api_v02.h` / DDF source is not present in the local source or
-external-input trees. Search results found only secondary explanations, so no
-bus-field interpretation is accepted from them.
+system/vendor images but no saved stock sensor-runtime log. The preserved
+`vendor.img` contains `sensor_def_qcomdev.conf` (SHA256
+`3364e90c0acbe0706f3f23f20870ca05c3e7de6ff62e3c490190e3dff298635b`). Its own
+header describes Qualcomm development-platform default registry values; the
+`msm8996` section lists LSM6DS3 and BMI160 as two accelerometer/gyroscope
+auto-detection candidates, plus multiple magnetometer and proximity/light
+candidates. This does not prove which physical IMU is populated or responding.
+The expected Qualcomm `sns_reg_api_v02.h` / DDF source is not present in the
+local source or external-input trees. Search results found only secondary
+explanations, so no bus-field interpretation is accepted from them.
 
 Conclusion: QMI decoding is confirmed to match each captured raw response;
 ACCEL did not appear in any sample, and GYRO appeared only in the earlier
