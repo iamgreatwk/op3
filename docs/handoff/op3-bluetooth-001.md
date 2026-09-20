@@ -291,6 +291,54 @@ long-duration PCM playback: FAIL (A2DP transport timeout)
 post-failure S01 connection: PASS (automatic reconnection observed)
 ```
 
+## Long-duration A2DP repeat verification (2026-09-20)
+
+The earlier timeout was retested twice without changing the temporary runtime
+stack or playback settings. The phone was running the already owner-built
+`6.12.1-msm8996+` recovery image; no kernel build, Buildroot build, persistent
+rootfs write, or flash was performed. The temporary test bundle was staged in
+`/tmp/op3bt` and its archive SHA256 was
+`e7e77302a193787a7eff60bfd3dc2d8e21f7726dd661693414aac8b6e4dd13df`.
+
+Both runs played the same 3:53.850 `The Entertainer` WAV (44.1 kHz stereo)
+through Debian Bookworm BlueZ 5.66, BlueALSA 4.0.0, and ALSA utils 1.2.8. The
+PCM negotiated as 48 kHz stereo SBC. In both runs BlueALSA logged `PCM drained`
+and then stopped the A2DP transport with `No PCM clients`; neither log showed
+`BT socket disconnected: Connection timed out`. The first run's `aplay` exit
+code was not saved, so it is counted as a complete drain/close based on the
+logs rather than a recorded exit status. The second run explicitly returned
+`aplay_rc=0`.
+
+The second `btmon` capture spans `2026-09-20 17:07:10.334749` through
+`17:11:04.792615` as decoded by `btmon --date`. It contains no HCI Disconnection
+Complete / Connection Terminated event. After playback, BlueZ still reported
+the S01 (`16:6E:52:FA:45:A0`) as paired, bonded, trusted, and `Connected: yes`.
+The capture SHA256 is
+`35d5317687282ec3684f543b0f7fc47c170e70e71a07a040ba1b0a51e05b71c9`;
+`aplay-second.log` SHA256 is
+`4e7d002fd93afbdf716da57683f210caacbd0cef1da99fb20eb50bd1f4f0f76a` and
+`bluealsa.log` SHA256 is
+`92e7122730d7f207338ecd3cc4a2cc970e44eb1b6379e620ec47ae7b0d4e14a4`. The
+temporary host evidence is under `/tmp/op3-bt-evidence.wS4xl4/`; it is not
+committed because it consists of bulky runtime captures and logs.
+
+Updated result:
+
+```text
+short PCM playback: PASS (owner acoustic confirmation recorded previously)
+long playback run 1: PCM drained; no timeout; aplay exit status not captured
+long playback run 2: PASS (full playback, aplay_rc=0, no HCI disconnect)
+post-playback S01 connection: PASS
+previous 2026-09-15 timeout: NOT REPRODUCED in two repeat runs; intermittent
+  stability issue remains unresolved, not fixed/accepted
+```
+
+This is evidence that the current temporary path can stream a full-length
+track; it does not prove the previous intermittent timeout is fixed. Acoustic
+confirmation for the two repeat runs was not recorded. Keep persistent
+Buildroot integration and acceptance separate until the owner confirms the
+long-run speaker output and a clean-boot test is planned.
+
 ## Next isolated implementation
 
 Add only the userspace/runtime integration:
