@@ -150,11 +150,11 @@ b1c791fcc24afd4ec52f28e7fb1daaa18c54e787581fd17d4304d289385bfbc1  artifacts/boot
 Device test status: COMPLETED. The clean-boot capture contained 70 registry
 group requests with `bad=0`: every request returned `result=0`, the expected
 data length, and `send_ret=0`. There were no unmapped groups or registry
-transport errors. SLPI then reported only two raw sensors, `MAG` (`0x14`) and
-`PROX_LIGHT` (`0x28`); IIO registered only `qcom-smgr-mag` and
-`qcom-smgr-prox-light`. The audit therefore passes the registry transport
-hypothesis but fails to explain the missing accelerometer and gyroscope. Do
-not change the registry group map or client mapping on this evidence.
+transport errors. The post-QMI-decode Sensor Manager log showed only two
+entries, `MAG` (`0x14`) and `PROX_LIGHT` (`0x28`); IIO registered only
+`qcom-smgr-mag` and `qcom-smgr-prox-light`. This proves the decoded Linux-side
+result, not the exact bytes returned by SLPI. Do not change the registry group
+map or client mapping on this evidence.
 
 ## Follow-up: firmware and HLOS bus A/B
 
@@ -164,15 +164,22 @@ booted again as an A/B control. It used the older Sensor Manager kernel at
 `qcom-smgr-mag` and `qcom-smgr-prox-light`; the earlier provisional gyro result
 was not reproduced.
 
-The registry-audit image was then booted again. Its board-specific registry
-lookup served both motion-sensor groups successfully:
+The registry-audit image was then booted again. The captured log included:
 
 ```text
-group id=2900 (ACCEL): result=0 data_len=4 send_ret=0
-group id=2910 (GYRO):  result=0 data_len=4 send_ret=0
+group id=2692: result=0 data_len=256 send_ret=0
+group id=2693: result=0 data_len=256 send_ret=0
+group id=2900: result=0 data_len=4 send_ret=0
+group id=2910: result=0 data_len=4 send_ret=0
 ```
 
-The same boot still returned exactly two raw SLPI inventory entries:
+The independent `sns-reg` map audit corrected the old labels: `2692` and
+`2693` are the DEVINFO ACCEL/GYRO candidate groups. `2900` and `2910` are SAM
+configuration groups (`basic ges` and `Facing`), not motion-sensor groups.
+Successful replies show that the static registry service returned mapped
+blocks; they do not show that SLPI probed a device or accepted those settings.
+
+The same boot's post-decode log still reported exactly two inventory entries:
 `MAG(0x14)` and `PROX_LIGHT(0x28)`. All local `slpi.mbn` copies, including the
 verified firmware tree and preserved mainline-test copy, are byte-identical
 (`5398c39071c4154cce71195848a522729ac1ff1c58f1e434bf2f821d62c2d902`). A
@@ -183,15 +190,14 @@ to the four candidate addresses and did not unload or alter the capacitive-key
 or touch clients. After the probe, the clients remained `s1302-capkey` on
 I2C-3 and `rmi4-i2c` on I2C-4.
 
-This A/B rules out the Sensor Manager source revision, registry filename,
-registry group transport, and a directly visible HLOS I2C sensor as the
-current explanation. The remaining evidence-backed hypothesis is an SLPI
-sensor-core hardware/bus/power or firmware-side probe issue. Do not add
-guessed HLOS sensor nodes or modify the registry map. The next valid change
-requires new SLPI-side evidence, a different verified SLPI firmware, or a
-vendor power/bus description that can be tied to this handset. No further
-HLOS motion-sensor change is justified by the current evidence; the task
-should move to another hardware class unless such evidence becomes available.
+This A/B shows the same two-entry *decoded* inventory across the tested kernel
+registry/userspace-registry paths and registry filename choices. It does not
+exclude a QMI decode or message-boundary issue, and the HLOS I2C `ENXIO` checks
+do not establish absence when the sensor may be owned by SLPI. Root cause
+remains **INCONCLUSIVE**. Do not add guessed HLOS sensor nodes or change the
+registry map. The next experiment is a read-only capture of the complete
+all-sensor-info QMI response before decoding, compared with the existing
+post-decode count/type/ID log.
 
 ## Static implementation record
 
@@ -256,15 +262,13 @@ qcom_smgr: sensor[1]: id=0x28 type=PROX_LIGHT
 ```
 
 The first temporary image used the wrong Android-format text and returned
-`available sensor count=0`. The corrected v2 image returned two sensors, so
-the userspace registry process, QRTR transport, and numeric registry format
-are active. ACCEL/GYRO still do not appear and no IIO motion devices are
-created. Therefore the A/B hypothesis is disproved: disabling the kernel
-registry and supplying the pmOS userspace registry does not restore the
-missing motion sensors. The remaining evidence-backed cause is on the SLPI
-sensor-core hardware/bus/power or firmware-side probe path. Do not promote
+`available sensor count=0`. The corrected v2 image returned two decoded
+entries, so the userspace registry process and QRTR path were active. This
+does not determine whether the raw reply itself contained more entries. The
+kernel/userspace registry A/B did not change the decoded result, but root cause
+remains **INCONCLUSIVE** until the pre-decode reply is captured. Do not promote
 this temporary userspace registry into the default recovery image or change
-the registry map without new SLPI-side evidence.
+the registry map without new evidence.
 
 ## Owner live verification: SLPI and Sensor Manager are running (2026-09-15)
 
@@ -288,9 +292,43 @@ iio:device0: qcom-smgr-mag
 iio:device1: qcom-smgr-prox-light
 ```
 
-This confirms the complete path `SLPI firmware -> QRTR/IPCRTR -> sns-reg ->
-Sensor Manager -> IIO` is operational. It also reconfirms that the missing
-ACCEL/GYRO inventory is an SLPI-side sensor-core hardware/bus/power or
-firmware-probe issue, not a failure to start SLPI, register `sns-reg`, or
-register the Sensor Manager IIO clients. No source or artifact was changed by
-this read-only verification.
+This confirms that `SLPI firmware -> QRTR/IPCRTR -> sns-reg -> Sensor Manager
+-> IIO` is active for the two decoded entries. It does not localize the missing
+ACCEL/GYRO result to SLPI rather than QMI decoding. No source or artifact was
+changed by this read-only verification.
+
+## Pre-decode SMGR inventory response diagnostic (2026-09-20)
+
+This resumes Issue #13 using the corrections from the independent six-axis
+route review (`30bb4f7`) and SSI/registry audit (`c8c2c76`, report
+`docs/handoff/op3-sensor-ssi-audit-001.md`). The prior `2900 (ACCEL)` and
+`2910 (GYRO)` labels were incorrect: the actual DEVINFO groups are `2692`
+and `2693`; `2900`/`2910` are SAM configuration groups. Existing
+`available sensor count=2` logs are emitted after QMI decoding, so they do not
+show whether the received packet itself contained more entries.
+
+The next experiment changes one thing: nested kernel commit
+`d0ae61511d192a2d9bd10aebca9c9a561e3a0ddd` adds an optional per-transaction
+raw-response callback in the QMI core and enables it only for the SMGR
+all-sensor-info query. Before decoding, it logs the sender node/port, QMI type,
+transaction ID, message ID, declared payload length, packet length, and the
+complete packet bytes. Existing post-decode item count/type/ID logs remain the
+comparison point. Registry contents, registry group mapping, IIO mapping, DTS,
+and request timing are unchanged.
+
+Interpretation gate:
+
+- If the captured response contains ACCEL/GYRO entries but the decoded log
+  still has only MAG/PROX_LIGHT, investigate QMI decoding/message boundaries.
+- If the captured response itself contains only MAG/PROX_LIGHT, conclude only
+  that SLPI returned two entries for this initial query; this does not prove
+  the physical IMU is absent. Timing and SLPI probe evidence remain separate
+  questions.
+- If the QMI header/TLV lengths are inconsistent or the payload is truncated,
+  treat the result as a protocol/transport diagnostic, not a sensor result.
+
+Build: **NOT_RUN**. Device test: **NOT_RUN**. No new artifact or device claim
+is made. The next gate is a clean committed-branch kernel build, followed by an
+owner-authorized temporary boot and collection of the raw response plus the
+existing decoded inventory logs. Do not flash the image or change any registry,
+DTS, or sensor mapping as part of this experiment.
