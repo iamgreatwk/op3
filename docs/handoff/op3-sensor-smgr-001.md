@@ -464,3 +464,17 @@ reason for this boot-to-boot inventory variation remain **INCONCLUSIVE**. Next
 work needs either an authoritative matching SSC/DDF definition or a same-phone
 stock-system health comparison. Do not infer physical absence or change
 registry, bus, DTS, IIO mapping, or SLPI state without that evidence.
+
+## Stock comparison image availability
+
+On 2026-09-20 fastboot enumerated the phone as serial `9634f4ac`, product
+`msm8996`. The preserved partition backup contains system/vendor and firmware
+images but no `boot.img`. Other archived boot-image candidates were inspected
+read-only: `agent-os/images/boot.img` and `_archive/output/boot.img` are
+identical (`323b36ccbf35af4bde0b09cedb65e7a081e8a57a11e016222afdccbe6ee94d6e`)
+and contain an Android recovery ramdisk (`init.recovery.*`); the archived
+Droidian image has a `root=/dev/dm-0` Droidian command line; `_mainline_test/boot.img`
+has pmOS root UUIDs. None is a matching stock Android boot image. No candidate
+was booted or flashed. A same-phone stock sensor-health comparison therefore
+still requires the matching stock `boot.img` (or an equivalent known-good
+stock firmware set).
