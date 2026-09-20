@@ -386,13 +386,8 @@ not that SLPI successfully probed either physical device. IIO exposed exactly
 `qcom-smgr-gyro`, `qcom-smgr-mag`, and `qcom-smgr-prox-light`. No QRTR/QMI
 userspace query utility is installed in this recovery image.
 
-Conclusion remains **INCONCLUSIVE** about the physical accelerometer. This
-capture narrows the next test to delayed inventory: issue the same read-only
-SMGR all-sensor-info query again after boot at fixed elapsed intervals, log
-raw and decoded replies, and do not alter registry bytes, bus configuration,
-DTS, IIO mapping, or SLPI state. If ACCEL appears later, investigate startup
-timing; if not, this only establishes that the inventory stayed absent over
-the sampled interval, not that the physical part is missing.
+Conclusion remains **INCONCLUSIVE** about the physical accelerometer. The
+follow-up delayed-inventory test is recorded below.
 
 ## Delayed inventory query diagnostic (2026-09-20)
 
@@ -420,7 +415,31 @@ b18c78299914d159f7d2fc32699aabe081c4b4dc46bc00b1352017b00ca020e4  Module.symvers
 1cfa1e06c6e35f9297fd199104a324c08f64d706f3c846c9db867011f1ca2a34  artifacts/boot-oneplus3-pmos612-recovery-sensor-smgr-delayed-inventory-test.img
 ```
 
-Device test: **PENDING**. The prior diagnostic boot remains running; the new
-image has not yet been booted. The next step is a fresh `fastboot boot` of the
-delayed-inventory image, then collect query indices 0 through 3 from dmesg
-after at least 65 seconds. Do not flash it.
+Device test: **PASS for collecting the bounded diagnostic; no sensor-port
+acceptance implied**. The image was temporarily started with `fastboot boot`
+and allowed to run for more than 65 seconds. All four raw packets were valid
+33-byte responses (`msg_len=26`), and raw and decoded inventories agreed:
+
+```text
+kernel time  query  count  entries
+3.072 s      #0     2      MAG 0x14, PROX_LIGHT 0x28
+13.292 s     #1     2      MAG 0x14, PROX_LIGHT 0x28
+33.772 s     #2     2      MAG 0x14, PROX_LIGHT 0x28
+64.492 s     #3     2      MAG 0x14, PROX_LIGHT 0x28
+
+raw payload prefix (all four):
+02 <txn> 00 05 00 1a 00 02 02 00 00 00 03 12 00 02
+14 03 4d 41 47 28 0a 50 52 4f 58 5f 4c 49 47 48 54
+
+IIO names: qcom-smgr-mag, qcom-smgr-prox-light
+SLPI: running, qcom/msm8996/oneplus3/slpi.mbn
+```
+
+ACCEL did not appear later in this boot, so the delayed-startup hypothesis is
+not supported over the sampled 64-second interval. However, the preceding
+fresh boot returned three entries, including GYRO `0x0a`; this boot returned
+two from the initial query onward. Therefore inventory is not yet shown to be
+reproducible across boots. The next experiment is a second fresh boot of this
+same image, with no source/configuration changes, to check whether GYRO
+presence varies again. Do not infer that the physical accelerometer is absent,
+and do not change registry, bus, DTS, IIO mapping, or SLPI state yet.
