@@ -327,8 +327,33 @@ Interpretation gate:
 - If the QMI header/TLV lengths are inconsistent or the payload is truncated,
   treat the result as a protocol/transport diagnostic, not a sensor result.
 
-Build: **NOT_RUN**. Device test: **NOT_RUN**. No new artifact or device claim
-is made. The next gate is a clean committed-branch kernel build, followed by an
-owner-authorized temporary boot and collection of the raw response plus the
-existing decoded inventory logs. Do not flash the image or change any registry,
-DTS, or sensor mapping as part of this experiment.
+Build: **PASS**, run on the committed nested kernel branch at
+`d0ae61511d192a2d9bd10aebca9c9a561e3a0ddd`:
+
+```text
+Output: out/pmos-msm8996-6.12-sensor-smgr-raw-response
+Command: make -C source/linux-pmos-msm8996-6.12-sensor-smgr \
+  O=out/pmos-msm8996-6.12-sensor-smgr-raw-response ARCH=arm64 \
+  CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
+  -j$(nproc) Image.gz dtbs modules
+c9db8711c24544950f1020a10231ca6718b900b9d7cbd23ba699073491c65acf  .config
+63139f10458606100f7b936493f7e864278cb9b95909a57e30fbe17ba2cf0cf6  arch/arm64/boot/Image.gz
+acf85fd6ae148861374ec4d65feee0e3d909cce9b75e6d09c2f44a102914d1b  arch/arm64/boot/dts/qcom/msm8996-oneplus3.dtb
+b18c78299914d159f7d2fc32699aabe081c4b4dc46bc00b1352017b00ca020e4  Module.symvers
+```
+
+The DTB hash matches the prior known-good image; this diagnostic changed only
+the QMI response logging path. A temporary test image was packed with the
+existing board-name initrd and `boot/oneplus3-fa5.env` (no Buildroot rebuild):
+
+```text
+63556b8c16a11a184bd7239873a08e1faa4c133eb48878850554ff7b1b80b472  artifacts/initrd-op3-recovery-buildroot-sensor-smgr-boardname-test.cpio.gz
+539e6228dbc722c43cc59b0f0f5b266d05674a164d5557e4d90359953717b840  artifacts/boot-oneplus3-pmos612-recovery-sensor-smgr-raw-response-test.img
+```
+
+Device test: **NOT_RUN**. `fastboot devices -l` returned no attached device, so
+the image was not booted or flashed. The next gate is to connect the phone in
+fastboot mode, run only `fastboot boot` on the temporary image, and collect the
+pre-decode packet dump together with the decoded inventory logs. Do not flash
+the image or change any registry, DTS, or sensor mapping as part of this
+experiment.
