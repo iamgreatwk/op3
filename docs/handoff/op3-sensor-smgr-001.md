@@ -438,8 +438,23 @@ SLPI: running, qcom/msm8996/oneplus3/slpi.mbn
 ACCEL did not appear later in this boot, so the delayed-startup hypothesis is
 not supported over the sampled 64-second interval. However, the preceding
 fresh boot returned three entries, including GYRO `0x0a`; this boot returned
-two from the initial query onward. Therefore inventory is not yet shown to be
-reproducible across boots. The next experiment is a second fresh boot of this
-same image, with no source/configuration changes, to check whether GYRO
-presence varies again. Do not infer that the physical accelerometer is absent,
-and do not change registry, bus, DTS, IIO mapping, or SLPI state yet.
+two from the initial query onward.
+
+The same image was cold-booted a second time with no changes. Queries at
+3.708, 13.805, 35.821, and 66.541 seconds again all returned the same two
+entries; IIO again exposed only MAG and PROX_LIGHT. Registry groups 2692 and
+2693 were served successfully. A temporary debugfs mount exposed only generic
+remoteproc files (`resource_table`, `coredump`, etc.), with no SLPI trace
+buffer; it was unmounted after inspection. The archived partition backup has
+system/vendor images but no saved stock sensor-runtime log. The expected
+Qualcomm `sns_reg_api_v02.h` / DDF source is not present in the local source or
+external-input trees. Search results found only secondary explanations, so no
+bus-field interpretation is accepted from them.
+
+Conclusion: QMI decoding is confirmed to match each captured raw response;
+ACCEL did not appear in any sample, and GYRO appeared only in the earlier
+single boot, not either delayed-query boot. Physical sensor presence and the
+reason for this boot-to-boot inventory variation remain **INCONCLUSIVE**. Next
+work needs either an authoritative matching SSC/DDF definition or a same-phone
+stock-system health comparison. Do not infer physical absence or change
+registry, bus, DTS, IIO mapping, or SLPI state without that evidence.
