@@ -351,9 +351,45 @@ existing board-name initrd and `boot/oneplus3-fa5.env` (no Buildroot rebuild):
 539e6228dbc722c43cc59b0f0f5b266d05674a164d5557e4d90359953717b840  artifacts/boot-oneplus3-pmos612-recovery-sensor-smgr-raw-response-test.img
 ```
 
-Device test: **NOT_RUN**. `fastboot devices -l` returned no attached device, so
-the image was not booted or flashed. The next gate is to connect the phone in
-fastboot mode, run only `fastboot boot` on the temporary image, and collect the
-pre-decode packet dump together with the decoded inventory logs. Do not flash
-the image or change any registry, DTS, or sensor mapping as part of this
-experiment.
+At initial build completion, device test was **NOT_RUN** because no fastboot
+device was attached. The subsequent owner-authorized boot and evidence are
+recorded below. The image was not flashed.
+
+## Pre-decode inventory result (2026-09-20)
+
+The owner reported the phone in fastboot. The exact temporary image above was
+verified by SHA256 and started with `fastboot boot` (bootloader returned
+`OKAY`; no partition was flashed). SSH became available at `172.16.42.1`.
+SLPI and ADSP both reported `running`, with SLPI firmware
+`qcom/msm8996/oneplus3/slpi.mbn`.
+
+At kernel time 2.812559 s, the raw QMI response was a complete 39-byte packet
+with a 32-byte message payload. The raw bytes and decoded inventory were:
+
+```text
+02 00 00 05 00 20 00 02 02 00 00 00 03 18 00 03
+0a 04 47 59 52 4f 14 03 4d 41 47 28 0a 50 52 4f
+58 5f 4c 49 47 48 54
+
+available sensor count=3
+sensor[0]: id=0x0a type=GYRO
+sensor[1]: id=0x14 type=MAG
+sensor[2]: id=0x28 type=PROX_LIGHT
+```
+
+Thus this sample does not show an ACCEL/GYRO parser loss: the raw response
+contains GYRO and the decoder reports the same three entries. ACCEL is absent
+from this initial response. In the same boot, registry groups `2692` and
+`2693` each returned `result=0`, `data_len=256`, and `send_ret=0`; this proves
+the registry service served the configured ACCEL and GYRO candidate blocks,
+not that SLPI successfully probed either physical device. IIO exposed exactly
+`qcom-smgr-gyro`, `qcom-smgr-mag`, and `qcom-smgr-prox-light`. No QRTR/QMI
+userspace query utility is installed in this recovery image.
+
+Conclusion remains **INCONCLUSIVE** about the physical accelerometer. This
+capture narrows the next test to delayed inventory: issue the same read-only
+SMGR all-sensor-info query again after boot at fixed elapsed intervals, log
+raw and decoded replies, and do not alter registry bytes, bus configuration,
+DTS, IIO mapping, or SLPI state. If ACCEL appears later, investigate startup
+timing; if not, this only establishes that the inventory stayed absent over
+the sampled interval, not that the physical part is missing.
