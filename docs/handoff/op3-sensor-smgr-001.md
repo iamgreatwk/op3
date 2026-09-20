@@ -393,3 +393,34 @@ raw and decoded replies, and do not alter registry bytes, bus configuration,
 DTS, IIO mapping, or SLPI state. If ACCEL appears later, investigate startup
 timing; if not, this only establishes that the inventory stayed absent over
 the sampled interval, not that the physical part is missing.
+
+## Delayed inventory query diagnostic (2026-09-20)
+
+Nested kernel commit `e587aa2c379b` adds three bounded, read-only re-queries
+after the normal SMGR probe, approximately 10, 30, and 60 seconds after probe.
+Each request logs a query index on the raw response and decoded items. Requery
+uses no new IIO registrations or heap allocations and does not change the
+initial sensor list, registry bytes, DTS, or bus configuration. A devres action
+cancels the delayed work before the QMI handle is released.
+
+Build: **PASS**, incremental build from the prior output directory:
+
+```text
+Output: out/pmos-msm8996-6.12-sensor-smgr-raw-response
+Command: make -C source/linux-pmos-msm8996-6.12-sensor-smgr \
+  O=out/pmos-msm8996-6.12-sensor-smgr-raw-response ARCH=arm64 \
+  CROSS_COMPILE=aarch64-linux-gnu- CC=aarch64-linux-gnu-gcc-11 \
+  -j$(nproc) Image.gz dtbs modules
+Kernel commit: e587aa2c379b6b8c5d2ecb439a53cf9dc5d2abc6
+c9db8711c24544950f1020a10231ca6718b900b9d7cbd23ba699073491c65acf  .config
+a0262d4d0c8a01fef702e2c0d3ae5f0ba1037c323597402aa906e320f44136f0  arch/arm64/boot/Image.gz
+acf85fd6ae148861374ec4d65feee0e3d909cce9b75e96d09c2f44a102914d1b  arch/arm64/boot/dts/qcom/msm8996-oneplus3.dtb
+b18c78299914d159f7d2fc32699aabe081c4b4dc46bc00b1352017b00ca020e4  Module.symvers
+63556b8c16a11a184bd7239873a08e1faa4c133eb48878850554ff7b1b80b472  artifacts/initrd-op3-recovery-buildroot-sensor-smgr-boardname-test.cpio.gz
+1cfa1e06c6e35f9297fd199104a324c08f64d706f3c846c9db867011f1ca2a34  artifacts/boot-oneplus3-pmos612-recovery-sensor-smgr-delayed-inventory-test.img
+```
+
+Device test: **PENDING**. The prior diagnostic boot remains running; the new
+image has not yet been booted. The next step is a fresh `fastboot boot` of the
+delayed-inventory image, then collect query indices 0 through 3 from dmesg
+after at least 65 seconds. Do not flash it.
