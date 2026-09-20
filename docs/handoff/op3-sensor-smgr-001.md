@@ -461,11 +461,14 @@ Conclusion: QMI decoding is confirmed to match each captured raw response;
 ACCEL did not appear in any sample, and GYRO appeared only in the earlier
 single boot, not either delayed-query boot. Physical sensor presence and the
 reason for this boot-to-boot inventory variation remain **INCONCLUSIVE**. Next
-work needs either an authoritative matching SSC/DDF definition or a same-phone
-stock-system health comparison. Do not infer physical absence or change
-registry, bus, DTS, IIO mapping, or SLPI state without that evidence.
+standalone-Linux work should continue by obtaining authoritative
+board-specific SSC/DDF or sensor-registry evidence and using the existing
+Linux/SLPI diagnostics. A stock Android comparison is optional diagnostic
+evidence only; Android is not a target dependency or a prerequisite. Do not
+infer physical absence or change registry, bus, DTS, IIO mapping, or SLPI state
+without authoritative evidence.
 
-## Stock comparison image availability
+## Optional stock-comparison image availability
 
 On 2026-09-20 fastboot enumerated the phone as serial `9634f4ac`, product
 `msm8996`. The preserved partition backup contains system/vendor and firmware
@@ -475,6 +478,5 @@ identical (`323b36ccbf35af4bde0b09cedb65e7a081e8a57a11e016222afdccbe6ee94d6e`)
 and contain an Android recovery ramdisk (`init.recovery.*`); the archived
 Droidian image has a `root=/dev/dm-0` Droidian command line; `_mainline_test/boot.img`
 has pmOS root UUIDs. None is a matching stock Android boot image. No candidate
-was booted or flashed. A same-phone stock sensor-health comparison therefore
-still requires the matching stock `boot.img` (or an equivalent known-good
-stock firmware set).
+was booted or flashed. This optional Android comparison is unavailable from
+the current archive and does not block the standalone Linux/SLPI port.
