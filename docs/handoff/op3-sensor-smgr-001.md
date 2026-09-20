@@ -537,3 +537,41 @@ Evidence sources:
   (Mi Note 2 runtime inventory and registry workflow).
 - [OnePlus-3 downstream OnePlus 3 defconfig](https://github.com/OnePlus-3/android_kernel_oneplus_msm8996/blob/lineage-19.0/arch/arm64/configs/lineageos_oneplus3_defconfig)
   (`CONFIG_SENSORS_SSC=y`).
+
+## Preserved partition sensor-input provenance audit (2026-09-20)
+
+The archived partition images were inspected offline only; Android was not
+booted. The compressed `android/persist.img.gz` from the supplied
+`partitions_20260818` backup has SHA256
+`1203735b5c3e3ecfc1e865d03a2220d983f19a10049b2bb0dcc0cd6e5257f3b9` and
+decompresses to a 32 MiB ext4 image with SHA256
+`304f9bb86e0ffb8b6140b8c1069422a3ec53a12d5133d31516a4d95e279e1c7b`.
+
+Read-only `debugfs` inspection found `/sensors/sns.reg` (25,468 bytes),
+`/sensors/sensors_settings` (2 bytes), `/sensors/gyro_sensitity_cal` (35
+bytes), and an empty `/sensors/error_log`. The backed-up `sns.reg` SHA256 is
+`2644c56bce535a7c8930e497d2f36601b302573a358493fad2732d1109518f06` and is
+byte-identical to `$OP3_EXTERNAL_INPUTS/sensors/sns.reg`, the registry served
+by the current recovery test. This confirms the locked external registry's
+provenance from this OP3 persist backup; it does not make the registry
+board-specific. Its ACCEL/GYRO entries remain the same two generic candidates,
+LSM6DS3 and BMI160.
+
+The two small persist files contain `1\n` and
+`GyroSens 1.000000 1.000000 1.000000`, respectively. These values do not
+identify the physical IMU or explain why SLPI omits ACCEL; they are not
+evidence that no other calibration exists. The vendor image's
+`/etc/sensors/sensor_def_qcomdev.conf` was also extracted read-only and hashes
+to the already audited
+`3364e90c0acbe0706f3f23f20870ca05c3e7de6ff62e3c490190e3dff298635b`. Its
+`/etc/sensors/hals.conf` selects `sensors.ssc.so`, and
+`/bin/init.qcom.sensors.sh` starts `vendor.sensors.qti`; this corroborates
+the SSC path, not an OP3-specific sensor wiring map.
+
+No board-specific six-axis identity, bus/controller mapping, or SLPI probe
+failure reason was found in these checked persist/vendor inputs. No registry,
+kernel, DTS, firmware, or device state was changed. Android remains an
+optional offline evidence source, never a runtime prerequisite. Conclusion
+remains **INCONCLUSIVE**. A source-backed OP3 SSI mapping or accessible
+SLPI-side probe diagnostics are still required before any configuration
+change; do not substitute values inferred from secondary web pages.

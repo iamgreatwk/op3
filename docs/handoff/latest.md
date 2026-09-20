@@ -99,6 +99,18 @@ guessed HLOS sensor node, registry-map change, or default recovery integration
 is justified; without new SLPI-side or handset-specific hardware evidence,
 move the next implementation effort to another hardware class.
 
+An offline audit of the preserved partition backup confirmed that
+`android/persist.img.gz` contains `/sensors/sns.reg` byte-identical to the
+locked external registry
+(`2644c56bce535a7c8930e497d2f36601b302573a358493fad2732d1109518f06`). The
+persist sidecars contain `sensors_settings=1` and
+`GyroSens 1.000000 1.000000 1.000000`; neither identifies the physical IMU.
+The vendor HAL selects `sensors.ssc.so`, consistent with the SLPI/SSC path.
+This confirms registry provenance, not board-specific ACCEL/GYRO wiring. No
+Android runtime, build, or device change was performed. Full hashes and
+caveats are recorded in `docs/handoff/op3-sensor-smgr-001.md`; no speculative
+registry/DTS change is justified.
+
 ## OP3 CAMSS/VFE stream-teardown diagnostic (2026-09-14)
 
 The active camera worktree is
